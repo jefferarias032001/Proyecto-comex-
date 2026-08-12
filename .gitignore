@@ -1,0 +1,23 @@
+# Archivos generados
+TRACTOCAR_UNIFICADO.xlsx
+
+# Sesión interna de Claude Code
+.claude/
+
+# Archivos de datos fuente (no subir al repo)
+*.xlsx
+*.xls
+*.csv
+
+# Archivos temporales Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Archivos de configuración local
+*.env
+ditar_despachos.json
+
+# Temporales del sistema
+Thumbs.db
+.DS_Store

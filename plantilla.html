@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tractocar · Control de Ventas COMEX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0E2A33;--ink-2:#5C6E73;--ink-3:#8A989C;--bg:#F3F5F6;--surface:#FFFFFF;--surface-2:#FAFBFB;
+    --line:#E2E8EA;--line-2:#EDF1F2;--marine:#0C4A5A;--marine-700:#093846;--marine-50:#E8F1F3;
+    --amber:#C2740B;--amber-soft:#FBEBD3;--amber-line:#EFD3A6;--teal:#0E7C86;--teal-soft:#E1F2F3;
+    --slate:#647B82;--slate-soft:#EBEFF0;--pos:#1C8A57;--pos-soft:#E2F2EA;--neg:#BE4326;--neg-soft:#F7E7E1;
+    --r:12px;--r-sm:8px;--sh:0 1px 2px rgba(14,42,51,.05),0 1px 3px rgba(14,42,51,.04);--sh-2:0 10px 30px rgba(14,42,51,.16);
+    --fd:'Archivo','Inter',system-ui,sans-serif;--fb:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    --fm:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--fb);background:var(--bg);color:var(--ink);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+  .num,.mono{font-variant-numeric:tabular-nums}.mono{font-family:var(--fm)}
+  button{font-family:inherit;cursor:pointer}
+  ::-webkit-scrollbar{height:10px;width:10px}::-webkit-scrollbar-thumb{background:#cfd8da;border-radius:8px;border:2px solid var(--bg)}
+  header.topbar{position:sticky;top:0;z-index:40;background:var(--marine);color:#fff;border-bottom:3px solid var(--amber)}
+  .topbar-in{max-width:100%;margin:0 auto;padding:13px 28px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:12px;min-width:0}
+  .logo{width:38px;height:38px;border-radius:9px;background:linear-gradient(135deg,var(--amber),#9c5a06);display:grid;place-items:center;flex:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+  .logo svg{width:22px;height:22px}
+  .brand h1{font-family:var(--fd);font-size:17px;font-weight:700;letter-spacing:-.2px;line-height:1.05}
+  .brand .sub{font-size:11px;color:#A9CBD2;letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+  .brand .sub b{color:var(--amber)}
+  .top-actions{margin-left:auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .meta-info{font-size:12px;color:#CFE3E7;text-align:right;line-height:1.4}
+  .meta-info b{color:#fff;font-weight:600}
+  .btn{border:0;border-radius:var(--r-sm);padding:9px 14px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:7px;transition:.15s;white-space:nowrap}
+  .btn svg{width:15px;height:15px}
+  .btn-amber{background:var(--amber);color:#fff}.btn-amber:hover{background:#a9650a}
+  .btn-light{background:#fff;color:var(--marine);border:1px solid var(--line)}.btn-light:hover{background:#eef4f5}
+  .wrap{max-width:100%;margin:0;padding:22px 28px}
+
+  .filterbar{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);padding:14px 16px;margin-bottom:18px;position:sticky;top:64px;z-index:30}
+  .fb-row{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start}
+  .fgroup{display:flex;flex-direction:column;gap:7px;min-width:0}
+  .flabel{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{font-size:12px;font-weight:600;padding:5px 11px;border-radius:20px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink-2);transition:.12s;user-select:none}
+  .chip:hover{border-color:#c4d0d3}.chip.on{background:var(--marine);border-color:var(--marine);color:#fff}
+  .chip.on.amber{background:var(--amber);border-color:var(--amber)}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface-2)}
+  .seg button{border:0;background:transparent;padding:6px 13px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+  .seg button.on{background:var(--marine);color:#fff}
+  .search{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:7px 11px;background:var(--surface-2);min-width:240px}
+  .search svg{width:15px;height:15px;color:var(--ink-3);flex:none}
+  .search input{border:0;background:transparent;outline:none;font-family:inherit;font-size:13px;width:100%;color:var(--ink)}
+  .fb-right{margin-left:auto;display:flex;gap:8px;align-items:center;align-self:flex-end}
+  .link-btn{background:none;border:0;color:var(--marine);font-size:12.5px;font-weight:600;text-decoration:underline;text-underline-offset:2px}
+  .link-btn:hover{color:var(--amber)}
+
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:18px}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:15px 16px;box-shadow:var(--sh);position:relative;overflow:hidden}
+  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--marine)}
+  .kpi.k-amber::before{background:var(--amber)}.kpi.k-pos::before{background:var(--pos)}
+  .kpi .kl{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);margin-bottom:9px}
+  .kpi .kv{font-family:var(--fd);font-size:23px;font-weight:700;letter-spacing:-.5px;line-height:1}
+  .kpi .ks{font-size:11.5px;color:var(--ink-2);margin-top:6px}.kpi .ks b{color:var(--ink);font-weight:600}
+
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px;flex-wrap:wrap}
+  .tab{background:none;border:0;padding:11px 16px;font-size:13.5px;font-weight:600;color:var(--ink-2);border-bottom:2px solid transparent;margin-bottom:-1px;display:flex;align-items:center;gap:7px}
+  .tab:hover{color:var(--ink)}.tab.on{color:var(--marine);border-bottom-color:var(--amber)}
+  .tab .badge{font-family:var(--fm);font-size:10px;font-weight:700;background:var(--marine-50);color:var(--marine);padding:1px 7px;border-radius:20px}
+  .panel{display:none}.panel.on{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  .grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh)}
+  .card-h{padding:14px 16px;border-bottom:1px solid var(--line-2);display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .card-h h3{font-family:var(--fd);font-size:14px;font-weight:700;letter-spacing:-.1px}
+  .card-h .hint{margin:0;font-size:11px;color:var(--ink-3)}
+  .card-b{padding:16px}
+  .svg-host{width:100%}.svg-host svg{width:100%;height:auto;display:block}
+  .legend{display:flex;gap:18px;justify-content:center;margin-top:10px;font-size:12px;color:var(--ink-2);flex-wrap:wrap}
+  .legend i{width:11px;height:11px;border-radius:3px;display:inline-block;margin-right:6px;vertical-align:-1px}
+
+  .bar-row{display:grid;grid-template-columns:140px 1fr 110px;gap:12px;align-items:center;padding:8px 0}
+  .bar-row+.bar-row{border-top:1px solid var(--line-2)}
+  .bar-name{font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:7px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bar-name .dot{width:9px;height:9px;border-radius:3px;flex:none}
+  .bar-track{height:9px;background:var(--line-2);border-radius:6px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:6px;transition:width .4s}
+  .bar-val{text-align:right;font-size:12.5px;font-weight:700}
+  .bar-val small{color:var(--ink-3);font-weight:500;display:block;font-size:11px}
+
+  .tbl-wrap{overflow:auto;border-radius:var(--r);border:1px solid var(--line);background:var(--surface);box-shadow:var(--sh)}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{position:sticky;top:0;background:var(--surface-2);text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);padding:11px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th.sortable{cursor:pointer}th.sortable:hover{color:var(--marine)}th .arr{font-size:9px;margin-left:3px}
+  td{padding:10px 12px;border-bottom:1px solid var(--line-2);white-space:nowrap}
+  tbody tr:hover{background:var(--marine-50)}td.r,th.r{text-align:right}
+  .pill{font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:20px;display:inline-block}
+  .pill-propio{background:var(--teal-soft);color:var(--teal)}.pill-tercero{background:var(--slate-soft);color:var(--slate)}
+  .pill-warn{background:var(--amber-soft);color:var(--amber)}
+  .pos{color:var(--pos);font-weight:600}.neg{color:var(--neg);font-weight:600}
+  .tag-seg{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:6px;color:#fff;white-space:nowrap}
+  .miniwrap{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+  .mini{width:54px;height:7px;background:var(--line-2);border-radius:5px;overflow:hidden;flex:none}.mini i{display:block;height:100%;background:var(--amber);border-radius:5px}
+  .tbl-foot{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-top:1px solid var(--line);background:var(--surface-2);font-size:12.5px;color:var(--ink-2)}
+  .pager{display:flex;gap:6px;align-items:center}
+  .pgbtn{border:1px solid var(--line);background:#fff;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--ink)}.pgbtn:disabled{opacity:.4;cursor:default}
+  .tablebar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+  .tablebar h3{font-family:var(--fd);font-size:15px;font-weight:700}
+  .toggle{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--ink-2);cursor:pointer;user-select:none}
+  .toggle input{width:34px;height:19px;-webkit-appearance:none;appearance:none;background:var(--line);border-radius:20px;position:relative;cursor:pointer;transition:.18s;flex:none}
+  .toggle input:checked{background:var(--amber)}
+  .toggle input::after{content:"";position:absolute;width:15px;height:15px;background:#fff;border-radius:50%;top:2px;left:2px;transition:.18s}
+  .toggle input:checked::after{left:17px}
+  .rules{font-size:13px;color:var(--ink-2);line-height:1.8}
+  .rules h4{font-family:var(--fd);font-size:13px;color:var(--ink);margin:16px 0 4px;text-transform:uppercase;letter-spacing:.04em}
+  .rules b{color:var(--ink)}.rules code{font-family:var(--fm);background:var(--surface-2);border:1px solid var(--line);padding:1px 6px;border-radius:5px;font-size:11.5px}
+  .note{background:var(--amber-soft);border:1px solid var(--amber-line);border-radius:10px;padding:13px 15px;font-size:12.5px;color:#7a4d09;line-height:1.6}.note b{color:#5e3b07}
+  .dd{position:relative;display:inline-block}
+  .dd-btn{display:inline-flex;align-items:center;gap:9px;min-width:160px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:13px;font-weight:600;color:var(--ink);box-shadow:var(--sh);transition:.12s}
+  .dd-btn:hover{border-color:#b9c6c9}
+  .dd.open .dd-btn{border-color:var(--marine);box-shadow:0 0 0 3px var(--marine-50)}
+  .dd-lbl{display:none}
+  .dd-val{flex:1;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
+  .dd-chev{width:15px;height:15px;color:var(--ink-3);transition:transform .15s;flex:none}
+  .dd.open .dd-chev{transform:rotate(180deg)}
+  .dd-panel{position:absolute;top:calc(100% + 6px);left:0;min-width:215px;max-width:320px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh-2);padding:6px;z-index:60;display:none;animation:ddin .14s ease}
+  .dd.open .dd-panel{display:block}
+  @keyframes ddin{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+  .dd-scroll{max-height:264px;overflow:auto}
+  .dd-opt{display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:7px;font-size:13px;font-weight:500;color:var(--ink-2);cursor:pointer;white-space:nowrap;user-select:none}
+  .dd-opt:hover{background:var(--surface-2)}
+  .dd-opt.on{color:var(--marine);font-weight:600}
+  .dd-opt .cb{width:16px;height:16px;border:1.5px solid var(--line);border-radius:5px;flex:none;display:grid;place-items:center;transition:.12s}
+  .dd-opt.on .cb{background:var(--marine);border-color:var(--marine)}
+  .dd-opt.on .cb::after{content:"";width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);margin-top:-2px}
+  .dd-opt .rb{width:16px;height:16px;border:1.5px solid var(--line);border-radius:50%;flex:none;display:grid;place-items:center;transition:.12s}
+  .dd-opt.on .rb{border-color:var(--marine)}
+  .dd-opt.on .rb::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--marine)}
+  .dd-range .dd-btn{min-width:188px}
+  .dd-range .dd-val{max-width:200px}
+  .dd-range .dd-panel{min-width:236px}
+  .dd-range-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 8px}
+  .dd-range-row label{font-size:12px;font-weight:600;color:var(--ink-2)}
+  .dd-range-row input[type=date]{border:1px solid var(--line);border-radius:7px;padding:6px 8px;font:inherit;font-size:12.5px;font-weight:600;color:var(--ink);background:var(--surface)}
+  .dd-range-row input[type=date]:focus{outline:none;border-color:var(--marine);box-shadow:0 0 0 2px var(--marine-50)}
+  .dd-clear-dates{display:block;margin:5px 6px 2px;font-size:12px}
+  .col-resizer{position:absolute;top:0;right:0;width:9px;height:100%;cursor:col-resize;z-index:6}
+  .col-resizer::after{content:"";position:absolute;right:3px;top:22%;height:56%;width:2px;border-radius:2px;background:transparent;transition:background .12s}
+  .col-resizer:hover::after{background:var(--amber)}
+  table.resizable{table-layout:fixed}
+  table.resizable th{position:relative}
+  table.resizable th,table.resizable td{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  @media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid2{grid-template-columns:1fr}}
+  @media(max-width:680px){.kpis{grid-template-columns:repeat(2,1fr)}.wrap{padding:14px}.filterbar{position:static;top:0}}
+
+  /* ---- DITAR panel ---- */
+  .ditar-filters{display:flex;gap:14px;flex-wrap:wrap;align-items:center;padding:12px 16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);margin-bottom:16px;box-shadow:var(--sh)}
+  .ditar-filters .flabel{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);margin-right:6px}
+  .pill-impo{background:#E8F1F3;color:#0C4A5A}
+  .pill-expo{background:#FBEBD3;color:#C2740B}
+  .pill-traslado{background:#EDE8F6;color:#5B44A6}
+  .pill-suelta{background:#E2F2EA;color:#1C8A57}
+  .pill-roundtrip{background:#F7E7E1;color:#BE4326}
+  .pill-alerta{background:#F7E7E1;color:#BE4326;font-weight:700}
+  .pill-pendiente{background:#FBEBD3;color:#C2740B}
+  .pill-ok{background:#E2F2EA;color:#1C8A57}
+  .pill-subop{font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:20px;display:inline-block}
+  tr.row-alerta td{background:#fff8f7}
+  tr.row-alerta:hover td{background:#fdf0ee !important}
+  tr.row-rt td{background:#fff8f0}
+  tr.row-multimes td{background:#f5f8ff}
+  tr.row-multimes:hover td{background:#eaf0ff !important}
+  .ob-total{color:var(--ink-2);font-weight:600}
+  .otros-meses{color:#1a73e8;font-weight:700}
+  .alert-icon{font-size:14px;line-height:1}
+  .ditar-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+  @media(max-width:1100px){.ditar-grid3{grid-template-columns:1fr 1fr}}
+  @media(max-width:680px){.ditar-grid3{grid-template-columns:1fr}}
+  .kpi-alerta::before{background:var(--neg)}
+  .kpi-pendiente::before{background:var(--amber)}
+</style>
+</head>
+<body>
+<header class="topbar"><div class="topbar-in">
+  <div class="brand">
+    <div class="logo"><svg viewBox="0 0 24 24" fill="none"><path d="M2.5 6.5h11v8h-11zM13.5 9h4l3.5 3.5v2h-7.5z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/><circle cx="7" cy="17" r="1.7" stroke="#fff" stroke-width="1.5"/><circle cx="17.5" cy="17" r="1.7" stroke="#fff" stroke-width="1.5"/></svg></div>
+    <div><h1>Tractocar · Control de Ventas</h1><div class="sub">Logistics SAS &nbsp;·&nbsp; análisis <b>COMEX</b></div></div>
+  </div>
+  <div class="top-actions">
+    <span class="meta-info" id="metaInfo"></span>
+    <button class="btn btn-amber" id="btnCSV"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Descargar vista (CSV)</button>
+  </div>
+</div></header>
+
+<main class="wrap">
+  <div class="filterbar" id="filterbar"></div>
+  <div class="kpis" id="kpis"></div>
+  <div class="tabs">
+    <button class="tab on" data-tab="resumen">Resumen</button>
+    <button class="tab" data-tab="ob">COMEX · OB <span class="badge" id="obBadge">0</span></button>
+    <button class="tab" data-tab="detalle">Detalle <span class="badge" id="detBadge">0</span></button>
+    <button class="tab" data-tab="ditar">DITAR <span class="badge" id="ditarBadge">0</span></button>
+    <button class="tab" data-tab="ajover">Ajover EXPO</button>
+    <button class="tab" data-tab="reglas">Reglas</button>
+  </div>
+
+  <div id="panel-resumen" class="panel on">
+    <div class="grid2">
+      <div class="card">
+        <div class="card-h"><h3>Tendencia de ventas</h3>
+          <div class="seg" id="trendSeg"><button data-t="mes" class="on">Por mes</button><button data-t="dia">Por día</button></div>
+        </div>
+        <div class="card-b"><div class="svg-host" id="trendChart"></div><div class="legend" id="trendLegend"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>Propio vs Tercero</h3><span class="hint">flota propia = NIT 900503325-2</span></div>
+        <div class="card-b" id="propBox"></div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="card-h"><h3>Venta por segmento</h3><span class="hint">barra = a facturar</span></div><div class="card-b" id="segBox"></div></div>
+      <div class="card"><div class="card-h"><h3>Venta por tipología</h3></div><div class="card-b" id="tipBox"></div></div>
+    </div>
+  </div>
+
+  <div id="panel-ob" class="panel">
+    <div class="tablebar">
+      <h3>COMEX · análisis por Orden Base (OB)</h3>
+      <label class="toggle"><input type="checkbox" id="obMultiTgl"> Solo OB con venta fuera del filtro</label>
+    </div>
+    <div class="note" id="obNote" style="margin-bottom:14px"><b>Venta del periodo</b>: a facturar de la OB según los filtros activos. &nbsp;<b>Venta TOTAL OB</b>: a facturar real de toda la OB sumando <u>todos</u> sus movimientos, sin importar los filtros — el "a facturar total real". Si <b>Fuera del filtro</b> es mayor que cero, esa OB tiene venta en otros meses/días y el periodo la muestra incompleta.</div>
+    <div class="tbl-wrap"><table id="obTable"><thead></thead><tbody></tbody></table><div class="tbl-foot" id="obFoot"></div></div>
+  </div>
+
+  <div id="panel-detalle" class="panel">
+    <div class="tablebar"><h3>Detalle de movimientos (unión limpia de los 4 archivos)</h3>
+      <button class="btn btn-light" id="btnCSV2"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Descargar vista (CSV)</button>
+    </div>
+    <div class="tbl-wrap"><table id="detTable"><thead></thead><tbody></tbody></table><div class="tbl-foot" id="detFoot"></div></div>
+  </div>
+
+  <!-- ===================== PANEL DITAR ===================== -->
+  <div id="panel-ditar" class="panel">
+    <div class="ditar-filters">
+      <div><span class="flabel">Sub-operación</span><span class="chips" id="ditarSubChips"></span></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <label class="toggle" id="ditarRTTgl" title="Mostrar solo RoundTrip"><input type="checkbox" id="ditarRT"> Solo RoundTrip</label>
+        <label class="toggle" id="ditarAlTgl"><input type="checkbox" id="ditarAl"> Solo alertas &gt;$2.5M</label>
+        <label class="toggle" id="ditarPFTgl"><input type="checkbox" id="ditarPF"> Pend. facturar</label>
+        <label class="toggle" id="ditarPPTgl"><input type="checkbox" id="ditarPP"> Pend. pagar</label>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="flabel">Contenedor</span>
+        <input id="ditarContQ" type="text" placeholder="Filtrar contenedor..." style="padding:5px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink);width:180px;outline:none" />
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="flabel">Envío venta</span>
+        <input id="ditarEnvioQ" type="text" placeholder="Filtrar envío venta..." style="padding:5px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink);width:180px;outline:none" />
+      </div>
+      <button class="link-btn" id="ditarClear" style="margin-left:auto">Limpiar</button>
+    </div>
+    <div class="kpis" id="ditarKpis"></div>
+
+    <div class="ditar-grid3">
+      <div class="card">
+        <div class="card-h"><h3>Por sub-operación</h3><span class="hint">a facturar</span></div>
+        <div class="card-b" id="ditarSubBox"></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>⚠ Alertas valor &gt; $2.5M</h3><span class="badge" id="ditarAlBadge" style="background:var(--neg-soft);color:var(--neg)">0</span></div>
+        <div class="card-b" style="padding:0">
+          <div style="overflow:auto;max-height:260px">
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+              <thead><tr><th style="padding:9px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);border-bottom:1px solid var(--line);position:sticky;top:0">Contenedor</th><th style="padding:9px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);border-bottom:1px solid var(--line);position:sticky;top:0">Sub-op.</th><th style="padding:9px 12px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);border-bottom:1px solid var(--line);position:sticky;top:0">A facturar</th><th style="padding:9px 12px;text-align:right;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);border-bottom:1px solid var(--line);position:sticky;top:0">A pagar</th></tr></thead>
+              <tbody id="ditarAlBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>📋 Pendientes facturar / pagar</h3><span class="badge" id="ditarPendBadge" style="background:var(--amber-soft);color:var(--amber)">0</span></div>
+        <div class="card-b" style="padding:0">
+          <div style="overflow:auto;max-height:260px">
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+              <thead><tr><th style="padding:9px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);border-bottom:1px solid var(--line);position:sticky;top:0">Contenedor</th><th style="padding:9px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);border-bottom:1px solid var(--line);position:sticky;top:0">Sub-op.</th><th style="padding:9px 12px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);border-bottom:1px solid var(--line);position:sticky;top:0">Facturar</th><th style="padding:9px 12px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);border-bottom:1px solid var(--line);position:sticky;top:0">Pagar</th></tr></thead>
+              <tbody id="ditarPendBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- ===== BUSCADOR POR CONTENEDOR ===== -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-h">
+        <h3>🔍 Buscador por contenedor</h3>
+        <span class="hint">Busca en todos los meses — sin importar el filtro activo</span>
+      </div>
+      <div class="card-b">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px">
+          <input id="contSearch" type="text" placeholder="Ej: SEGU4044963, TCKU..." style="flex:1;padding:9px 14px;border:1px solid var(--line);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--ink);outline:none" />
+          <button class="btn" id="contSearchBtn">Buscar</button>
+          <button class="btn btn-light" id="contSearchClear">Limpiar</button>
+        </div>
+        <div id="contResults"></div>
+      </div>
+    </div>
+    <!-- Resumen RoundTrip agrupado por contenedor -->
+    <div class="card" style="margin-bottom:16px" id="ditarRTCard">
+      <div class="card-h">
+        <h3>↔ Resumen RoundTrip — consolidado por contenedor</h3>
+        <span class="hint" id="ditarRTHint"></span>
+        <div id="ditarRTKpis" style="display:flex;gap:10px;margin-left:16px;flex-wrap:wrap"></div>
+        <button class="btn btn-light" id="btnRTCSV" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" style="width:14px;height:14px;margin-right:5px"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Descargar CSV</button>
+      </div>
+      <div class="card-b" style="padding:0">
+        <div style="overflow:auto;max-height:340px">
+          <table style="width:100%;border-collapse:collapse;font-size:12px" id="ditarRTTable">
+            <thead id="ditarRTThead"></thead>
+            <tbody id="ditarRTBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="tablebar"><h3>Movimientos DITAR</h3><button class="btn btn-light" id="btnDitarCSV"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Descargar CSV</button></div>
+    <div class="tbl-wrap"><table id="ditarTable"><thead></thead><tbody></tbody></table><div class="tbl-foot" id="ditarFoot"></div></div>
+  </div>
+
+  <!-- ===================== PANEL AJOVER ===================== -->
+  <div id="panel-ajover" class="panel">
+    <!-- VACIOS -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-h"><h3>📦 Vaciós Ajover — cumplimiento de fechas programadas</h3><span class="hint" id="ajVacHint"></span></div>
+      <div class="card-b" style="padding:12px 0 0">
+        <div class="kpis" id="ajVacKpis" style="margin-bottom:12px"></div>
+        <div style="margin:0 16px 12px" id="ajVacPromedios"></div>
+        <div style="display:flex;gap:16px;margin:0 16px 12px;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px"><div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">Por Patio</div><div id="ajVacPatios"></div></div>
+          <div style="flex:1;min-width:200px"><div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">Por Línea</div><div id="ajVacLineas"></div></div>
+        </div>
+        <div style="display:flex;gap:10px;padding:0 16px 10px;align-items:center;flex-wrap:wrap">
+          <input id="ajVacQ" type="text" placeholder="Buscar contenedor, patio, línea..." style="padding:6px 12px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink);width:260px;outline:none"/>
+          <select id="ajVacFiltCumpl" style="padding:6px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink)">
+            <option value="">Todos</option><option value="A tiempo">A tiempo</option><option value="Tarde">Tarde</option><option value="Sin fecha">Sin fecha</option>
+          </select>
+          <button class="btn btn-light" id="ajVacClear">Limpiar</button>
+          <button class="btn btn-light" id="ajVacCSV" style="margin-left:auto">↓ CSV</button>
+        </div>
+        <div class="tbl-wrap" style="max-height:340px">
+          <table style="width:100%;border-collapse:collapse;font-size:12px" id="ajVacTable">
+            <thead><tr id="ajVacHead"></tr></thead>
+            <tbody id="ajVacBody"></tbody>
+          </table>
+        </div>
+        <div class="tbl-foot" id="ajVacFoot"></div>
+      </div>
+    </div>
+
+    <!-- LLENOS -->
+    <div class="card">
+      <div class="card-h"><h3>🚢 Llenos Ajover — cumplimiento de citas y operación</h3><span class="hint" id="ajLlHint"></span></div>
+      <div class="card-b" style="padding:12px 0 0">
+        <div class="kpis" id="ajLlKpis" style="margin-bottom:12px"></div>
+        <div style="margin:0 16px 12px" id="ajLlPromedios"></div>
+        <div style="margin:0 16px 16px" id="ajLlTendencia"></div>
+        <div style="margin:0 16px 16px" id="ajLlTendMov"></div>
+        <div style="margin:0 16px 16px" id="ajLlTendTiempos"></div>
+        <div style="margin:0 16px 12px" id="ajLlNoCumpl"></div>
+        <div style="margin:0 16px 16px" id="ajLlNoCumplDetalle"></div>
+        <div style="display:flex;gap:16px;margin:0 16px 12px;flex-wrap:wrap">
+          <div style="flex:1;min-width:220px"><div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">Estado operación</div><div id="ajLlEstados"></div></div>
+          <div style="flex:1;min-width:220px"><div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">Motivos de fallo (todos)</div><div id="ajLlMotivos"></div></div>
+        </div>
+        <div style="display:flex;gap:10px;padding:0 16px 10px;align-items:center;flex-wrap:wrap">
+          <input id="ajLlQ" type="text" placeholder="Buscar contenedor, placa, terminal..." style="padding:6px 12px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink);width:260px;outline:none"/>
+          <select id="ajLlFiltEst" style="padding:6px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink)">
+            <option value="">Todos</option><option value="EXITOSO">Exitoso</option><option value="FALLIDO">Fallido</option>
+          </select>
+          <button class="btn btn-light" id="ajLlClear">Limpiar</button>
+          <button class="btn btn-light" id="ajLlCSV" style="margin-left:auto">↓ CSV</button>
+        </div>
+        <div class="tbl-wrap" style="max-height:340px">
+          <table style="width:100%;border-collapse:collapse;font-size:12px" id="ajLlTable">
+            <thead><tr id="ajLlHead"></tr></thead>
+            <tbody id="ajLlBody"></tbody>
+          </table>
+        </div>
+        <div class="tbl-foot" id="ajLlFoot"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="panel-reglas" class="panel"><div class="card"><div class="card-b rules" id="rulesBox"></div></div></div>
+</main>
+
+<script>/*__DATOS__*/</script>
+<script>
+/* ===================== Tractocar · vista (datos embebidos) ===================== */
+const COP=new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0});
+const NF=new Intl.NumberFormat('es-CO');
+const f$=v=>COP.format(Math.round(v||0));
+const fN=v=>NF.format(v||0);
+const fPct=v=>((v||0)*100).toFixed(1)+'%';
+const f$c=v=>{const a=Math.abs(v||0);if(a>=1e9)return '$'+(v/1e9).toFixed(2)+' B';if(a>=1e6)return '$'+(v/1e6).toFixed(1)+' M';if(a>=1e3)return '$'+(v/1e3).toFixed(0)+' K';return f$(v);};
+const SEGC={'Comex Impo':'#C2740B','Comex Expo':'#E0A030','Nacional':'#0C4A5A','Cedis':'#0E7C86','Alto Cubicaje':'#7A5EA8'};
+const segColor=s=>SEGC[s]||'#647B82';
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $=id=>document.getElementById(id);
+
+const S={rows:[],ob:new Map(),
+  f:{meses:new Set(),segs:new Set(),tips:new Set(),prop:'todos',ac:'todos',sam:'todos',q:'',desde:'',hasta:''},
+  trend:'mes',obMulti:false,obSort:{k:'total',dir:-1},detSort:{k:'AFacturar',dir:-1},page:1,colW:{obTable:{},detTable:{}}};
+
+const OB_COLW=[226,150,60,150,170,150,128,134,92,118,132,142,122,78,70];
+const DET_COLW=[88,110,78,180,118,132,168,168,84,118,116,110,110,80];
+function makeResizable(table,defs){
+  if(!table||!table.tHead||!table.tHead.rows[0])return;
+  const id=table.id,store=S.colW[id]||(S.colW[id]={});
+  const ths=[...table.tHead.rows[0].cells];
+  let cg=table.querySelector('colgroup');
+  if(!cg||cg.children.length!==ths.length){if(cg)cg.remove();cg=document.createElement('colgroup');ths.forEach(()=>cg.appendChild(document.createElement('col')));table.insertBefore(cg,table.firstChild);}
+  const cols=[...cg.children];
+  table.classList.add('resizable');
+  let total=0;
+  cols.forEach((col,i)=>{const w=store[i]!=null?store[i]:(defs[i]||120);col.style.width=w+'px';total+=w;});
+  table.style.width=total+'px';
+  ths.forEach((th,i)=>{
+    if(th.querySelector('.col-resizer'))return;
+    const grip=document.createElement('span');grip.className='col-resizer';grip.title='Arrastra para ajustar el ancho';th.appendChild(grip);
+    grip.addEventListener('click',e=>e.stopPropagation());
+    grip.addEventListener('mousedown',e=>{e.preventDefault();e.stopPropagation();
+      const startX=e.pageX,startW=cols[i].getBoundingClientRect().width;
+      const move=ev=>{const w=Math.max(56,Math.round(startW+(ev.pageX-startX)));cols[i].style.width=w+'px';store[i]=w;
+        let t=0;cols.forEach(c=>t+=c.getBoundingClientRect().width);table.style.width=t+'px';};
+      const up=()=>{document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);document.body.style.cursor='';document.body.style.userSelect='';};
+      document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);document.body.style.cursor='col-resize';document.body.style.userSelect='none';});
+  });
+}
+
+function uniqSorted(key){return [...new Set(S.rows.map(r=>r[key]).filter(v=>v!=null&&v!==''))].sort();}
+
+/* ---------------- filtros ---------------- */
+const F_LABELS={prop:{todos:'Todos',propio:'Propio',tercero:'Tercero'},ac:{todos:'Todos',si:'Sí',no:'No'},sam:{todos:'Todos',si:'Sí',no:'No'}};
+function ddSummary(key,multi){
+  if(multi){const set=S.f[key];if(!set.size)return'Todos';if(set.size===1)return[...set][0];return set.size+' seleccionados';}
+  return (F_LABELS[key]||{})[S.f[key]]||'Todos';
+}
+function ddBtn(key,label,multi){
+  return `<button class="dd-btn" type="button"><span class="dd-lbl">${label}</span><span class="dd-val" data-val>${esc(ddSummary(key,multi))}</span><svg class="dd-chev" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
+}
+function ddMulti(key,label,options){
+  const set=S.f[key];
+  const opts=options.map(o=>`<div class="dd-opt${set.has(o)?' on':''}" data-v="${esc(o)}"><span class="cb"></span>${esc(o)}</div>`).join('');
+  return `<div class="dd" data-f="${key}" data-multi="1">${ddBtn(key,label,true)}<div class="dd-panel"><div class="dd-scroll">${opts}</div></div></div>`;
+}
+function ddSingle(key,label,options){
+  const cur=S.f[key];
+  const opts=options.map(([v,l])=>`<div class="dd-opt${cur===v?' on':''}" data-v="${esc(v)}"><span class="rb"></span>${esc(l)}</div>`).join('');
+  return `<div class="dd" data-f="${key}" data-multi="0">${ddBtn(key,label,false)}<div class="dd-panel">${opts}</div></div>`;
+}
+function fechaSummary(){const d=S.f.desde,h=S.f.hasta;if(!d&&!h)return'Todas';if(d&&h)return `${d} → ${h}`;if(d)return `desde ${d}`;return `hasta ${h}`;}
+function ddRange(minF,maxF){
+  const at=a=>a?`value="${esc(a)}"`:'';
+  return `<div class="dd dd-range" data-f="fecha">
+    <button class="dd-btn" type="button"><span class="dd-lbl">Fecha</span><span class="dd-val" data-val>${esc(fechaSummary())}</span><svg class="dd-chev" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="dd-panel">
+      <div class="dd-range-row"><label>Desde</label><input type="date" id="fDesde" ${minF?`min="${minF}"`:''} ${maxF?`max="${maxF}"`:''} ${at(S.f.desde)}></div>
+      <div class="dd-range-row"><label>Hasta</label><input type="date" id="fHasta" ${minF?`min="${minF}"`:''} ${maxF?`max="${maxF}"`:''} ${at(S.f.hasta)}></div>
+      <button class="link-btn dd-clear-dates" id="fClear" type="button">Limpiar fechas</button>
+    </div></div>`;
+}
+function refreshFechaDD(){const dd=document.querySelector('.dd-range');if(dd)dd.querySelector('[data-val]').textContent=fechaSummary();}
+function buildFilters(){
+  const meses=uniqSorted('Mes'),segs=uniqSorted('Segmento'),tips=uniqSorted('Tipologia');
+  const fechas=S.rows.map(r=>r.FechaISO).filter(Boolean);
+  const minF=fechas.length?fechas.reduce((a,b)=>a<b?a:b):'', maxF=fechas.length?fechas.reduce((a,b)=>a>b?a:b):'';
+  $('filterbar').innerHTML=`
+    <div class="fb-row">
+      <div class="fgroup"><span class="flabel">Mes</span>${ddMulti('meses','Mes',meses)}</div>
+      <div class="fgroup"><span class="flabel">Fecha (rango)</span>${ddRange(minF,maxF)}</div>
+      <div class="fgroup"><span class="flabel">Segmento</span>${ddMulti('segs','Segmento',segs)}</div>
+      <div class="fgroup"><span class="flabel">Propiedad</span>${ddSingle('prop','Propiedad',[['todos','Todos'],['propio','Propio'],['tercero','Tercero']])}</div>
+      <div class="fgroup"><span class="flabel">Alto cubicaje</span>${ddSingle('ac','Alto cubicaje',[['todos','Todos'],['si','Sí'],['no','No']])}</div>
+      <div class="fgroup"><span class="flabel">Tipología</span>${ddMulti('tips','Tipología',tips)}</div>
+      <div class="fgroup"><span class="flabel">Samaritima</span>${ddSingle('sam','Samaritima',[['todos','Todos'],['si','Tocó SIMARITIMA_NUEVO'],['no','Sin Samaritima']])}</div>
+      <div class="fb-right">
+        <div class="search"><svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><input id="searchInp" placeholder="Buscar OB, cliente, proveedor, manifiesto, placa…"></div>
+        <button class="link-btn" id="clearFilters">Limpiar</button>
+      </div>
+    </div>`;
+  wireFilters();
+}
+function refreshDD(dd){
+  const key=dd.dataset.f,multi=dd.dataset.multi==='1';
+  dd.querySelector('[data-val]').textContent=ddSummary(key,multi);
+  dd.querySelectorAll('.dd-opt').forEach(o=>{const v=o.dataset.v;o.classList.toggle('on',multi?S.f[key].has(v):S.f[key]===v);});
+}
+function wireFilters(){
+  const fb=$('filterbar');
+  fb.querySelectorAll('.dd').forEach(dd=>{
+    const btn=dd.querySelector('.dd-btn'),panel=dd.querySelector('.dd-panel'),key=dd.dataset.f,multi=dd.dataset.multi==='1';
+    btn.addEventListener('click',e=>{e.stopPropagation();const open=dd.classList.contains('open');document.querySelectorAll('.dd.open').forEach(x=>x.classList.remove('open'));if(!open)dd.classList.add('open');});
+    panel.addEventListener('click',e=>e.stopPropagation());
+    dd.querySelectorAll('.dd-opt').forEach(opt=>opt.addEventListener('click',()=>{const v=opt.dataset.v;
+      if(multi){const set=S.f[key];if(set.has(v))set.delete(v);else set.add(v);}
+      else{S.f[key]=v;dd.classList.remove('open');}
+      refreshDD(dd);S.page=1;render();}));
+  });
+  const dn=$('fDesde'),hn=$('fHasta'),fc=$('fClear');
+  if(dn)dn.addEventListener('change',e=>{S.f.desde=e.target.value;refreshFechaDD();S.page=1;render();});
+  if(hn)hn.addEventListener('change',e=>{S.f.hasta=e.target.value;refreshFechaDD();S.page=1;render();});
+  if(fc)fc.addEventListener('click',e=>{e.stopPropagation();S.f.desde='';S.f.hasta='';if(dn)dn.value='';if(hn)hn.value='';refreshFechaDD();S.page=1;render();});
+  $('searchInp').addEventListener('input',e=>{S.f.q=e.target.value.trim();S.page=1;render();});
+  $('clearFilters').addEventListener('click',()=>{S.f={meses:new Set(),segs:new Set(),tips:new Set(),prop:'todos',ac:'todos',sam:'todos',q:'',desde:'',hasta:''};buildFilters();S.page=1;render();});
+}
+function passes(r){const f=S.f;
+  if(f.desde&&(!r.FechaISO||r.FechaISO<f.desde))return false;
+  if(f.hasta&&(!r.FechaISO||r.FechaISO>f.hasta))return false;
+  if(f.meses.size&&!f.meses.has(r.Mes))return false;
+  if(f.segs.size&&!f.segs.has(r.Segmento))return false;
+  if(f.tips.size&&!f.tips.has(r.Tipologia))return false;
+  if(f.prop!=='todos'&&r.Propiedad!==f.prop.toUpperCase())return false;
+  if(f.ac==='si'&&!r.AltoCubicaje)return false;
+  if(f.ac==='no'&&r.AltoCubicaje)return false;
+  if(f.sam==='si'&&!r.TocoSamaritima)return false;
+  if(f.sam==='no'&&r.TocoSamaritima)return false;
+  if(f.q){const q=f.q.toLowerCase();if(![r.OB,r.Manifiesto,r.ClienteNombre,r.ClienteNIT,r.ProvNombre,r.ProvNIT,r.Placa,r.Origen,r.Destino].some(x=>x!=null&&String(x).toLowerCase().includes(q)))return false;}
+  return true;
+}
+
+/* ---------------- render ---------------- */
+function sum(rows,k){let s=0;for(const r of rows)s+=r[k]||0;return s;}
+function render(){const rows=S.rows.filter(passes);renderKpis(rows);renderTrend(rows);renderProp(rows);renderBreak('segBox',rows,'Segmento',true);renderBreak('tipBox',rows,'Tipologia',false);renderOb(rows);renderDetail(rows);if($('panel-ditar')&&$('panel-ditar').classList.contains('on'))renderDitar();if($('panel-ajover')&&$('panel-ajover').classList.contains('on'))renderAjover();}
+function renderKpis(rows){
+  const af=sum(rows,'AFacturar'),ap=sum(rows,'APagar'),ut=af-ap;
+  const viajes=new Set(rows.map(r=>r.Manifiesto).filter(Boolean)).size;
+  const obs=new Set(rows.filter(r=>r.EsComex&&r.OB!=null).map(r=>r.OB)).size;
+  const comexAf=sum(rows.filter(r=>r.EsComex),'AFacturar');
+  $('kpis').innerHTML=`
+    <div class="kpi"><div class="kl">A facturar</div><div class="kv num">${f$c(af)}</div><div class="ks">${f$(af)}</div></div>
+    <div class="kpi"><div class="kl">A pagar (afiliado)</div><div class="kv num">${f$c(ap)}</div><div class="ks">${f$(ap)}</div></div>
+    <div class="kpi k-pos"><div class="kl">Utilidad</div><div class="kv num">${f$c(ut)}</div><div class="ks">${f$(ut)}</div></div>
+    <div class="kpi k-pos"><div class="kl">Margen</div><div class="kv num">${fPct(af?ut/af:0)}</div><div class="ks">utilidad ÷ a facturar</div></div>
+    <div class="kpi"><div class="kl">Viajes</div><div class="kv num">${fN(viajes)}</div><div class="ks">${fN(rows.length)} movimientos</div></div>
+    <div class="kpi k-amber"><div class="kl">OB COMEX</div><div class="kv num">${fN(obs)}</div><div class="ks">COMEX: <b>${f$c(comexAf)}</b></div></div>`;
+}
+function renderProp(rows){
+  const g={PROPIO:{af:0,v:new Set()},TERCERO:{af:0,v:new Set()}};
+  for(const r of rows){const o=g[r.Propiedad];if(!o)continue;o.af+=r.AFacturar;if(r.Manifiesto)o.v.add(r.Manifiesto);}
+  const tot=g.PROPIO.af+g.TERCERO.af||1;
+  const row=(name,o,color)=>`<div class="bar-row"><div class="bar-name"><span class="dot" style="background:${color}"></span>${name}</div><div class="bar-track"><div class="bar-fill" style="width:${(o.af/tot*100).toFixed(1)}%;background:${color}"></div></div><div class="bar-val">${f$c(o.af)}<small>${(o.af/tot*100).toFixed(1)}% · ${fN(o.v.size)} viajes</small></div></div>`;
+  $('propBox').innerHTML=row('Propio (flota)',g.PROPIO,'#0E7C86')+row('Tercero',g.TERCERO,'#647B82');
+}
+function renderBreak(id,rows,key,seg){
+  const m=new Map();
+  for(const r of rows){const k=r[key]||'(n/d)';let o=m.get(k);if(!o){o={af:0,ut:0,v:new Set()};m.set(k,o);}o.af+=r.AFacturar;o.ut+=r.Utilidad;if(r.Manifiesto)o.v.add(r.Manifiesto);}
+  const arr=[...m.entries()].sort((a,b)=>b[1].af-a[1].af).slice(0,9);
+  const max=Math.max(1,...arr.map(x=>x[1].af));
+  $(id).innerHTML=arr.length?arr.map(([k,o])=>{const color=seg?segColor(k):'#0C4A5A';return `<div class="bar-row"><div class="bar-name" title="${esc(k)}"><span class="dot" style="background:${color}"></span>${esc(k)}</div><div class="bar-track"><div class="bar-fill" style="width:${(o.af/max*100).toFixed(1)}%;background:${color}"></div></div><div class="bar-val">${f$c(o.af)}<small>margen ${fPct(o.af?o.ut/o.af:0)}</small></div></div>`;}).join(''):'<div class="hint">Sin datos con los filtros actuales.</div>';
+}
+
+/* ---------------- gráfica de tendencia (SVG) ---------------- */
+function niceMax(v){if(v<=0)return 1;const p=Math.pow(10,Math.floor(Math.log10(v)));const n=v/p;let m;if(n<=1)m=1;else if(n<=2)m=2;else if(n<=2.5)m=2.5;else if(n<=5)m=5;else m=10;return m*p;}
+function moneyShort(v){const a=Math.abs(v);if(a>=1e9)return '$'+(v/1e9).toFixed(1)+'B';if(a>=1e6)return '$'+(v/1e6).toFixed(0)+'M';if(a>=1e3)return '$'+(v/1e3).toFixed(0)+'K';return '$'+Math.round(v);}
+function escSvg(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function svgChart(labels,fac,pag,mg){
+  const W=760,H=300,pl=66,pr=48,pt=16,pb=48,pw=W-pl-pr,ph=H-pt-pb;
+  const maxM=niceMax(Math.max(1,...fac,...pag));
+  const mgMax=Math.max(50,Math.ceil(Math.max(10,...mg)/10)*10),mgMin=Math.min(0,Math.floor(Math.min(0,...mg)/10)*10);
+  const n=labels.length,gw=pw/n,bw=Math.max(3,Math.min(26,gw*0.30));
+  const yM=v=>pt+ph-(v/maxM)*ph, yG=v=>pt+ph-((v-mgMin)/(mgMax-mgMin))*ph;
+  let s=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+  for(let i=0;i<=4;i++){const v=maxM*i/4,y=yM(v);s+=`<line x1="${pl}" y1="${y.toFixed(1)}" x2="${W-pr}" y2="${y.toFixed(1)}" stroke="#EDF1F2"/><text x="${pl-8}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="10" fill="#8A989C" font-family="JetBrains Mono,monospace">${moneyShort(v)}</text>`;}
+  for(let i=0;i<=4;i++){const v=mgMin+(mgMax-mgMin)*i/4,y=yG(v);s+=`<text x="${W-pr+8}" y="${(y+3).toFixed(1)}" text-anchor="start" font-size="10" fill="#1C8A57" font-family="JetBrains Mono,monospace">${v.toFixed(0)}%</text>`;}
+  const rot=n>10;
+  labels.forEach((lb,i)=>{const cx=pl+gw*i+gw/2,x1=cx-bw-1,x2=cx+1;
+    s+=`<rect x="${x1.toFixed(1)}" y="${yM(fac[i]).toFixed(1)}" width="${bw.toFixed(1)}" height="${((fac[i]/maxM)*ph).toFixed(1)}" rx="2.5" fill="#0C4A5A"/>`;
+    s+=`<rect x="${x2.toFixed(1)}" y="${yM(pag[i]).toFixed(1)}" width="${bw.toFixed(1)}" height="${((pag[i]/maxM)*ph).toFixed(1)}" rx="2.5" fill="#C2740B"/>`;
+    const ly=H-pb+(rot?13:16);
+    s+=`<text x="${cx.toFixed(1)}" y="${ly}" text-anchor="${rot?'end':'middle'}" font-size="10" fill="#5C6E73" font-family="Inter,sans-serif" ${rot?`transform="rotate(-40 ${cx.toFixed(1)} ${ly})"`:''}>${escSvg(lb)}</text>`;});
+  const pts=labels.map((lb,i)=>`${(pl+gw*i+gw/2).toFixed(1)},${yG(mg[i]).toFixed(1)}`).join(' ');
+  s+=`<polyline points="${pts}" fill="none" stroke="#1C8A57" stroke-width="2"/>`;
+  labels.forEach((lb,i)=>{s+=`<circle cx="${(pl+gw*i+gw/2).toFixed(1)}" cy="${yG(mg[i]).toFixed(1)}" r="2.6" fill="#1C8A57"/>`;});
+  return s+`</svg>`;
+}
+function renderTrend(rows){
+  const host=$('trendChart'),leg=$('trendLegend');
+  const m=new Map();
+  for(const r of rows){let k;if(S.trend==='dia'){if(!r.FechaISO)continue;k=r.FechaISO;}else k=r.Mes;let o=m.get(k);if(!o){o={af:0,ap:0};m.set(k,o);}o.af+=r.AFacturar;o.ap+=r.APagar;}
+  const labels=[...m.keys()].sort();
+  if(!labels.length){host.innerHTML='<div class="hint" style="padding:40px;text-align:center">Sin datos con los filtros actuales.</div>';leg.innerHTML='';return;}
+  host.innerHTML=svgChart(labels,labels.map(k=>m.get(k).af),labels.map(k=>m.get(k).ap),labels.map(k=>{const o=m.get(k);return o.af?(o.af-o.ap)/o.af*100:0;}));
+  leg.innerHTML='<span><i style="background:#0C4A5A"></i>A facturar</span><span><i style="background:#C2740B"></i>A pagar</span><span><i style="background:#1C8A57"></i>Margen %</span>';
+}
+
+/* ---------------- tabla OB (COMEX) ---------------- */
+function renderOb(rows){
+  const comexF=rows.filter(r=>r.EsComex&&r.OB!=null);
+  const m=new Map();
+  for(const r of comexF){let o=m.get(r.OB);if(!o){o={ob:r.OB,cli:r.ClienteNombre,tip:r.Tipologia,periodo:0,pagP:0,mov:0};m.set(r.OB,o);}o.periodo+=r.AFacturar;o.pagP+=r.APagar;o.mov++;}
+  let data=[...m.values()].map(o=>{const t=S.ob.get(o.ob)||{fact:0,pag:0,mov:0,meses:0,enviosVenta:'',samMovs:0,ajusteSam:0,manifiestos:'',contenedores:''};
+    const fuera=t.fact-o.periodo;
+    return{...o,total:t.fact,utilTot:t.fact-t.pag,movTot:t.mov,meses:t.meses,enviosVenta:t.enviosVenta||'',manifiestos:t.manifiestos||'',contenedores:t.contenedores||'',samMovs:t.samMovs||0,ajusteSam:t.ajusteSam||0,totalConSam:t.fact+(t.ajusteSam||0),fuera,multi:t.meses>1||fuera>0.5};});
+  if(S.obMulti)data=data.filter(d=>d.multi);
+  const k=S.obSort.k,dir=S.obSort.dir;
+  data.sort((a,b)=>{let va=a[k],vb=b[k];if(typeof va==='string')return dir*va.localeCompare(vb);return dir*((va||0)-(vb||0));});
+  $('obBadge').textContent=fN(m.size);
+  const th=(kk,l,r)=>`<th class="sortable ${r?'r':''}" data-k="${kk}">${l}${S.obSort.k===kk?`<span class="arr">${S.obSort.dir<0?'▼':'▲'}</span>`:''}</th>`;
+  document.querySelector('#obTable thead').innerHTML=`<tr>${th('ob','Orden Base')}<th>Cliente</th>${th('mov','Mov.',true)}<th>Manifiesto</th><th>Envíos de venta</th><th>Contenedor</th>${th('periodo','Venta del periodo',true)}${th('total','Venta TOTAL OB',true)}<th class="r">% periodo</th>${th('fuera','Fuera del filtro',true)}${th('ajusteSam','Ajuste Samaritima',true)}${th('totalConSam','A facturar + Samar.',true)}${th('utilTot','Utilidad total',true)}<th class="r">Margen</th><th></th></tr>`;
+  document.querySelector('#obTable tbody').innerHTML=data.map(d=>{const pctP=d.total?d.periodo/d.total*100:0,mg=d.total?d.utilTot/d.total:0;
+    return `<tr>
+      <td class="mono" title="${esc(d.ob)}">${esc(d.ob)}</td>
+      <td title="${esc(d.cli)}">${esc(d.cli||'—')}</td>
+      <td class="r num">${d.mov}${d.movTot>d.mov?` <span style="color:var(--ink-3)">/ ${d.movTot}</span>`:''}</td>
+      <td class="mono" style="font-size:11.5px" title="${esc(d.manifiestos)}">${esc(d.manifiestos||'—')}</td>
+      <td class="mono" style="font-size:11.5px" title="${esc(d.enviosVenta)}">${esc(d.enviosVenta||'—')}</td>
+      <td class="mono" style="font-size:11.5px" title="${esc(d.contenedores)}">${esc(d.contenedores||'—')}</td>
+      <td class="r num">${f$(d.periodo)}</td>
+      <td class="r num" style="font-weight:700">${f$(d.total)}</td>
+      <td class="r"><div class="miniwrap"><div class="mini"><i style="width:${pctP.toFixed(0)}%"></i></div><span class="num" style="font-size:11px;color:var(--ink-2)">${pctP.toFixed(0)}%</span></div></td>
+      <td class="r num ${d.fuera>0.5?'neg':''}">${d.fuera>0.5?f$(d.fuera):'—'}</td>
+      <td class="r num">${d.ajusteSam>0?`<span class="pill pill-warn" title="${d.samMovs} manifiesto(s) por Samaritima">+${f$(d.ajusteSam)}</span>`:'—'}</td>
+      <td class="r num" style="font-weight:600">${f$(d.ajusteSam>0?d.totalConSam:d.total)}</td>
+      <td class="r num ${d.utilTot<0?'neg':'pos'}">${f$(d.utilTot)}</td>
+      <td class="r num">${fPct(mg)}</td>
+      <td>${d.multi?'<span class="pill pill-warn">otros meses</span>':''}</td></tr>`;}).join('')||'<tr><td colspan="15" style="text-align:center;color:var(--ink-3);padding:30px">No hay OB de COMEX con los filtros actuales.</td></tr>';
+  const conSam=data.filter(d=>d.ajusteSam>0).length, ajTot=data.reduce((s,d)=>s+d.ajusteSam,0);
+  $('obFoot').innerHTML=`<span><b>${fN(data.length)}</b> órdenes base · venta total real <b>${f$(data.reduce((s,d)=>s+d.total,0))}</b>${ajTot>0?` · ajuste Samaritima <b>+${f$(ajTot)}</b> en ${conSam} OB`:''}</span><span class="hint">todas las órdenes base</span>`;
+  makeResizable($('obTable'),OB_COLW);
+  document.querySelectorAll('#obTable thead th.sortable').forEach(th=>th.onclick=()=>{const kk=th.dataset.k;S.obSort.dir=(S.obSort.k===kk)?-S.obSort.dir:-1;S.obSort.k=kk;render();});
+}
+
+/* ---------------- tabla detalle ---------------- */
+const DET_COLS=[['Fuente','Origen',0],['Segmento','Segmento',0],['Mes','Mes',0],['OB','OB',0],['Manifiesto','Manifiesto',0],['Contenedor','Contenedor',0],['ClienteNombre','Cliente',0],['ProvNombre','Proveedor',0],['Propiedad','Prop.',0],['Tipologia','Tipología',0],['AFacturar','A facturar',1],['APagar','A pagar',1],['Utilidad','Utilidad',1],['Margen','Margen',1],['VentaTotalOB','Total OB',1],['_EnOtros','En otros meses',1]];
+function renderDetail(rows){
+  $('detBadge').textContent=fN(rows.length);
+  // Calcular suma de AFacturar por OB dentro del filtro actual (todas las filas, no solo la página)
+  const obSumFilt={};
+  for(const r of rows){if(r.OB)obSumFilt[r.OB]=(obSumFilt[r.OB]||0)+(r.AFacturar||0);}
+  const k=S.detSort.k,dir=S.detSort.dir;
+  const sorted=[...rows].sort((a,b)=>{let va=a[k],vb=b[k];if(va==null)va='';if(vb==null)vb='';if(typeof va==='number'||typeof vb==='number')return dir*((+va||0)-(+vb||0));return dir*String(va).localeCompare(String(vb));});
+  const per=100,pages=Math.max(1,Math.ceil(sorted.length/per));if(S.page>pages)S.page=pages;
+  const slice=sorted.slice((S.page-1)*per,S.page*per);
+  document.querySelector('#detTable thead').innerHTML='<tr>'+DET_COLS.map(([kk,l,r])=>`<th class="sortable ${r?'r':''}" data-k="${kk}">${l}${S.detSort.k===kk?`<span class="arr">${dir<0?'▼':'▲'}</span>`:''}</th>`).join('')+'</tr>';
+  document.querySelector('#detTable tbody').innerHTML=slice.map(r=>{
+    const totalOB=r.VentaTotalOB||0;
+    const enFiltro=obSumFilt[r.OB]||0;
+    const enOtros=Math.max(0,totalOB-enFiltro);
+    const multiMes=enOtros>0;
+    return `<tr class="${multiMes?'row-multimes':''}">
+    <td><span class="tag-seg" style="background:${segColor(r.Segmento)}">${esc(r.Fuente)}</span></td>
+    <td>${esc(r.Segmento)}</td><td class="num">${esc(r.Mes)}</td>
+    <td class="mono" title="${esc(r.OB)}">${esc(r.OB||'—')}</td>
+    <td class="mono">${esc(r.Manifiesto||'—')}</td>
+    <td class="mono">${esc(r.Contenedor||'—')}</td>
+    <td title="${esc(r.ClienteNombre)}">${esc(r.ClienteNombre||'—')}</td>
+    <td title="${esc(r.ProvNombre)}">${esc(r.ProvNombre||'—')}</td>
+    <td><span class="pill ${r.Propiedad==='PROPIO'?'pill-propio':'pill-tercero'}">${r.Propiedad==='PROPIO'?'Propio':'Tercero'}</span></td>
+    <td>${esc(r.Tipologia)}</td>
+    <td class="r num">${f$(r.AFacturar)}</td><td class="r num">${f$(r.APagar)}</td>
+    <td class="r num ${r.Utilidad<0?'neg':'pos'}">${f$(r.Utilidad)}</td>
+    <td class="r num">${fPct(r.Margen)}</td>
+    <td class="r num ob-total">${totalOB?f$(totalOB):'—'}</td>
+    <td class="r num ${multiMes?'otros-meses':''}">${multiMes?f$(enOtros):'—'}</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="16" style="text-align:center;color:var(--ink-3);padding:30px">Sin movimientos.</td></tr>';
+  $('detFoot').innerHTML=`<span>${fN(rows.length)} movimientos</span><div class="pager"><button class="pgbtn" id="pgPrev" ${S.page<=1?'disabled':''}>‹ Anterior</button><span class="num">Página ${S.page} de ${pages}</span><button class="pgbtn" id="pgNext" ${S.page>=pages?'disabled':''}>Siguiente ›</button></div>`;
+  $('pgPrev')&&($('pgPrev').onclick=()=>{S.page--;renderDetail(S.rows.filter(passes));});
+  $('pgNext')&&($('pgNext').onclick=()=>{S.page++;renderDetail(S.rows.filter(passes));});
+  makeResizable($('detTable'),DET_COLW);
+  document.querySelectorAll('#detTable thead th.sortable').forEach(th=>th.onclick=()=>{const kk=th.dataset.k;S.detSort.dir=(S.detSort.k===kk)?-S.detSort.dir:-1;S.detSort.k=kk;renderDetail(S.rows.filter(passes));});
+}
+
+/* ---------------- reglas ---------------- */
+function renderRules(){
+  const segs=uniqSorted('Segmento'),counts={};for(const r of S.rows)counts[r.Segmento]=(counts[r.Segmento]||0)+1;
+  $('rulesBox').innerHTML=`
+  <h4>Cómo se clasifica cada viaje</h4>
+  <p><b>Propio vs Tercero:</b> es <b>Propio</b> (flota propia) cuando el NIT del proveedor/afiliado es <code>900503325-2</code> (TRACTOCAR LOGISTICS SAS). Cualquier otro NIT es <b>Tercero</b>.</p>
+  <p><b>Segmento</b> (de la cuenta contable <code>CIUDAD-CATEGORÍA-N°</code>, o de la operación en COMEX): <code>-AC-</code> → Alto Cubicaje · <code>CEDI-</code> → Cedis · <code>-TN-</code> → Nacional · COMEX → IMPO/EXPO (unidad de negocio <code>TL</code>).</p>
+  <h4>Métricas</h4>
+  <p>• <b>A facturar</b> = venta al cliente · <b>A pagar</b> = lo que se paga al afiliado · <b>Utilidad</b> = A facturar − A pagar · <b>Margen</b> = Utilidad ÷ A facturar.<br>Cada fila es un movimiento; sumar filas da el total correcto (el valor ya viene repartido entre los movimientos del viaje/OB).</p>
+  <h4>OB · venta del periodo vs. total real</h4>
+  <p>Una <b>OB (Orden Base)</b> de COMEX tiene varios movimientos (retiro de puerto, movimiento a planta, devolución de vacío) en fechas distintas. <b>Venta TOTAL OB</b> suma todos sus movimientos sin importar el filtro: el "a facturar total real" aunque filtres un solo mes.</p>
+  <h4>Limpieza aplicada por el código</h4>
+  <p>Se excluyen registros con bandera de borrado en COMEX; los montos vacíos se tratan como 0; las fechas y los NIT se normalizan. La unión completa con todas las columnas queda en <code>TRACTOCAR_UNIFICADO.xlsx</code>.</p>
+  <h4>Segmentos detectados</h4>
+  <p>${segs.map(s=>`<span class="tag-seg" style="background:${segColor(s)};margin:2px 4px 2px 0;display:inline-block">${esc(s)} · ${fN(counts[s])}</span>`).join('')}</p>`;
+}
+
+/* ---------------- exportar CSV (vista filtrada) ---------------- */
+function exportCSV(){
+  const rows=S.rows.filter(passes);
+  const cols=[['Fuente','Fuente'],['Segmento','Segmento'],['Mes','Mes'],['FechaISO','Fecha'],['OB','OB'],['Manifiesto','Manifiesto'],['ClienteNIT','ClienteNIT'],['ClienteNombre','Cliente'],['ProvNIT','ProveedorNIT'],['ProvNombre','Proveedor'],['Propiedad','Propiedad'],['Tipologia','Tipologia'],['Placa','Placa'],['Origen','Origen'],['Destino','Destino'],['AFacturar','AFacturar'],['APagar','APagar'],['Utilidad','Utilidad'],['Margen','Margen']];
+  const q=v=>{v=v==null?'':String(v);return /[";\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  const out=[cols.map(c=>c[1]).join(';')].concat(rows.map(r=>cols.map(c=>q(r[c[0]])).join(';'))).join('\r\n');
+  const blob=new Blob(['\ufeff'+out],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='tractocar_vista_filtrada.csv';document.body.appendChild(a);a.click();a.remove();
+}
+
+/* ---------------- exportar CSV COMEX OB (vista filtrada + agregada) -------------- */
+function exportOBCSV(){
+  const rows=S.rows.filter(passes);
+  const comexF=rows.filter(r=>r.EsComex&&r.OB!=null);
+  const m=new Map();
+  for(const r of comexF){let o=m.get(r.OB);if(!o){o={ob:r.OB,cli:r.ClienteNombre,tip:r.Tipologia,periodo:0,pagP:0,mov:0};m.set(r.OB,o);}o.periodo+=r.AFacturar;o.pagP+=r.APagar;o.mov++;}
+  let data=[...m.values()].map(o=>{
+    const t=S.ob.get(o.ob)||{fact:0,pag:0,mov:0,meses:0,enviosVenta:'',samMovs:0,ajusteSam:0,manifiestos:'',contenedores:''};
+    const fuera=t.fact-o.periodo;
+    return{...o,total:t.fact,utilTot:t.fact-t.pag,movTot:t.mov,meses:t.meses,
+      enviosVenta:t.enviosVenta||'',manifiestos:t.manifiestos||'',contenedores:t.contenedores||'',
+      samMovs:t.samMovs||0,ajusteSam:t.ajusteSam||0,totalConSam:t.fact+(t.ajusteSam||0),fuera};
+  });
+  if(S.obMulti)data=data.filter(d=>d.multi);
+  const k=S.obSort.k,dir=S.obSort.dir;
+  data.sort((a,b)=>{let va=a[k],vb=b[k];if(typeof va==='string')return dir*va.localeCompare(vb);return dir*((va||0)-(vb||0));});
+  const cols=[
+    ['ob','Orden Base'],['cli','Cliente'],['tip','Tipología'],
+    ['manifiestos','Manifiestos'],['enviosVenta','Envíos Venta'],['contenedores','Contenedores'],
+    ['mov','Mov. periodo'],['movTot','Mov. totales OB'],['meses','# Meses OB'],
+    ['periodo','Venta del periodo'],['total','Venta TOTAL OB'],['fuera','Fuera del filtro'],
+    ['ajusteSam','Ajuste Samaritima'],['totalConSam','A facturar + Samar.'],
+    ['pagP','A pagar periodo'],['utilTot','Utilidad total OB'],
+  ];
+  const q=v=>{v=v==null?'':String(v);return /[";\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  const out=[cols.map(c=>c[1]).join(';')].concat(data.map(r=>cols.map(c=>q(r[c[0]])).join(';'))).join('\r\n');
+  const blob=new Blob(['﻿'+out],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='comex_ob_filtrado.csv';document.body.appendChild(a);a.click();a.remove();
+}
+
+/* ===================== DITAR panel ===================== */
+const SUBOP_COLOR={'Importación':'pill-impo','Exportación':'pill-expo','Traslado vacíos':'pill-traslado','Carga suelta':'pill-suelta','RoundTrip':'pill-roundtrip'};
+const SUBOP_BAR={'Importación':'#0C4A5A','Exportación':'#C2740B','Traslado vacíos':'#5B44A6','Carga suelta':'#1C8A57','RoundTrip':'#BE4326'};
+const SD={subOps:new Set(),rt:false,al:false,pf:false,pp:false,contQ:'',envioQ:'',sort:{k:'AFacturar',dir:-1},page:1};
+const fFecha=v=>{if(!v||v==='<NA>'||v==='nan'||v==='None')return '—';const p=String(v).split('-');return p.length===3?`${p[2]}-${p[1]}-${p[0]}`:v;};
+
+function pillSubOp(v){const cls=SUBOP_COLOR[v]||'pill-subop';return v?`<span class="pill-subop ${cls}">${esc(v)}</span>`:'<span style="color:var(--ink-3)">—</span>';}
+function ditarRows(){
+  const base=S.rows.filter(r=>r.ClienteNombre&&String(r.ClienteNombre).toUpperCase().includes('DITAR'));
+  const gf=S.rows.filter(passes);
+  const gfSet=new Set(gf.map((_,i)=>i));
+  const filtered=S.rows.reduce((acc,r,i)=>{if(r.ClienteNombre&&String(r.ClienteNombre).toUpperCase().includes('DITAR')&&passes(r))acc.push(r);return acc;},[]);
+  return filtered;
+}
+function applyDitarFilters(rows){
+  let r=rows;
+  if(SD.subOps.size)r=r.filter(x=>SD.subOps.has(x.SubOperacion||''));
+  if(SD.rt)r=r.filter(x=>x.EsRoundTrip);
+  if(SD.al)r=r.filter(x=>x.AlertaValorDitar);
+  if(SD.pf)r=r.filter(x=>x.PendienteFacturar);
+  if(SD.pp)r=r.filter(x=>x.PendientePagar);
+  if(SD.contQ){const q=SD.contQ.toUpperCase();r=r.filter(x=>(x.Contenedor||'').toUpperCase().includes(q));}
+  if(SD.envioQ){const q=SD.envioQ.toUpperCase();r=r.filter(x=>(x.EnvioVenta||'').toUpperCase().includes(q));}
+  return r;
+}
+function renderDitar(){
+  const base=ditarRows();
+  const rows=applyDitarFilters(base);
+  $('ditarBadge').textContent=fN(base.length);
+  renderDitarKpis(base,rows);
+  renderDitarSubOpChips(base);
+  renderDitarRT(base);
+  renderDitarSubBox(base);
+  renderDitarAlertas(base);
+  renderDitarPendientes(base);
+  renderDitarTable(rows);
+}
+const SRT={k:'totAF',dir:-1};
+const RT_COLS=[
+  {k:'cont',   l:'Contenedor',      r:false, val:g=>g.cont},
+  {k:'fechas', l:'Fechas',          r:false, val:g=>[...g.fechas].sort().map(fFecha).join(', ')},
+  {k:'meses',  l:'Meses',           r:false, val:g=>[...g.meses].sort().join(', ')},
+  {k:'nobs',   l:'OBs',             r:true,  val:g=>[...g.obs].length},
+  {k:'impoAF', l:'A fac. IMPO',     r:true,  val:g=>g.impoAF},
+  {k:'expoAF', l:'A fac. EXPO',     r:true,  val:g=>g.expoAF},
+  {k:'totAF',  l:'Total A facturar',r:true,  val:g=>g.impoAF+g.expoAF},
+  {k:'totAP',  l:'Total A pagar',   r:true,  val:g=>g.impoAP+g.expoAP},
+  {k:'ut',     l:'Utilidad',        r:true,  val:g=>g.impoAF+g.expoAF-g.impoAP-g.expoAP},
+  {k:'mg',     l:'Margen',          r:true,  val:g=>{const af=g.impoAF+g.expoAF,ut=af-g.impoAP-g.expoAP;return af?ut/af:0;}},
+  {k:'envios', l:'Envío venta',     r:false, val:g=>[...g.envios].join(', ')||'—'},
+  {k:'placas', l:'Placa',           r:false, val:g=>[...g.placas].join(', ')||'—'},
+  {k:'seg',    l:'RT en OB',        r:false, val:g=>g.rtOB?'Sí':'No'},
+  {k:'rtcont', l:'RT contenedor',   r:false, val:g=>g.rtCont?'Sí':'No'},
+  {k:'notas',  l:'Notas web app',   r:false, val:g=>[...g.notas].join(' | ')||'—'},
+];
+let _rtData=[];
+function renderDitarRT(base){
+  // Contenedores que tienen al menos un movimiento RT en el mes filtrado
+  const contsFiltrados=new Set(base.filter(r=>(r.EsRoundTrip||r.RTContenedor)&&r.Contenedor).map(r=>r.Contenedor));
+  const hayFiltroMes=S.f.meses.size>0;
+  // Para esos contenedores, traer TODOS los meses (para ver IMPO+EXPO aunque sean de meses distintos)
+  const allDitar=S.rows.filter(r=>r.ClienteNombre&&String(r.ClienteNombre).toUpperCase().includes('DITAR')&&(r.EsRoundTrip||r.RTContenedor)&&r.Contenedor&&(!hayFiltroMes||contsFiltrados.has(r.Contenedor))&&(!SD.contQ||(r.Contenedor||'').toUpperCase().includes(SD.contQ.toUpperCase())));
+  const byC={};
+  for(const r of allDitar){
+    const c=r.Contenedor;
+    if(!byC[c])byC[c]={cont:c,impoAF:0,impoAP:0,expoAF:0,expoAP:0,meses:new Set(),fechas:new Set(),obs:new Set(),envios:new Set(),placas:new Set(),notas:new Set(),rtOB:false,rtCont:false};
+    const g=byC[c];
+    if(r.Fuente==='IMPO'){g.impoAF+=r.AFacturar||0;g.impoAP+=r.APagar||0;}
+    else{g.expoAF+=r.AFacturar||0;g.expoAP+=r.APagar||0;}
+    if(r.Mes)g.meses.add(r.Mes);
+    if(r.FechaISO&&r.FechaISO!=='<NA>'&&r.FechaISO!=='nan'&&r.FechaISO!=='None')g.fechas.add(r.FechaISO);
+    if(r.OB)g.obs.add(r.OB);
+    if(r.EnvioVenta&&r.EnvioVenta!=='<NA>'&&r.EnvioVenta!=='nan')g.envios.add(r.EnvioVenta);
+    if(r.Placa&&r.Placa!=='<NA>'&&r.Placa!=='nan')g.placas.add(r.Placa);
+    if(r.NotasWebApp&&r.NotasWebApp!=='<NA>'&&r.NotasWebApp!=='nan')g.notas.add(r.NotasWebApp);
+    if(r.EsRoundTrip)g.rtOB=true;
+    if(r.RTContenedor)g.rtCont=true;
+  }
+  _rtData=Object.values(byC);
+  const mesLabel=hayFiltroMes?[...S.f.meses].sort().join(', ')+' (y otros meses compartidos)':'todos los meses';
+  $('ditarRTHint').textContent=`${_rtData.length} contenedores · ${mesLabel}`;
+  renderDitarRTTable();
+}
+function renderDitarRTTable(){
+  // KPIs
+  const perdida=_rtData.filter(g=>g.impoAF+g.expoAF-g.impoAP-g.expoAP<0).length;
+  const altoAF=_rtData.filter(g=>g.impoAF+g.expoAF>2500000).length;
+  const altoAP=_rtData.filter(g=>g.impoAP+g.expoAP>2500000).length;
+  $('ditarRTKpis').innerHTML=`
+    <span style="font-size:11px;padding:4px 10px;border-radius:20px;font-weight:700;background:var(--neg-soft);color:var(--neg)">📉 A pérdida: ${fN(perdida)}</span>
+    <span style="font-size:11px;padding:4px 10px;border-radius:20px;font-weight:700;background:var(--amber-soft);color:var(--amber)">⚠ A fac &gt;$2.5M: ${fN(altoAF)}</span>
+    <span style="font-size:11px;padding:4px 10px;border-radius:20px;font-weight:700;background:var(--amber-soft);color:var(--amber)">⚠ A pag &gt;$2.5M: ${fN(altoAP)}</span>`;
+  const col=RT_COLS.find(c=>c.k===SRT.k)||RT_COLS[5];
+  const sorted=[..._rtData].sort((a,b)=>{
+    const va=col.val(a),vb=col.val(b);
+    return SRT.dir*(typeof va==='number'?va-vb:String(va).localeCompare(String(vb)));
+  });
+  const thStyle=(c)=>`padding:8px 12px;text-align:${c.r?'right':'left'};font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:2px solid var(--line);position:sticky;top:0;background:var(--surface-2);cursor:pointer;user-select:none;white-space:nowrap`;
+  $('ditarRTThead').innerHTML='<tr>'+RT_COLS.map(c=>`<th style="${thStyle(c)}" data-rtk="${c.k}">${c.l}${SRT.k===c.k?`<span class="arr">${SRT.dir<0?'▼':'▲'}</span>`:''}</th>`).join('')+'</tr>';
+  $('ditarRTThead').querySelectorAll('th').forEach(th=>th.onclick=()=>{const k=th.dataset.rtk;SRT.dir=(SRT.k===k)?-SRT.dir:-1;SRT.k=k;renderDitarRTTable();});
+  $('ditarRTBody').innerHTML=sorted.map(g=>{
+    const totAF=g.impoAF+g.expoAF,totAP=g.impoAP+g.expoAP,ut=totAF-totAP,mg=totAF?ut/totAF:0;
+    return `<tr style="border-bottom:1px solid var(--line-2)">
+      <td style="padding:8px 12px;font-family:monospace;font-size:12px;font-weight:700">${esc(g.cont)}</td>
+      <td style="padding:8px 12px;font-size:11px;color:var(--ink-2);white-space:nowrap">${[...g.fechas].sort().map(fFecha).join(', ')||'—'}</td>
+      <td style="padding:8px 12px;font-size:11px;color:var(--ink-2)">${[...g.meses].sort().join(', ')}</td>
+      <td style="padding:8px 12px;text-align:right;font-size:11px;color:var(--ink-3)" title="${[...g.obs].join('\n')}">${[...g.obs].length}</td>
+      <td style="padding:8px 12px;text-align:right"><span class="pill pill-impo" style="font-size:10px">IMPO</span> ${f$(g.impoAF)}</td>
+      <td style="padding:8px 12px;text-align:right"><span class="pill pill-expo" style="font-size:10px">EXPO</span> ${f$(g.expoAF)}</td>
+      <td style="padding:8px 12px;text-align:right;font-weight:700">${f$(totAF)}</td>
+      <td style="padding:8px 12px;text-align:right;font-weight:700">${f$(totAP)}</td>
+      <td style="padding:8px 12px;text-align:right;font-weight:700" class="${ut<0?'neg':'pos'}">${f$(ut)}</td>
+      <td style="padding:8px 12px;text-align:right" class="${mg<0?'neg':'pos'}">${fPct(mg)}</td>
+      <td style="padding:8px 12px;font-size:11px;font-family:monospace">${esc([...g.envios].join(', ')||'—')}</td>
+      <td style="padding:8px 12px;font-size:11px;font-family:monospace">${esc([...g.placas].join(', ')||'—')}</td>
+      <td style="padding:8px 12px;text-align:center">${g.rtOB?'<span style="background:#d4edda;color:#155724;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">↔ Sí</span>':'<span style="color:var(--ink-3);font-size:11px">No</span>'}</td>
+      <td style="padding:8px 12px;text-align:center">${g.rtCont?'<span style="background:#cce5ff;color:#004085;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">✓ Sí</span>':'<span style="color:var(--ink-3);font-size:11px">No</span>'}</td>
+      <td style="padding:8px 12px;font-size:11px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc([...g.notas].join(' | '))}">${esc([...g.notas].join(' | ')||'—')}</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="15" style="padding:20px;text-align:center;color:var(--ink-3)">Sin RoundTrip detectados.</td></tr>';
+}
+function renderDitarKpis(base,rows){
+  const af=sum(rows,'AFacturar'),ap=sum(rows,'APagar'),ut=af-ap;
+  const alertas=base.filter(r=>r.AlertaValorDitar).length;
+  const pendF=base.filter(r=>r.PendienteFacturar).length;
+  const pendP=base.filter(r=>r.PendientePagar).length;
+  const rtsOB=new Set(base.filter(r=>r.EsRoundTrip&&r.Contenedor).map(r=>r.Contenedor)).size;
+  const rtsContenedor=new Set(base.filter(r=>r.RTContenedor&&r.Contenedor).map(r=>r.Contenedor)).size;
+  const rtsSoloContenedor=new Set(base.filter(r=>r.RTContenedor&&!r.EsRoundTrip&&r.Contenedor).map(r=>r.Contenedor)).size;
+  $('ditarKpis').innerHTML=`
+    <div class="kpi"><div class="kl">A facturar DITAR</div><div class="kv num">${f$c(af)}</div><div class="ks">${f$(af)}</div></div>
+    <div class="kpi"><div class="kl">A pagar DITAR</div><div class="kv num">${f$c(ap)}</div><div class="ks">${f$(ap)}</div></div>
+    <div class="kpi k-pos"><div class="kl">Utilidad DITAR</div><div class="kv num">${f$c(ut)}</div><div class="ks">margen ${fPct(af?ut/af:0)}</div></div>
+    <div class="kpi kpi-alerta"><div class="kl">⚠ Alertas valor &gt;$2.5M</div><div class="kv num" style="color:var(--neg)">${fN(alertas)}</div><div class="ks">filas fuera de rango</div></div>
+    <div class="kpi kpi-pendiente"><div class="kl">↔ RT en OB / RT contenedor</div><div class="kv num" style="color:#1a73e8">${fN(rtsOB)} / ${fN(rtsContenedor)}</div><div class="ks">${rtsSoloContenedor>0?`<b style="color:#856404">${fN(rtsSoloContenedor)} cont. solo detectados</b>`:'OB y contenedor coinciden ✓'}</div></div>
+    <div class="kpi kpi-pendiente"><div class="kl">📋 Pend. facturar / pagar</div><div class="kv num" style="color:var(--amber)">${fN(pendF)} / ${fN(pendP)}</div><div class="ks">sin flete pendiente</div></div>`;
+}
+function renderDitarSubOpChips(base){
+  const ops=[...new Set(base.map(r=>r.SubOperacion||'').filter(Boolean))].sort();
+  $('ditarSubChips').innerHTML=ops.map(o=>`<span class="chip${SD.subOps.has(o)?' on':''}" data-sub="${esc(o)}">${esc(o)}</span>`).join('');
+  $('ditarSubChips').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{const v=c.dataset.sub;if(SD.subOps.has(v))SD.subOps.delete(v);else SD.subOps.add(v);renderDitar();});
+}
+function renderDitarSubBox(base){
+  const m=new Map();
+  for(const r of base){const k=r.SubOperacion||'(sin sub-op.)';let o=m.get(k);if(!o){o={af:0,ap:0,n:0};m.set(k,o);}o.af+=r.AFacturar;o.ap+=r.APagar;o.n++;}
+  const arr=[...m.entries()].sort((a,b)=>b[1].af-a[1].af);
+  const maxAf=Math.max(1,...arr.map(x=>x[1].af));
+  $('ditarSubBox').innerHTML=arr.length?arr.map(([k,o])=>{
+    const color=SUBOP_BAR[k]||'#647B82';
+    const ut=o.af-o.ap,mg=o.af?ut/o.af:0;
+    return `<div class="bar-row"><div class="bar-name" title="${esc(k)}"><span class="dot" style="background:${color}"></span>${esc(k)}</div><div class="bar-track"><div class="bar-fill" style="width:${(o.af/maxAf*100).toFixed(1)}%;background:${color}"></div></div><div class="bar-val">${f$c(o.af)}<small>${fN(o.n)} mov. · margen ${fPct(mg)}</small></div></div>`;
+  }).join(''):'<div style="color:var(--ink-3);padding:20px;text-align:center">Sin datos DITAR con los filtros actuales.</div>';
+}
+function renderDitarAlertas(base){
+  const als=base.filter(r=>r.AlertaValorDitar).sort((a,b)=>b.AFacturar-a.AFacturar);
+  $('ditarAlBadge').textContent=fN(als.length);
+  $('ditarAlBody').innerHTML=als.slice(0,50).map(r=>`<tr class="row-alerta">
+    <td class="mono" style="padding:8px 12px;border-bottom:1px solid var(--line-2)">${esc(r.Contenedor||r.Manifiesto||'—')}</td>
+    <td style="padding:8px 12px;border-bottom:1px solid var(--line-2)">${pillSubOp(r.SubOperacion)}</td>
+    <td class="r num" style="padding:8px 12px;border-bottom:1px solid var(--line-2);color:var(--neg);font-weight:700">${f$(r.AFacturar)}</td>
+    <td class="r num" style="padding:8px 12px;border-bottom:1px solid var(--line-2);color:var(--neg);font-weight:700">${f$(r.APagar)}</td></tr>`).join('')||'<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--ink-3)">Sin alertas con los filtros actuales.</td></tr>';
+}
+function renderDitarPendientes(base){
+  const pend=base.filter(r=>r.PendienteFacturar||r.PendientePagar).sort((a,b)=>b.AFacturar-a.AFacturar);
+  $('ditarPendBadge').textContent=fN(pend.length);
+  $('ditarPendBody').innerHTML=pend.slice(0,50).map(r=>`<tr>
+    <td class="mono" style="padding:8px 12px;border-bottom:1px solid var(--line-2)">${esc(r.Contenedor||r.Manifiesto||'—')}</td>
+    <td style="padding:8px 12px;border-bottom:1px solid var(--line-2)">${pillSubOp(r.SubOperacion)}</td>
+    <td style="padding:8px 12px;border-bottom:1px solid var(--line-2);text-align:center">${r.PendienteFacturar?'<span class="pill pill-pendiente">Pendiente</span>':'<span class="pill pill-ok">OK</span>'}</td>
+    <td style="padding:8px 12px;border-bottom:1px solid var(--line-2);text-align:center">${r.PendientePagar?'<span class="pill pill-pendiente">Pendiente</span>':'<span class="pill pill-ok">OK</span>'}</td></tr>`).join('')||'<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--ink-3)">Sin pendientes. ¡Todo al día!</td></tr>';
+}
+const DITAR_COLS=[['FechaISO','Fecha',0],['Mes','Mes',0],['OB','OB',0],['Manifiesto','Envío compra',0],['EnvioVenta','Envío venta',0],['Contenedor','Contenedor',0],['Placa','Placa',0],['SubOperacion','Sub-operación',0],['EsRoundTrip','RT (OB)',0],['RTContenedor','RT contenedor',0],['ClienteNombre','Cliente',0],['ProvNombre','Proveedor',0],['AFacturar','A facturar',1],['APagar','A pagar',1],['Utilidad','Utilidad',1],['Margen','Margen',1],['VentaTotalOB','Total OB',1],['_EnOtros','En otros meses',1],['AlertaValorDitar','Alerta',0],['PendienteFacturar','Pend. fac.',0],['PendientePagar','Pend. pag.',0],['NotasWebApp','Notas web',0]];
+const DITAR_COLW=[100,80,160,110,130,120,80,44,180,180,120,120,110,80,128,128,66,76,76,76,200];
+const DITAR_CELL={
+  FechaISO:  (r)=>`<td class="mono" style="font-size:11px;white-space:nowrap">${fFecha(r.FechaISO)}</td>`,
+  Mes:       (r)=>`<td class="num">${esc(r.Mes||'—')}</td>`,
+  OB:        (r)=>`<td class="mono" style="font-size:11.5px" title="${esc(r.OB)}">${esc(r.OB||'—')}</td>`,
+  Manifiesto:(r)=>`<td class="mono">${esc(r.Manifiesto||'—')}</td>`,
+  EnvioVenta:(r)=>`<td class="mono" style="font-size:11px">${esc(r.EnvioVenta||'—')}</td>`,
+  Contenedor:(r)=>`<td class="mono">${esc(r.Contenedor||'—')}</td>`,
+  Placa:     (r)=>`<td style="font-size:11px">${esc(r.Placa&&r.Placa!=='<NA>'&&r.Placa!=='nan'?r.Placa:'—')}</td>`,
+  SubOperacion:(r)=>`<td>${pillSubOp(r.SubOperacion)}</td>`,
+  EsRoundTrip:(r)=>`<td style="text-align:center">${r.EsRoundTrip?'<span class="pill pill-roundtrip" title="RT: OB contiene \'RT\'">↔ RT</span>':''}</td>`,
+  RTContenedor:(r)=>`<td style="text-align:center">${r.RTContenedor&&!r.EsRoundTrip?'<span style="background:#fff3cd;color:#856404;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700">⚠ Cont.</span>':r.RTContenedor?'<span style="background:#d4edda;color:#155724;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700">✓ Cont.</span>':''}</td>`,
+  ClienteNombre:(r)=>`<td title="${esc(r.ClienteNombre)}">${esc(r.ClienteNombre||'—')}</td>`,
+  ProvNombre:(r)=>`<td title="${esc(r.ProvNombre)}">${esc(r.ProvNombre||'—')}</td>`,
+  AFacturar: (r)=>`<td class="r num" style="${r.AFacturar>2500000?'color:var(--neg);font-weight:700':''}">${f$(r.AFacturar)}</td>`,
+  APagar:    (r)=>`<td class="r num" style="${r.APagar>2500000?'color:var(--neg);font-weight:700':''}">${f$(r.APagar)}</td>`,
+  Utilidad:  (r)=>`<td class="r num ${r.Utilidad<0?'neg':'pos'}">${f$(r.Utilidad)}</td>`,
+  Margen:    (r)=>`<td class="r num">${fPct(r.Margen)}</td>`,
+  VentaTotalOB:(r,c)=>`<td class="r num ob-total">${c.totalOB?f$(c.totalOB):'—'}</td>`,
+  _EnOtros:  (r,c)=>`<td class="r num ${c.multiMes?'otros-meses':''}">${c.multiMes?f$(c.enOtros):'—'}</td>`,
+  AlertaValorDitar:(r)=>`<td style="text-align:center">${r.AlertaValorDitar?'<span class="alert-icon">⚠️</span>':''}</td>`,
+  PendienteFacturar:(r)=>`<td style="text-align:center">${r.PendienteFacturar?'<span class="pill pill-pendiente">Pend.</span>':'<span class="pill pill-ok">OK</span>'}</td>`,
+  PendientePagar:(r)=>`<td style="text-align:center">${r.PendientePagar?'<span class="pill pill-pendiente">Pend.</span>':'<span class="pill pill-ok">OK</span>'}</td>`,
+  NotasWebApp:(r)=>`<td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--ink-2)" title="${esc(r.NotasWebApp||'')}">${esc(r.NotasWebApp||'')}</td>`,
+};
+// shared column drag-reorder helper
+function _dragCols(thead,colOrder,rerender){
+  let src=-1;
+  const ths=[...thead.querySelectorAll('th')];
+  ths.forEach((th,vi)=>{
+    th.draggable=true;
+    th.style.cursor='grab';
+    th.addEventListener('dragstart',e=>{src=vi;e.dataTransfer.effectAllowed='move';setTimeout(()=>th.style.opacity='.45',0);});
+    th.addEventListener('dragend',()=>{th.style.opacity='';ths.forEach(t=>{t.style.borderLeft='';t.style.opacity='';});});
+    th.addEventListener('dragover',e=>{e.preventDefault();ths.forEach(t=>t.style.borderLeft='');th.style.borderLeft='2px solid var(--marine)';});
+    th.addEventListener('dragleave',()=>th.style.borderLeft='');
+    th.addEventListener('drop',e=>{
+      e.preventDefault();ths.forEach(t=>t.style.borderLeft='');
+      if(src>=0&&src!==vi){const mv=colOrder.splice(src,1)[0];colOrder.splice(vi,0,mv);rerender();}
+      src=-1;
+    });
+  });
+}
+function renderDitarTable(rows){
+  if(!SD.colOrder)SD.colOrder=DITAR_COLS.map((_,i)=>i);
+  const ord=SD.colOrder;
+  const ordCols=ord.map(i=>DITAR_COLS[i]);
+  const ordWidths=ord.map(i=>DITAR_COLW[i]);
+  const k=SD.sort.k,dir=SD.sort.dir;
+  const obSumFilt={};
+  for(const r of rows){if(r.OB)obSumFilt[r.OB]=(obSumFilt[r.OB]||0)+(r.AFacturar||0);}
+  const sorted=[...rows].sort((a,b)=>{let va=a[k],vb=b[k];if(va==null)va='';if(vb==null)vb='';if(typeof va==='boolean')return dir*((va?1:0)-(vb?1:0));if(typeof va==='number'||typeof vb==='number')return dir*((+va||0)-(+vb||0));return dir*String(va).localeCompare(String(vb));});
+  const per=100,pages=Math.max(1,Math.ceil(sorted.length/per));if(SD.page>pages)SD.page=pages;
+  const slice=sorted.slice((SD.page-1)*per,SD.page*per);
+  const thead=document.querySelector('#ditarTable thead');
+  thead.innerHTML='<tr>'+ordCols.map(([kk,l,r])=>`<th class="sortable ${r?'r':''}" data-k="${kk}" title="Arrastra para reordenar · Click para ordenar">${l}${SD.sort.k===kk?`<span class="arr">${dir<0?'▼':'▲'}</span>`:''}</th>`).join('')+'</tr>';
+  document.querySelector('#ditarTable tbody').innerHTML=slice.map(r=>{
+    const totalOB=r.VentaTotalOB||0,enOtros=Math.max(0,totalOB-(obSumFilt[r.OB]||0)),multiMes=enOtros>0;
+    const ctx={totalOB,enOtros,multiMes};
+    const isAl=r.AlertaValorDitar,isRt=r.EsRoundTrip;
+    return `<tr class="${isAl?'row-alerta':isRt?'row-rt':multiMes?'row-multimes':''}">`+
+      ordCols.map(([kk])=>(DITAR_CELL[kk]||(()=>'<td>—</td>'))(r,ctx)).join('')+
+    '</tr>';
+  }).join('')||`<tr><td colspan="${ordCols.length}" style="text-align:center;color:var(--ink-3);padding:30px">Sin movimientos DITAR con los filtros actuales.</td></tr>`;
+  $('ditarFoot').innerHTML=`<span><b>${fN(rows.length)}</b> movimientos DITAR</span><div class="pager"><button class="pgbtn" id="ditarPrev" ${SD.page<=1?'disabled':''}>‹ Anterior</button><span class="num">Página ${SD.page} de ${pages}</span><button class="pgbtn" id="ditarNext" ${SD.page>=pages?'disabled':''}>Siguiente ›</button></div>`;
+  $('ditarPrev')&&($('ditarPrev').onclick=()=>{SD.page--;renderDitarTable(applyDitarFilters(ditarRows()));});
+  $('ditarNext')&&($('ditarNext').onclick=()=>{SD.page++;renderDitarTable(applyDitarFilters(ditarRows()));});
+  makeResizable($('ditarTable'),ordWidths);
+  thead.querySelectorAll('th.sortable').forEach(th=>th.onclick=()=>{const kk=th.dataset.k;SD.sort.dir=(SD.sort.k===kk)?-SD.sort.dir:-1;SD.sort.k=kk;renderDitarTable(applyDitarFilters(ditarRows()));});
+  _dragCols(thead,ord,()=>renderDitarTable(applyDitarFilters(ditarRows())));
+}
+function wireDitar(){
+  $('ditarRT').onchange=e=>{SD.rt=e.target.checked;SD.page=1;renderDitar();};
+  $('ditarAl').onchange=e=>{SD.al=e.target.checked;SD.page=1;renderDitar();};
+  $('ditarPF').onchange=e=>{SD.pf=e.target.checked;SD.page=1;renderDitar();};
+  $('ditarPP').onchange=e=>{SD.pp=e.target.checked;SD.page=1;renderDitar();};
+  $('ditarContQ').oninput=e=>{SD.contQ=e.target.value.trim();SD.page=1;renderDitar();};
+  $('ditarEnvioQ').oninput=e=>{SD.envioQ=e.target.value.trim();SD.page=1;renderDitar();};
+  $('ditarClear').onclick=()=>{SD.subOps=new Set();SD.rt=SD.al=SD.pf=SD.pp=false;SD.contQ='';SD.envioQ='';$('ditarContQ').value='';$('ditarEnvioQ').value='';$('ditarRT').checked=$('ditarAl').checked=$('ditarPF').checked=$('ditarPP').checked=false;SD.page=1;renderDitar();};
+  $('btnDitarCSV').onclick=()=>{
+    const rows=applyDitarFilters(ditarRows());
+    const cols=[['Mes','Mes'],['OB','OB'],['Manifiesto','Manifiesto'],['Contenedor','Contenedor'],['SubOperacion','SubOperacion'],['EsRoundTrip','EsRoundTrip'],['ClienteNombre','Cliente'],['ProvNombre','Proveedor'],['AFacturar','AFacturar'],['APagar','APagar'],['Utilidad','Utilidad'],['Margen','Margen'],['AlertaValorDitar','AlertaValor'],['PendienteFacturar','PendienteFacturar'],['PendientePagar','PendientePagar']];
+    const q=v=>{v=v==null?'':String(v);return /[";\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+    const out=[cols.map(c=>c[1]).join(';')].concat(rows.map(r=>cols.map(c=>q(r[c[0]])).join(';'))).join('\r\n');
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+out],{type:'text/csv;charset=utf-8;'}));a.download='ditar_vista.csv';document.body.appendChild(a);a.click();a.remove();
+  };
+
+  // ---- Buscador por contenedor ----
+  function buscarContenedor(){
+    const q=($('contSearch').value||'').trim().toUpperCase();
+    const box=$('contResults');
+    if(!q){box.innerHTML='';return;}
+    // Buscar en TODOS los movimientos (sin filtro de mes ni segmento) que tengan ese contenedor
+    const terms=q.split(/[\s,;]+/).filter(Boolean);
+    const hits=S.rows.filter(r=>{
+      const c=(r.Contenedor||'').toUpperCase();
+      return c&&terms.some(t=>c.includes(t));
+    });
+    if(!hits.length){box.innerHTML='<p style="color:var(--ink-3);font-size:13px;padding:8px 0">Sin resultados para ese contenedor.</p>';return;}
+    // Agrupar por contenedor
+    const byContenedor={};
+    for(const r of hits){
+      const c=r.Contenedor||'—';
+      if(!byContenedor[c])byContenedor[c]=[];
+      byContenedor[c].push(r);
+    }
+    // Agrupar por OB dentro de cada contenedor
+    let html='';
+    for(const cont of Object.keys(byContenedor).sort()){
+      const filas=byContenedor[cont];
+      // agrupar por OB
+      const byOB={};
+      for(const r of filas){
+        const ob=r.OB||'—';
+        if(!byOB[ob])byOB[ob]=[];
+        byOB[ob].push(r);
+      }
+      const totAF=filas.reduce((s,r)=>s+(r.AFacturar||0),0);
+      const totAP=filas.reduce((s,r)=>s+(r.APagar||0),0);
+      const totUt=totAF-totAP;
+      const isRT=filas.some(r=>r.EsRoundTrip);
+      html+=`<div style="margin-bottom:18px">
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);margin-bottom:6px">
+          <span style="font-weight:700;font-size:14px;font-family:monospace">${esc(cont)}</span>
+          ${isRT?'<span class="pill pill-roundtrip">RoundTrip ↔</span>':''}
+          <span style="margin-left:auto;font-size:12px;color:var(--ink-2)">${filas.length} movimiento${filas.length!==1?'s':''}</span>
+          <span style="font-size:12px;font-weight:700">A fac: ${f$(totAF)}</span>
+          <span style="font-size:12px;font-weight:700">A pag: ${f$(totAP)}</span>
+          <span class="r num ${totUt<0?'neg':'pos'}" style="font-size:12px">Util: ${f$(totUt)}</span>
+        </div>
+        <div class="tbl-wrap" style="max-height:320px;overflow:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:var(--surface-2)">
+            <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface-2)">OB</th>
+            <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface-2)">Fuente</th>
+            <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface-2)">Fecha</th>
+            <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface-2)">Mes</th>
+            <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface-2)">Sub-op.</th>
+            <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface-2)">Envío compra</th>
+            <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface-2)">Envío venta</th>
+            <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface-2)">Placa</th>
+            <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface-2)">Cliente</th>
+            <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface-2)">Proveedor</th>
+            <th style="padding:7px 10px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface-2)">A facturar</th>
+            <th style="padding:7px 10px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface-2)">A pagar</th>
+            <th style="padding:7px 10px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface-2)">Total OB</th>
+            <th style="padding:7px 10px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface-2)">En otros meses</th>
+          </tr></thead>
+          <tbody>`;
+      // Filas por OB — calcular suma por OB global (VentaTotalOB)
+      const obRows=Object.entries(byOB).sort(([a],[b])=>a.localeCompare(b));
+      for(const [ob,rs] of obRows){
+        const obAF=rs.reduce((s,r)=>s+(r.AFacturar||0),0);
+        const obAP=rs.reduce((s,r)=>s+(r.APagar||0),0);
+        const obUt=obAF-obAP;
+        const totalOB=rs[0].VentaTotalOB||0;
+        const enOtros=Math.max(0,totalOB-obAF);
+        const isRtOB=rs.some(r=>r.EsRoundTrip);
+        // Una fila de resumen por OB
+        const fechas=[...new Set(rs.map(r=>r.FechaISO||'').filter(v=>v&&v!=='<NA>'&&v!=='nan'&&v!=='None'))].sort();
+        const placas=[...new Set(rs.map(r=>r.Placa||'').filter(v=>v&&v!=='<NA>'&&v!=='nan'&&v!=='None'))];
+        html+=`<tr style="background:var(--surface-2);font-weight:600;border-top:2px solid var(--line)">
+          <td style="padding:6px 10px;font-family:monospace;font-size:11px">${esc(ob)}</td>
+          <td style="padding:6px 10px">${rs.map(r=>`<span class="pill ${r.Fuente==='EXPO'?'pill-expo':'pill-impo'}" style="font-size:10px">${esc(r.Fuente)}</span>`).filter((v,i,a)=>a.indexOf(v)===i).join(' ')}</td>
+          <td style="padding:6px 10px;font-size:11px;white-space:nowrap">${fechas.map(fFecha).join(', ')||'—'}</td>
+          <td style="padding:6px 10px">${[...new Set(rs.map(r=>r.Mes||'—'))].join(', ')}</td>
+          <td style="padding:6px 10px">${pillSubOp(rs[0].SubOperacion)}${isRtOB?' <span class="pill pill-roundtrip" style="font-size:10px">RT</span>':''}</td>
+          <td style="padding:6px 10px;font-family:monospace;font-size:11px">${[...new Set(rs.map(r=>r.Manifiesto||'').filter(Boolean))].join(', ')||'—'}</td>
+          <td style="padding:6px 10px;font-family:monospace;font-size:11px">${[...new Set(rs.map(r=>r.EnvioVenta||'').filter(v=>v&&v!=='<NA>'&&v!=='nan'))].join(', ')||'—'}</td>
+          <td style="padding:6px 10px;font-size:11px">${placas.join(', ')||'—'}</td>
+          <td style="padding:6px 10px">${esc(rs[0].ClienteNombre||'—')}</td>
+          <td style="padding:6px 10px">${esc(rs[0].ProvNombre||'—')}</td>
+          <td style="padding:6px 10px;text-align:right;font-weight:700">${f$(obAF)}</td>
+          <td style="padding:6px 10px;text-align:right;font-weight:700">${f$(obAP)}</td>
+          <td style="padding:6px 10px;text-align:right;color:var(--ink-2);font-weight:700">${totalOB?f$(totalOB):'—'}</td>
+          <td style="padding:6px 10px;text-align:right;${enOtros>0?'color:#1a73e8;font-weight:700':'color:var(--ink-3)'}">${enOtros>0?f$(enOtros):'—'}</td>
+        </tr>`;
+      }
+      html+=`</tbody></table></div></div>`;
+    }
+    box.innerHTML=html;
+  }
+  $('contSearchBtn').onclick=buscarContenedor;
+  $('contSearch').onkeydown=e=>{if(e.key==='Enter')buscarContenedor();};
+  $('contSearchClear').onclick=()=>{$('contSearch').value='';$('contResults').innerHTML='';};
+  $('btnRTCSV').onclick=()=>{
+    const q=v=>{v=v==null?'':String(v);return /[";\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+    const cols=[['cont','Contenedor'],['meses','Meses'],['nobs','OBs'],['impoAF','A fac IMPO'],['expoAF','A fac EXPO'],['totAF','Total A facturar'],['totAP','Total A pagar'],['ut','Utilidad'],['mg','Margen'],['envios','Envio venta'],['placas','Placa']];
+    const rows=_rtData.map(g=>({
+      cont:g.cont, meses:[...g.meses].sort().join(', '), nobs:[...g.obs].length,
+      impoAF:g.impoAF, expoAF:g.expoAF,
+      totAF:g.impoAF+g.expoAF, totAP:g.impoAP+g.expoAP,
+      ut:g.impoAF+g.expoAF-g.impoAP-g.expoAP,
+      mg:(g.impoAF+g.expoAF)?(g.impoAF+g.expoAF-g.impoAP-g.expoAP)/(g.impoAF+g.expoAF):0,
+      envios:[...g.envios].join(', '), placas:[...g.placas].join(', ')
+    }));
+    const out=[cols.map(c=>c[1]).join(';')].concat(rows.map(r=>cols.map(c=>q(r[c[0]])).join(';'))).join('\r\n');
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+out],{type:'text/csv;charset=utf-8;'}));a.download='ditar_roundtrip.csv';document.body.appendChild(a);a.click();a.remove();
+  };
+}
+
+/* ---------------- init + eventos ---------------- */
+function init(){
+  S.rows=(window.DATA||[]);
+  S.ob=new Map();const obt=window.OBT||{};for(const kk in obt){const v=obt[kk];S.ob.set(kk,{fact:v[0],pag:v[1],mov:v[2],meses:v[3],enviosVenta:v[4]||'',samMovs:v[5]||0,ajusteSam:v[6]||0,manifiestos:v[7]||'',contenedores:v[8]||''});}
+  const meta=window.META||{};
+  $('metaInfo').innerHTML=`<b>${fN(meta.movimientos||S.rows.length)}</b> movimientos<br>generado ${esc(meta.generado||'')}`;
+  if(!S.rows.length){$('kpis').innerHTML='<div class="note" style="grid-column:1/-1">No hay datos. Revisa la carpeta en el código y vuelve a correr <code>python procesar.py</code>.</div>';return;}
+  buildFilters();renderRules();wireDitar();render();
+}
+
+/* ============================================================
+   AJOVER — vaciós y llenos
+   ============================================================ */
+const SAJ={vac:{q:'',cumpl:'',pg:1,colOrder:null},ll:{q:'',est:'',pg:1,colOrder:null}};
+const VAC_COLS=[
+  {k:'mes',     l:'Mes',              cell:(r,s)=>`<td style="${s}">${esc(r.mes)}</td>`},
+  {k:'fprog',   l:'Fecha programada', cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fprog)}</td>`},
+  {k:'faten',   l:'Fecha atención',   cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.faten)}</td>`},
+  {k:'fllpatio',l:'Llegada patio',    cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fllpatio)}</td>`},
+  {k:'fslpatio',l:'Salida patio',     cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fslpatio)}</td>`},
+  {k:'fplanta', l:'Llegada planta',   cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fplanta)}</td>`},
+  {k:'patio',   l:'Patio',            cell:(r,s)=>`<td style="${s}">${esc(r.patio)}</td>`},
+  {k:'linea',   l:'Línea',            cell:(r,s)=>`<td style="${s}">${esc(r.linea)}</td>`},
+  {k:'cont',    l:'Contenedor',       cell:(r,s)=>`<td style="${s};font-family:monospace">${esc(r.cont)}</td>`},
+  {k:'man',     l:'Manifiesto',       cell:(r,s)=>`<td style="${s};font-family:monospace">${esc(r.man)}</td>`},
+  {k:'cumpl',   l:'Cumplimiento',     cell:(r,s)=>`<td style="${s}">${_pillCumpl(r.cumpl)}</td>`},
+  {k:'dt1',     l:'P→A',              cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt1)}</td>`},
+  {k:'dt2',     l:'A→Patio',          cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt2)}</td>`},
+  {k:'dt3',     l:'En patio',         cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt3)}</td>`},
+  {k:'dt4',     l:'Patio→Planta',     cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt4)}</td>`},
+];
+const LL_COLS=[
+  {k:'fecha',       l:'Fecha aten.',     cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fecha)}</td>`},
+  {k:'cont',        l:'Contenedor',      cell:(r,s)=>`<td style="${s};font-family:monospace">${esc(r.cont)}</td>`},
+  {k:'terminal',    l:'Terminal',        cell:(r,s)=>`<td style="${s}">${esc(r.terminal)}</td>`},
+  {k:'placa',       l:'Placa',           cell:(r,s)=>`<td style="${s}">${esc(r.placa)}</td>`},
+  {k:'estado',      l:'Estado',          cell:(r,s)=>`<td style="${s}">${r.estado==='EXITOSO'?'<span style="background:#d4edda;color:#155724;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">✓ Exitoso</span>':r.estado?`<span style="background:#f8d7da;color:#721c24;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">✗ ${esc(r.estado)}</span>`:'—'}</td>`},
+  {k:'fcita',       l:'Cita puerto',     cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fcita)}</td>`},
+  {k:'fllpuerto',   l:'Llegada puerto',  cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fllpuerto)}</td>`},
+  {k:'cumpl_cita',  l:'Cumpl. cita',     cell:(r,s)=>`<td style="${s}">${_pillCumpl(r.cumpl_cita)}</td>`},
+  {k:'clasif',      l:'Causa',           cell:(r,s,_,pc)=>`<td style="${s}">${pc(r.clasif)}</td>`},
+  {k:'motivo',      l:'Motivo',          cell:(r,s)=>`<td style="${s};font-size:10px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(r.motivo)}">${esc(r.motivo)||'—'}</td>`},
+  {k:'obs',         l:'Observaciones',   cell:(r,s)=>`<td style="${s};color:var(--ink-2);font-size:10px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(r.obs)}">${esc(r.obs)||'—'}</td>`},
+  {k:'dt2',         l:'⏱ Cargue',        cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt2)}</td>`},
+  {k:'dt3',         l:'⏱ Tránsito',      cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt3)}</td>`},
+];
+const PER_AJ=100;
+
+function _ajBarras(data,parentId){
+  const total=Object.values(data).reduce((s,v)=>s+v,0)||1;
+  const sorted=Object.entries(data).sort((a,b)=>b[1]-a[1]);
+  $(parentId).innerHTML=sorted.map(([k,v])=>{
+    const pct=((v/total)*100).toFixed(1);
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+      <div style="font-size:11px;color:var(--ink-2);width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(k)}">${esc(k)||'—'}</div>
+      <div style="flex:1;background:var(--line-2);border-radius:4px;height:10px"><div style="width:${pct}%;background:var(--marine);height:10px;border-radius:4px"></div></div>
+      <div style="font-size:11px;color:var(--ink-3);width:40px;text-align:right">${fN(v)}</div>
+      <div style="font-size:10px;color:var(--ink-3);width:36px;text-align:right">${pct}%</div>
+    </div>`;
+  }).join('');
+}
+
+function _pillCumpl(v){
+  if(!v)return '<span style="color:var(--ink-3)">—</span>';
+  if(v==='A tiempo')return '<span style="background:#d4edda;color:#155724;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">✓ A tiempo</span>';
+  if(v==='Sin fecha')return '<span style="background:#e2e3e5;color:#383d41;padding:2px 8px;border-radius:20px;font-size:10px">Sin fecha</span>';
+  return `<span style="background:#fff3cd;color:#856404;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">⚠ ${esc(v)}</span>`;
+}
+
+function renderAjoverVacios(){
+  const AJ=window.AJOVER||{};
+  const va=AJ.vacios;
+  if(!va){$('ajVacHint').textContent='Sin datos (archivo no encontrado)';return;}
+  $('ajVacHint').textContent=`${fN(va.total)} registros`;
+
+  const tot=va.total||1, pctOk=((va.a_tiempo/tot)*100).toFixed(1);
+  $('ajVacKpis').innerHTML=`
+    <div class="kpi"><div class="kl">Total vaciós</div><div class="kv num">${fN(va.total)}</div><div class="ks">registros</div></div>
+    <div class="kpi k-pos"><div class="kl">✓ A tiempo</div><div class="kv num" style="color:var(--pos)">${fN(va.a_tiempo)}</div><div class="ks">${pctOk}% del total</div></div>
+    <div class="kpi kpi-alerta"><div class="kl">⚠ Tarde</div><div class="kv num" style="color:var(--neg)">${fN(va.tarde)}</div><div class="ks">${((va.tarde/tot)*100).toFixed(1)}% del total</div></div>
+    <div class="kpi"><div class="kl">Sin fecha registrada</div><div class="kv num" style="color:var(--ink-2)">${fN(va.sin_fecha)}</div><div class="ks">sin datos de atención</div></div>`;
+
+  _ajBarras(va.patios||{},'ajVacPatios');
+  _ajBarras(va.lineas||{},'ajVacLineas');
+
+  // tiempos promedio
+  const pr=va.prom||{};
+  const _fmin=m=>{if(m==null)return '<span style="color:var(--ink-3)">—</span>';const h=Math.floor(m/60),mn=Math.round(m%60);return h>0?`<b>${h}h ${mn}min</b>`:`<b>${mn}min</b>`;};
+  $('ajVacPromedios').innerHTML=`
+    <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;margin:10px 0 4px">
+      <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:130px">
+        <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Programación → Atención</div>
+        <div style="font-size:16px">${_fmin(pr.prog_aten)}</div>
+        <div style="font-size:10px;color:var(--ink-3)">tiempo de respuesta</div>
+      </div>
+      <div style="font-size:18px;color:var(--ink-3);padding:0 6px">›</div>
+      <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:130px">
+        <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Atención → Llegada patio</div>
+        <div style="font-size:16px">${_fmin(pr.aten_llpatio)}</div>
+        <div style="font-size:10px;color:var(--ink-3)">transporte al patio</div>
+      </div>
+      <div style="font-size:18px;color:var(--ink-3);padding:0 6px">›</div>
+      <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:130px">
+        <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Tiempo en patio</div>
+        <div style="font-size:16px">${_fmin(pr.en_patio)}</div>
+        <div style="font-size:10px;color:var(--ink-3)">llegada → salida patio</div>
+      </div>
+      <div style="font-size:18px;color:var(--ink-3);padding:0 6px">›</div>
+      <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:130px">
+        <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Salida patio → Planta</div>
+        <div style="font-size:16px">${_fmin(pr.patio_planta)}</div>
+        <div style="font-size:10px;color:var(--ink-3)">transporte a planta</div>
+      </div>
+    </div>`;
+
+  // tabla con columnas reordenables
+  if(!SAJ.vac.colOrder)SAJ.vac.colOrder=VAC_COLS.map((_,i)=>i);
+  const vacOrd=SAJ.vac.colOrder;
+  const vacCols=vacOrd.map(i=>VAC_COLS[i]);
+  const thS='padding:7px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface-2);white-space:nowrap;cursor:grab';
+  const vacThead=$('ajVacHead').closest('thead')||$('ajVacHead').parentElement;
+  $('ajVacHead').innerHTML=vacCols.map(c=>`<th style="${thS}" title="Arrastra para reordenar">${c.l}</th>`).join('');
+
+  const q=SAJ.vac.q.toLowerCase(), fc=SAJ.vac.cumpl;
+  const _mesStr=s=>{if(!s||s.length<10)return '';return s.slice(6,10)+'-'+s.slice(3,5);};
+  let rows=(va.rows||[]).filter(r=>{
+    if(S.f.meses.size&&!S.f.meses.has(_mesStr(r.fprog)))return false;
+    if(q&&!`${r.patio}${r.linea}${r.cont}${r.man}`.toLowerCase().includes(q))return false;
+    if(fc&&!r.cumpl.startsWith(fc))return false;
+    return true;
+  });
+  const pg=SAJ.vac.pg,pages=Math.max(1,Math.ceil(rows.length/PER_AJ));
+  if(pg>pages)SAJ.vac.pg=pages;
+  const sl=rows.slice((SAJ.vac.pg-1)*PER_AJ,SAJ.vac.pg*PER_AJ);
+  const tdS='padding:6px 10px;border-bottom:1px solid var(--line-2);font-size:11px';
+  const _mfmt=m=>m==null?'—':(Math.floor(m/60)>0?`${Math.floor(m/60)}h${Math.round(m%60)}m`:`${Math.round(m)}m`);
+  $('ajVacBody').innerHTML=sl.map(r=>`<tr>${vacCols.map(c=>c.cell(r,tdS,_mfmt)).join('')}</tr>`).join('')
+    ||`<tr><td colspan="${vacCols.length}" style="padding:20px;text-align:center;color:var(--ink-3)">Sin resultados.</td></tr>`;
+  $('ajVacFoot').innerHTML=`<span><b>${fN(rows.length)}</b> registros</span><div class="pager"><button class="pgbtn" id="ajVacPrev" ${SAJ.vac.pg<=1?'disabled':''}>‹</button><span class="num">Pág. ${SAJ.vac.pg}/${pages}</span><button class="pgbtn" id="ajVacNext" ${SAJ.vac.pg>=pages?'disabled':''}>›</button></div>`;
+  $('ajVacPrev')&&($('ajVacPrev').onclick=()=>{SAJ.vac.pg--;renderAjoverVacios();});
+  $('ajVacNext')&&($('ajVacNext').onclick=()=>{SAJ.vac.pg++;renderAjoverVacios();});
+  _dragCols($('ajVacHead').parentElement,vacOrd,()=>renderAjoverVacios());
+}
+
+function renderAjoverLlenos(){
+  const AJ=window.AJOVER||{};
+  const ll=AJ.llenos;
+  if(!ll){$('ajLlHint').textContent='Sin datos';return;}
+
+  // ── filas filtradas por mes ──────────────────────────────────────────────
+  const allRows=ll.rows||[];
+  const filtRows=allRows.filter(r=>!S.f.meses.size||S.f.meses.has(r.mes_iso));
+  const fTot=filtRows.length;
+  $('ajLlHint').textContent=`${fN(fTot)} registros`;
+
+  // ── KPIs calculados desde filas filtradas ────────────────────────────────
+  const _isNoCumpl=r=>r.cumpl_cita&&r.cumpl_cita.startsWith('Tarde')&&!r.cumpl_cita.includes('externo');
+  const _isExterno=r=>r.cumpl_cita&&r.cumpl_cita.includes('externo');
+  const fConFecha=filtRows.filter(r=>r.cumpl_cita&&r.cumpl_cita!=='Sin fecha').length||1;
+  const fCumpl=filtRows.filter(r=>r.cumpl_cita==='A tiempo'||_isExterno(r)).length;
+  const fNoCumpl=filtRows.filter(_isNoCumpl).length;
+  const fExterno=filtRows.filter(_isExterno).length;
+  const fExitosos=filtRows.filter(r=>r.estado==='EXITOSO').length;
+  const fFallidos=filtRows.filter(r=>r.estado==='FALLIDO').length;
+  const pctCumpl=((fCumpl/fConFecha)*100).toFixed(1);
+  const pctEx=fTot?((fExitosos/fTot)*100).toFixed(1):'0';
+  $('ajLlKpis').innerHTML=`
+    <div class="kpi"><div class="kl">Total llenos</div><div class="kv num">${fN(fTot)}</div><div class="ks">registros</div></div>
+    <div class="kpi k-pos"><div class="kl">✓ Cumplen cita</div><div class="kv num" style="color:var(--pos)">${pctCumpl}%</div><div class="ks">${fN(fCumpl)} de ${fN(fConFecha)} (ventana 1h)</div></div>
+    <div class="kpi kpi-alerta"><div class="kl">✗ No cumplen cita</div><div class="kv num" style="color:var(--neg)">${fN(fNoCumpl)}</div><div class="ks">${((fNoCumpl/fConFecha)*100).toFixed(1)}% — causa interna</div></div>
+    <div class="kpi"><div class="kl">🌍 Externos ok</div><div class="kv num" style="color:var(--ink-2)">${fN(fExterno)}</div><div class="ks">tarde pero causa ajena</div></div>
+    <div class="kpi k-pos"><div class="kl">✓ Exitosos op.</div><div class="kv num" style="color:var(--pos)">${fN(fExitosos)}</div><div class="ks">${pctEx}% del total</div></div>
+    <div class="kpi kpi-alerta"><div class="kl">✗ Fallidos op.</div><div class="kv num" style="color:var(--neg)">${fN(fFallidos)}</div><div class="ks">${fTot?((fFallidos/fTot)*100).toFixed(1):'0'}% del total</div></div>`;
+
+  // ── tiempos promedio (calculados desde filas filtradas) ──────────────────
+  const _avg=arr=>arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:null;
+  const _fmin2=m=>{if(m==null)return '<span style="color:var(--ink-3)">—</span>';const h=Math.floor(Math.abs(m)/60),mn=Math.round(Math.abs(m)%60),sgn=m<0?'antes ':'';return h>0?`<b>${sgn}${h}h ${mn}min</b>`:`<b>${sgn}${mn}min</b>`;};
+  const fPr={
+    retraso_planta: _avg(filtRows.map(r=>r.dt1).filter(v=>v!=null)),
+    cargue_planta:  _avg(filtRows.map(r=>r.dt2).filter(v=>v!=null)),
+    transito_puerto:_avg(filtRows.map(r=>r.dt3).filter(v=>v!=null)),
+    delta_cita:     _avg(filtRows.filter(r=>r.delta_min!=null).map(r=>r.delta_min)),
+  };
+  const pr2=fPr;
+  const deltaColor=pr2.delta_cita==null?'var(--ink-3)':pr2.delta_cita<=60?'var(--pos)':'var(--neg)';
+  $('ajLlPromedios').innerHTML=`
+    <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;margin:10px 0 4px">
+      <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:140px">
+        <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Planeada → Llegada a planta</div>
+        <div style="font-size:16px">${_fmin2(pr2.retraso_planta)}</div>
+        <div style="font-size:10px;color:var(--ink-3)">retraso llegada vehículo</div>
+      </div>
+      <div style="font-size:18px;color:var(--ink-3);padding:0 6px">›</div>
+      <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:140px">
+        <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Tiempo de cargue en planta</div>
+        <div style="font-size:16px">${_fmin2(pr2.cargue_planta)}</div>
+        <div style="font-size:10px;color:var(--ink-3)">llegada planta → salida</div>
+      </div>
+      <div style="font-size:18px;color:var(--ink-3);padding:0 6px">›</div>
+      <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:140px">
+        <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Tránsito a puerto</div>
+        <div style="font-size:16px">${_fmin2(pr2.transito_puerto)}</div>
+        <div style="font-size:10px;color:var(--ink-3)">salida planta → llegada puerto</div>
+      </div>
+      <div style="font-size:18px;color:var(--ink-3);padding:0 6px">→</div>
+      <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:140px;border:2px solid ${deltaColor}">
+        <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Delta promedio vs cita</div>
+        <div style="font-size:16px;color:${deltaColor}">${_fmin2(pr2.delta_cita)}</div>
+        <div style="font-size:10px;color:var(--ink-3)">${pr2.delta_cita==null?'sin datos':(pr2.delta_cita||0)<=60?'dentro del rango':'tarde en promedio'}</div>
+      </div>
+    </div>`;
+
+  // ── helper SVG chart ─────────────────────────────────────────────────────
+  function _svgTend(data,cfg){
+    const _mn=s=>{const p=s.split('-');const ms=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];return (ms[parseInt(p[1])-1]||p[1])+"'"+p[0].slice(2);};
+    const W=640,H=280,PL=44,PR=12,PT=32,PB=50;
+    const cW=(W-PL-PR)/data.length;
+    const bW=Math.min(36,cW*0.55);
+    const maxV=cfg.maxV||Math.max(...data.map(t=>t[cfg.key]||0),1);
+    const yS=v=>PT+(H-PT-PB)*(1-(v/maxV));
+    let bars='',pts='',dots='',xlbls='',grid='';
+    const gVals=cfg.pct?[0,25,50,75,100]:[0,Math.round(maxV*0.25),Math.round(maxV*0.5),Math.round(maxV*0.75),Math.round(maxV)];
+    gVals.forEach(v=>{
+      const y=yS(v);
+      grid+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="var(--line-2)" stroke-width="${v===0?1.5:0.7}"/>`;
+      grid+=`<text x="${PL-4}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--ink-3)">${v}${cfg.pct?'%':''}</text>`;
+    });
+    data.forEach((t,i)=>{
+      const val=t[cfg.key]||0, x=PL+i*cW+cW/2, y=yS(val);
+      const col=cfg.color(t,val);
+      bars+=`<rect x="${(x-bW/2).toFixed(1)}" y="${y.toFixed(1)}" width="${bW}" height="${Math.max(0,H-PB-y).toFixed(1)}" fill="${col}" opacity="0.22" rx="3"/>`;
+      pts+=(i===0?'M':'L')+`${x.toFixed(1)},${y.toFixed(1)}`;
+      dots+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="${col}" stroke="var(--surface)" stroke-width="2"/>`;
+      dots+=`<text x="${x.toFixed(1)}" y="${(y-10).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="${col}">${cfg.label(t,val)}</text>`;
+      xlbls+=`<text x="${x.toFixed(1)}" y="${H-PB+14}" text-anchor="middle" font-size="10" fill="var(--ink-3)">${_mn(t.mes)}</text>`;
+      if(cfg.sub)  xlbls+=`<text x="${x.toFixed(1)}" y="${H-PB+27}" text-anchor="middle" font-size="9" font-weight="600" fill="var(--ink-2)">${cfg.sub(t)}</text>`;
+      if(cfg.sub2) xlbls+=`<text x="${x.toFixed(1)}" y="${H-PB+39}" text-anchor="middle" font-size="8" fill="var(--ink-3)">${cfg.sub2(t)}</text>`;
+    });
+    return `<div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">${cfg.title}</div>
+      <div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" style="width:100%;min-width:${Math.max(360,data.length*72)}px;height:${H}px;display:block">
+        ${grid}${bars}<path d="${pts}" fill="none" stroke="var(--marine)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${dots}${xlbls}
+      </svg></div>`;
+  }
+
+  // ── gráfico 1: % cumplimiento, subtítulo = OBs distintos ─────────────────
+  const tend=(ll.tendencia||[]).filter(t=>!S.f.meses.size||S.f.meses.has(t.mes));
+  if(tend.length){
+    $('ajLlTendencia').innerHTML=_svgTend(tend,{
+      key:'pct', pct:true, maxV:100,
+      title:'Cumplimiento de cita — mes a mes',
+      color:(t)=>t.pct>=90?'#1a8a34':t.pct>=70?'#d48000':'#c82333',
+      label:(t,v)=>v+'%',
+      sub: (t)=>`${fN(t.rows_tot||0)} llenos`,
+      sub2:(t)=>t.obs_dist?`${fN(t.obs_dist)} OBs distintos`:''
+    });
+  } else { $('ajLlTendencia').innerHTML=''; }
+
+  // ── gráfico 2: movimientos (manifiestos) + OBs distintos ─────────────────
+  if(tend.length){
+    const _movVal=t=>(t.mans||0)>0?t.mans:(t.rows_tot||0);
+    const maxM=Math.max(...tend.map(_movVal),1);
+    $('ajLlTendMov').innerHTML=_svgTend(tend,{
+      key:'rows_tot', pct:false, maxV:maxM,
+      title:'Movimientos mes a mes (manifiestos) · OBs distintos por mes',
+      color:()=>'#0C4A5A',
+      label:(t,v)=>fN(_movVal(t)),
+      sub: (t)=>`${fN(t.rows_tot||0)} llenos`,
+      sub2:(t)=>t.obs_dist?`${fN(t.obs_dist)} OBs distintos`:''
+    });
+  } else { $('ajLlTendMov').innerHTML=''; }
+
+  // ── gráfico 3: tiempos de operación mes a mes ────────────────────────────
+  if(tend.length){
+    const tendT=tend.filter(t=>t.dt1_avg!=null||t.dt2_avg!=null||t.dt3_avg!=null);
+    if(tendT.length){
+      const _fmtMin=m=>{if(m==null)return'—';const h=Math.floor(m/60),mn=Math.round(m%60);return h>0?`${h}h ${mn}m`:`${mn}m`;};
+      const _mnLbl=s=>{const p=s.split('-');const ms=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];return (ms[parseInt(p[1])-1]||p[1])+"'"+p[0].slice(2);};
+      const W=640,H=280,PL=52,PR=12,PT=32,PB=50;
+      const pw=W-PL-PR,ph=H-PT-PB;
+      const SERIES=[
+        {key:'dt1_avg',label:'Retraso llegada a planta',color:'#c82333'},
+        {key:'dt2_avg',label:'Cargue en planta',color:'#d48000'},
+        {key:'dt3_avg',label:'Tránsito a puerto',color:'#0C4A5A'},
+      ];
+      const allV=SERIES.flatMap(s=>tendT.map(t=>t[s.key]||0));
+      const maxV=Math.max(...allV,1);
+      const cW=pw/tendT.length;
+      const bW=Math.min(18,cW*0.22);
+      const gap=2;
+      const groupW=SERIES.length*(bW+gap)-gap;
+      const yS=v=>PT+ph*(1-(v/maxV));
+      let svg='';
+      [0,0.25,0.5,0.75,1].forEach(f=>{
+        const v=maxV*f,y=yS(v);
+        svg+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="var(--line-2)" stroke-width="${f===0?1.5:0.7}"/>`;
+        svg+=`<text x="${PL-4}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--ink-3)">${_fmtMin(v)}</text>`;
+      });
+      tendT.forEach((t,i)=>{
+        const cx=PL+i*cW+cW/2;
+        SERIES.forEach((s,j)=>{
+          const v=t[s.key];if(v==null)return;
+          const bx=cx-groupW/2+j*(bW+gap);
+          const by=yS(v),bh=Math.max(0,H-PB-by);
+          svg+=`<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bW}" height="${bh.toFixed(1)}" fill="${s.color}" rx="2" opacity="0.85"><title>${s.label}: ${_fmtMin(v)}</title></rect>`;
+          svg+=`<text x="${(bx+bW/2).toFixed(1)}" y="${(by-4).toFixed(1)}" text-anchor="middle" font-size="8" fill="${s.color}" font-weight="700">${_fmtMin(v)}</text>`;
+        });
+        svg+=`<text x="${cx.toFixed(1)}" y="${H-PB+14}" text-anchor="middle" font-size="10" fill="var(--ink-3)">${_mnLbl(t.mes)}</text>`;
+      });
+      const leg=SERIES.map(s=>`<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--ink-2)"><span style="width:12px;height:10px;background:${s.color};display:inline-block;border-radius:2px;opacity:0.85"></span>${s.label}</span>`).join('');
+      $('ajLlTendTiempos').innerHTML=`
+        <div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">Tiempos de operación mes a mes</div>
+        <div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" style="width:100%;min-width:${Math.max(360,tendT.length*72)}px;height:${H}px;display:block">${svg}</svg></div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;padding-left:${PL}px">${leg}</div>`;
+    } else { $('ajLlTendTiempos').innerHTML=''; }
+  } else { $('ajLlTendTiempos').innerHTML=''; }
+
+  // ── motivos de incumplimiento (desde filas filtradas) ────────────────────
+  const ncRows=filtRows.filter(_isNoCumpl);
+  const ncmFilt={};
+  ncRows.forEach(r=>{const m=r.motivo||'(sin motivo)';ncmFilt[m]=(ncmFilt[m]||0)+1;});
+  if(ncRows.length){
+    $('ajLlNoCumpl').innerHTML=`<div style="padding:12px;background:var(--surface-2);border-radius:8px;border-left:3px solid var(--neg)">
+      <div style="font-size:11px;font-weight:700;color:var(--neg);text-transform:uppercase;margin-bottom:8px">⚠ Causas de incumplimiento — ${fN(ncRows.length)} registros</div>
+      <div id="ajLlNoCumplBars"></div></div>`;
+    _ajBarras(ncmFilt,'ajLlNoCumplBars');
+  } else { $('ajLlNoCumpl').innerHTML=''; }
+
+  // ── detalle de los que NO cumplen cita ───────────────────────────────────
+  if(ncRows.length){
+    const thD='padding:6px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:2px solid var(--line);white-space:nowrap;background:var(--surface-2)';
+    const tdD='padding:5px 10px;border-bottom:1px solid var(--line-2);font-size:11px';
+    const sorted=[...ncRows].sort((a,b)=>{
+      const pa=a.cumpl_cita?parseInt(a.cumpl_cita.match(/\d+/)||0):0;
+      const pb=b.cumpl_cita?parseInt(b.cumpl_cita.match(/\d+/)||0):0;
+      return pb-pa;
+    });
+    $('ajLlNoCumplDetalle').innerHTML=`
+      <details open style="background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden">
+        <summary style="padding:10px 16px;cursor:pointer;font-size:12px;font-weight:700;color:var(--neg);list-style:none;display:flex;align-items:center;gap:8px;background:var(--surface-2)">
+          <span>▾</span> Detalle: ${fN(ncRows.length)} contenedores que no cumplieron cita (ordenados por mayor retraso)
+        </summary>
+        <div style="overflow-x:auto;max-height:320px;overflow-y:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:11px">
+            <thead><tr>
+              <th style="${thD}">Fecha atención</th>
+              <th style="${thD}">Contenedor</th>
+              <th style="${thD}">Cita puerto</th>
+              <th style="${thD}">Llegada puerto</th>
+              <th style="${thD}">Retraso</th>
+              <th style="${thD}">Terminal</th>
+              <th style="${thD}">Placa</th>
+              <th style="${thD}">Motivo</th>
+              <th style="${thD}">Observaciones</th>
+            </tr></thead>
+            <tbody>${sorted.map(r=>`<tr>
+              <td style="${tdD};white-space:nowrap">${esc(r.fecha)}</td>
+              <td style="${tdD};font-family:monospace">${esc(r.cont)}</td>
+              <td style="${tdD};white-space:nowrap">${esc(r.fcita)}</td>
+              <td style="${tdD};white-space:nowrap">${esc(r.fllpuerto)}</td>
+              <td style="${tdD};font-weight:700;color:var(--neg)">${esc(r.cumpl_cita)}</td>
+              <td style="${tdD}">${esc(r.terminal)}</td>
+              <td style="${tdD}">${esc(r.placa)}</td>
+              <td style="${tdD};max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(r.motivo)}">${esc(r.motivo)||'—'}</td>
+              <td style="${tdD};max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink-2)" title="${esc(r.obs)}">${esc(r.obs)||'—'}</td>
+            </tr>`).join('')}</tbody>
+          </table>
+        </div>
+      </details>`;
+  } else { $('ajLlNoCumplDetalle').innerHTML=''; }
+
+  // ── barras de estados y motivos (desde filas filtradas) ──────────────────
+  const fEstados={},fMotivos={};
+  filtRows.forEach(r=>{
+    if(r.estado)fEstados[r.estado]=(fEstados[r.estado]||0)+1;
+    if(r.motivo)fMotivos[r.motivo]=(fMotivos[r.motivo]||0)+1;
+  });
+  _ajBarras(fEstados,'ajLlEstados');
+  _ajBarras(fMotivos,'ajLlMotivos');
+
+  // ── tabla principal ──────────────────────────────────────────────────────
+  if(!SAJ.ll.colOrder)SAJ.ll.colOrder=LL_COLS.map((_,i)=>i);
+  const llOrd=SAJ.ll.colOrder;
+  const llCols=llOrd.map(i=>LL_COLS[i]);
+  const thS2='padding:7px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface-2);white-space:nowrap;cursor:grab';
+  $('ajLlHead').innerHTML=llCols.map(c=>`<th style="${thS2}" title="Arrastra para reordenar">${c.l}</th>`).join('');
+
+  const q2=SAJ.ll.q.toLowerCase(), fe=SAJ.ll.est;
+  let rows2=filtRows.filter(r=>{
+    if(q2&&!`${r.cont}${r.placa}${r.terminal}${r.motivo}`.toLowerCase().includes(q2))return false;
+    if(fe&&r.estado!==fe)return false;
+    return true;
+  });
+  const pg=SAJ.ll.pg,pages=Math.max(1,Math.ceil(rows2.length/PER_AJ));
+  if(pg>pages)SAJ.ll.pg=pages;
+  const sl=rows2.slice((SAJ.ll.pg-1)*PER_AJ,SAJ.ll.pg*PER_AJ);
+  const tdS='padding:6px 10px;border-bottom:1px solid var(--line-2);font-size:11px';
+  const _mfmt2=m=>m==null?'—':(Math.floor(m/60)>0?`${Math.floor(m/60)}h${Math.round(m%60)}m`:`${Math.round(m)}m`);
+  const _pillClasif=c=>c==='externo'?'<span style="background:#cfe2ff;color:#084298;padding:2px 7px;border-radius:20px;font-size:10px">🌍 Externo</span>':c==='interno'?'<span style="background:#f8d7da;color:#721c24;padding:2px 7px;border-radius:20px;font-size:10px">⚙ Interno</span>':'<span style="color:var(--ink-3);font-size:10px">—</span>';
+  $('ajLlBody').innerHTML=sl.map(r=>`<tr>${llCols.map(c=>c.cell(r,tdS,_mfmt2,_pillClasif)).join('')}</tr>`).join('')
+    ||`<tr><td colspan="${llCols.length}" style="padding:20px;text-align:center;color:var(--ink-3)">Sin resultados.</td></tr>`;
+  $('ajLlFoot').innerHTML=`<span><b>${fN(rows2.length)}</b> registros</span><div class="pager"><button class="pgbtn" id="ajLlPrev" ${SAJ.ll.pg<=1?'disabled':''}>‹</button><span class="num">Pág. ${SAJ.ll.pg}/${pages}</span><button class="pgbtn" id="ajLlNext" ${SAJ.ll.pg>=pages?'disabled':''}>›</button></div>`;
+  $('ajLlPrev')&&($('ajLlPrev').onclick=()=>{SAJ.ll.pg--;renderAjoverLlenos();});
+  $('ajLlNext')&&($('ajLlNext').onclick=()=>{SAJ.ll.pg++;renderAjoverLlenos();});
+  _dragCols($('ajLlHead').parentElement,llOrd,()=>renderAjoverLlenos());
+}
+
+let _ajovWired=false;
+function renderAjover(){
+  renderAjoverVacios();
+  renderAjoverLlenos();
+  if(_ajovWired)return;
+  _ajovWired=true;
+  $('ajVacQ').oninput=e=>{SAJ.vac.q=e.target.value.trim();SAJ.vac.pg=1;renderAjoverVacios();};
+  $('ajVacFiltCumpl').onchange=e=>{SAJ.vac.cumpl=e.target.value;SAJ.vac.pg=1;renderAjoverVacios();};
+  $('ajVacClear').onclick=()=>{SAJ.vac.q='';SAJ.vac.cumpl='';SAJ.vac.pg=1;$('ajVacQ').value='';$('ajVacFiltCumpl').value='';renderAjoverVacios();};
+  $('ajLlQ').oninput=e=>{SAJ.ll.q=e.target.value.trim();SAJ.ll.pg=1;renderAjoverLlenos();};
+  $('ajLlFiltEst').onchange=e=>{SAJ.ll.est=e.target.value;SAJ.ll.pg=1;renderAjoverLlenos();};
+  $('ajLlClear').onclick=()=>{SAJ.ll.q='';SAJ.ll.est='';SAJ.ll.pg=1;$('ajLlQ').value='';$('ajLlFiltEst').value='';renderAjoverLlenos();};
+  const csvDl=(rows,cols,fname)=>{const q=v=>{v=v==null?'':String(v);return /[;\n"]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};const out=[cols.map(c=>c[1]).join(';')].concat(rows.map(r=>cols.map(c=>q(r[c[0]])).join(';'))).join('\r\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(out);a.download=fname;a.click();};
+  $('ajVacCSV').onclick=()=>{const va=(window.AJOVER||{}).vacios;if(!va)return;csvDl(va.rows,[['mes','Mes'],['fprog','Fecha programada'],['faten','Fecha atención'],['fplanta','Llegada planta'],['patio','Patio'],['linea','Línea'],['cont','Contenedor'],['man','Manifiesto'],['cumpl','Cumplimiento']],'ajover_vacios.csv');};
+  $('ajLlCSV').onclick=()=>{const ll=(window.AJOVER||{}).llenos;if(!ll)return;csvDl(ll.rows,[['fecha','Fecha'],['cont','Contenedor'],['terminal','Terminal'],['placa','Placa'],['estado','Estado'],['cumpl_planta','Cumpl.planta'],['cumpl_puerto','Cumpl.puerto'],['motivo','Motivo fallo'],['obs','Observaciones']],'ajover_llenos.csv');};
+}
+
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));t.classList.add('on');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  $('panel-'+t.dataset.tab).classList.add('on');
+  if(t.dataset.tab==='ditar')renderDitar();
+  if(t.dataset.tab==='ajover')renderAjover();
+});
+$('trendSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$('trendSeg').querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');S.trend=b.dataset.t;renderTrend(S.rows.filter(passes));});
+$('obMultiTgl').addEventListener('change',e=>{S.obMulti=e.target.checked;render();});
+$('btnCSV').onclick=exportCSV;$('btnCSV2').onclick=exportOBCSV;
+document.addEventListener('click',()=>document.querySelectorAll('.dd.open').forEach(x=>x.classList.remove('open')));
+init();
+</script>
+</body>
+</html>
