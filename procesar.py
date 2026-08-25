@@ -976,7 +976,7 @@ def main():
         print("\n[ERROR] Falta 'plantilla.html' en la misma carpeta que este script.")
         sys.exit(1)
     tpl = open(tpl_path, encoding="utf-8").read()
-    ruta_html = os.path.join(BASE, "dashboard.html")
+    ruta_html = os.path.join(BASE, "index.html")
     open(ruta_html, "w", encoding="utf-8").write(tpl.replace("/*__DATOS__*/", payload))
 
     af, ap = U["AFacturar"].sum(), U["APagar"].sum()
