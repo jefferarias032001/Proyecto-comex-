@@ -254,7 +254,10 @@ def leer_ajover_completo(stats):
         c_planeada= next((v for k, v in nm2.items() if "planeada" in k), None)
         c_llegplant = next((v for k, v in nm2.items() if "llegada" in k and "planta" in k and "planeada" not in k), None)
         c_salida  = next((v for k, v in nm2.items() if "salida" in k and "vehiculo" in k and "cita" in k), None)
-        c_cita    = next((v for k, v in nm2.items() if "cita" in k and "puerto" in k), None)
+        c_cita    = next((v for k, v in nm2.items() if "cita" in k and "puerto" in k and "reprog" not in k), None)
+        c_cita_repr = next((v for k, v in nm2.items() if "cita" in k and "puerto" in k and "reprog" in k), None)
+        c_motivo_repr = next((v for k, v in nm2.items() if "motivo" in k and "reprog" in k), None)
+        c_resp_repr   = next((v for k, v in nm2.items() if "responsable" in k and "reprog" in k), None)
         c_llegpuer= next((v for k, v in nm2.items() if "llegada" in k and "puerto" in k), None)
         c_cont2   = next((v for k, v in nm2.items() if "contenedor" in k), None)
         c_term    = next((v for k, v in nm2.items() if "terminal" in k), None)
@@ -271,7 +274,8 @@ def leer_ajover_completo(stats):
         plan_s  = _ts2(c_planeada)
         llpl_s  = _ts2(c_llegplant)
         sal_s   = _ts2(c_salida)
-        cita_s  = _ts2(c_cita)
+        cita_s      = _ts2(c_cita)
+        cita_repr_s = _ts2(c_cita_repr)
         llpu_s  = _ts2(c_llegpuer)
 
         # Causas externas: tardanza NO es culpa de Tractocar → cuenta como cumplido
@@ -299,8 +303,8 @@ def leer_ajover_completo(stats):
             return None if d < 0 else round(d, 1)
 
         exitosos = fallidos = 0
-        cumpl_cita = no_cumpl = sin_fecha_c = externo_ok = 0
-        motivos = {}; no_cumpl_motivos = {}; estados = {}; ll_rows = []
+        cumpl_cita = no_cumpl = sin_fecha_c = externo_ok = reprog_ajover_ok = 0
+        motivos = {}; no_cumpl_motivos = {}; estados = {}; motivos_repr = {}; ll_rows = []
         dt1s = []; dt2s = []; dt3s = []; delta_citas = []
         tendencia_raw = {}  # {YYYY-MM: {total, cumpl, no_cumpl, externo, obs_set, mans}}
 
@@ -308,8 +312,12 @@ def leer_ajover_completo(stats):
             estado = str(ll[c_estado].iloc[i] if c_estado else "").strip().upper()
             motivo = str(ll[c_motivo].iloc[i] if c_motivo else "").strip()
             obs    = str(ll[c_obs].iloc[i]    if c_obs    else "").strip()
+            motivo_repr = str(ll[c_motivo_repr].iloc[i] if c_motivo_repr else "").strip()
+            resp_repr   = str(ll[c_resp_repr].iloc[i]   if c_resp_repr   else "").strip()
             if motivo in ("nan","None","NAN","NONE",""): motivo = ""
             if obs    in ("nan","None","NAN","NONE",""): obs = ""
+            if motivo_repr in ("nan","None","NAN","NONE",""): motivo_repr = ""
+            if resp_repr   in ("nan","None","NAN","NONE",""): resp_repr = ""
             if estado == "EXITOSO": exitosos += 1
             elif estado:
                 fallidos += 1
@@ -327,6 +335,10 @@ def leer_ajover_completo(stats):
             clasif = _clasif(motivo) if motivo else "otro"
 
             # Cumplimiento cita: ventana de 1 hora
+            ct_repr = cita_repr_s.iloc[i]
+            resp_es_ajover = "ajover" in resp_repr.lower() if resp_repr else False
+            if motivo_repr and resp_repr:
+                motivos_repr[motivo_repr] = motivos_repr.get(motivo_repr, 0) + 1
             if pd.isna(ct) or pd.isna(lp):
                 cumpl_c = "Sin fecha"; sin_fecha_c += 1
             elif lp <= ct + pd.Timedelta(hours=1):
@@ -334,6 +346,9 @@ def leer_ajover_completo(stats):
             elif clasif == "externo":
                 mins = round((lp - ct).total_seconds() / 60)
                 cumpl_c = f"Tarde +{mins}min (externo)"; externo_ok += 1; cumpl_cita += 1
+            elif resp_es_ajover and not pd.isna(ct_repr):
+                mins = round((lp - ct).total_seconds() / 60)
+                cumpl_c = f"Tarde +{mins}min (reprog Ajover)"; reprog_ajover_ok += 1; cumpl_cita += 1
             else:
                 mins = round((lp - ct).total_seconds() / 60)
                 cumpl_c = f"Tarde +{mins}min"; no_cumpl += 1
@@ -357,6 +372,8 @@ def leer_ajover_completo(stats):
                         t["cumpl"] += 1
                     elif "externo" in cumpl_c:
                         t["cumpl"] += 1; t["externo"] += 1
+                    elif "reprog Ajover" in cumpl_c:
+                        t["cumpl"] += 1
                     else:
                         t["no_cumpl"] += 1
 
@@ -390,7 +407,10 @@ def leer_ajover_completo(stats):
                 "motivo":       motivo,
                 "clasif":       clasif,
                 "obs":          obs,
-                "fcita":        ct.strftime("%d-%m-%Y %H:%M")  if not pd.isna(ct)  else "",
+                "fcita":        ct.strftime("%d-%m-%Y %H:%M")      if not pd.isna(ct)      else "",
+                "fcita_repr":   ct_repr.strftime("%d-%m-%Y %H:%M") if not pd.isna(ct_repr) else "",
+                "motivo_repr":  motivo_repr,
+                "resp_repr":    resp_repr,
                 "fllpuerto":    lp.strftime("%d-%m-%Y %H:%M")  if not pd.isna(lp)  else "",
                 "fplanta_plan": pl.strftime("%d-%m-%Y %H:%M")  if not pd.isna(pl)  else "",
                 "fplanta_real": llp.strftime("%d-%m-%Y %H:%M") if not pd.isna(llp) else "",
@@ -423,9 +443,10 @@ def leer_ajover_completo(stats):
         result["llenos"] = {
             "total": len(ll), "exitosos": exitosos, "fallidos": fallidos,
             "cumpl_cita": cumpl_cita, "no_cumpl": no_cumpl,
-            "externo_ok": externo_ok, "sin_fecha_cita": sin_fecha_c,
+            "externo_ok": externo_ok, "reprog_ajover_ok": reprog_ajover_ok, "sin_fecha_cita": sin_fecha_c,
             "motivos": dict(sorted(motivos.items(), key=lambda x: -x[1])[:20]),
             "no_cumpl_motivos": dict(sorted(no_cumpl_motivos.items(), key=lambda x: -x[1])),
+            "motivos_repr": dict(sorted(motivos_repr.items(), key=lambda x: -x[1])),
             "tendencia": tendencia,
             "estados": estados, "rows": ll_rows,
             "prom": {

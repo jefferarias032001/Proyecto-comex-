@@ -372,6 +372,7 @@
         <div style="display:flex;gap:16px;margin:0 16px 12px;flex-wrap:wrap">
           <div style="flex:1;min-width:220px"><div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">Estado operación</div><div id="ajLlEstados"></div></div>
           <div style="flex:1;min-width:220px"><div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">Motivos de fallo (todos)</div><div id="ajLlMotivos"></div></div>
+          <div style="flex:1;min-width:220px"><div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">🔄 Motivos de reprogramación</div><div id="ajLlMotivosRepr"></div></div>
         </div>
         <div style="display:flex;gap:10px;padding:0 16px 10px;align-items:center;flex-wrap:wrap">
           <input id="ajLlQ" type="text" placeholder="Buscar contenedor, placa, terminal..." style="padding:6px 12px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink);width:260px;outline:none"/>
@@ -1141,6 +1142,9 @@ const LL_COLS=[
   {k:'placa',       l:'Placa',           cell:(r,s)=>`<td style="${s}">${esc(r.placa)}</td>`},
   {k:'estado',      l:'Estado',          cell:(r,s)=>`<td style="${s}">${r.estado==='EXITOSO'?'<span style="background:#d4edda;color:#155724;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">✓ Exitoso</span>':r.estado?`<span style="background:#f8d7da;color:#721c24;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">✗ ${esc(r.estado)}</span>`:'—'}</td>`},
   {k:'fcita',       l:'Cita puerto',     cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fcita)}</td>`},
+  {k:'fcita_repr',  l:'Cita reprog.',    cell:(r,s)=>`<td style="${s};white-space:nowrap;color:var(--warn)">${esc(r.fcita_repr)||'—'}</td>`},
+  {k:'resp_repr',   l:'Resp. reprog.',   cell:(r,s)=>`<td style="${s}">${esc(r.resp_repr)||'—'}</td>`},
+  {k:'motivo_repr', l:'Motivo reprog.',  cell:(r,s)=>`<td style="${s}">${esc(r.motivo_repr)||'—'}</td>`},
   {k:'fllpuerto',   l:'Llegada puerto',  cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fllpuerto)}</td>`},
   {k:'cumpl_cita',  l:'Cumpl. cita',     cell:(r,s)=>`<td style="${s}">${_pillCumpl(r.cumpl_cita)}</td>`},
   {k:'clasif',      l:'Causa',           cell:(r,s,_,pc)=>`<td style="${s}">${pc(r.clasif)}</td>`},
@@ -1169,7 +1173,9 @@ function _pillCumpl(v){
   if(!v)return '<span style="color:var(--ink-3)">—</span>';
   if(v==='A tiempo')return '<span style="background:#d4edda;color:#155724;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">✓ A tiempo</span>';
   if(v==='Sin fecha')return '<span style="background:#e2e3e5;color:#383d41;padding:2px 8px;border-radius:20px;font-size:10px">Sin fecha</span>';
-  return `<span style="background:#fff3cd;color:#856404;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">⚠ ${esc(v)}</span>`;
+  if(v.includes('externo'))return `<span style="background:#d1ecf1;color:#0c5460;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">🌍 ${esc(v)}</span>`;
+  if(v.includes('reprog Ajover'))return `<span style="background:#e8d5f5;color:#5b2d8e;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">🔄 ${esc(v)}</span>`;
+  return `<span style="background:#f8d7da;color:#721c24;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">✗ ${esc(v)}</span>`;
 }
 
 function renderAjoverVacios(){
@@ -1259,12 +1265,14 @@ function renderAjoverLlenos(){
   $('ajLlHint').textContent=`${fN(fTot)} registros`;
 
   // ── KPIs calculados desde filas filtradas ────────────────────────────────
-  const _isNoCumpl=r=>r.cumpl_cita&&r.cumpl_cita.startsWith('Tarde')&&!r.cumpl_cita.includes('externo');
+  const _isNoCumpl=r=>r.cumpl_cita&&r.cumpl_cita.startsWith('Tarde')&&!r.cumpl_cita.includes('externo')&&!r.cumpl_cita.includes('reprog');
   const _isExterno=r=>r.cumpl_cita&&r.cumpl_cita.includes('externo');
+  const _isReprogAjover=r=>r.cumpl_cita&&r.cumpl_cita.includes('reprog Ajover');
   const fConFecha=filtRows.filter(r=>r.cumpl_cita&&r.cumpl_cita!=='Sin fecha').length||1;
-  const fCumpl=filtRows.filter(r=>r.cumpl_cita==='A tiempo'||_isExterno(r)).length;
+  const fCumpl=filtRows.filter(r=>r.cumpl_cita==='A tiempo'||_isExterno(r)||_isReprogAjover(r)).length;
   const fNoCumpl=filtRows.filter(_isNoCumpl).length;
   const fExterno=filtRows.filter(_isExterno).length;
+  const fReprogAjover=filtRows.filter(_isReprogAjover).length;
   const fExitosos=filtRows.filter(r=>r.estado==='EXITOSO').length;
   const fFallidos=filtRows.filter(r=>r.estado==='FALLIDO').length;
   const pctCumpl=((fCumpl/fConFecha)*100).toFixed(1);
@@ -1273,6 +1281,7 @@ function renderAjoverLlenos(){
     <div class="kpi"><div class="kl">Total llenos</div><div class="kv num">${fN(fTot)}</div><div class="ks">registros</div></div>
     <div class="kpi k-pos"><div class="kl">✓ Cumplen cita</div><div class="kv num" style="color:var(--pos)">${pctCumpl}%</div><div class="ks">${fN(fCumpl)} de ${fN(fConFecha)} (ventana 1h)</div></div>
     <div class="kpi kpi-alerta"><div class="kl">✗ No cumplen cita</div><div class="kv num" style="color:var(--neg)">${fN(fNoCumpl)}</div><div class="ks">${((fNoCumpl/fConFecha)*100).toFixed(1)}% — causa interna</div></div>
+    <div class="kpi"><div class="kl">🔄 Reprog. Ajover</div><div class="kv num" style="color:var(--ink-2)">${fN(fReprogAjover)}</div><div class="ks">cita reprogramada por Ajover</div></div>
     <div class="kpi"><div class="kl">🌍 Externos ok</div><div class="kv num" style="color:var(--ink-2)">${fN(fExterno)}</div><div class="ks">tarde pero causa ajena</div></div>
     <div class="kpi k-pos"><div class="kl">✓ Exitosos op.</div><div class="kv num" style="color:var(--pos)">${fN(fExitosos)}</div><div class="ks">${pctEx}% del total</div></div>
     <div class="kpi kpi-alerta"><div class="kl">✗ Fallidos op.</div><div class="kv num" style="color:var(--neg)">${fN(fFallidos)}</div><div class="ks">${fTot?((fFallidos/fTot)*100).toFixed(1):'0'}% del total</div></div>`;
@@ -1473,14 +1482,16 @@ function renderAjoverLlenos(){
       </details>`;
   } else { $('ajLlNoCumplDetalle').innerHTML=''; }
 
-  // ── barras de estados y motivos (desde filas filtradas) ──────────────────
-  const fEstados={},fMotivos={};
+  // ── barras de estados, motivos y motivos de reprogramación (desde filas filtradas) ──
+  const fEstados={},fMotivos={},fMotivosRepr={};
   filtRows.forEach(r=>{
     if(r.estado)fEstados[r.estado]=(fEstados[r.estado]||0)+1;
     if(r.motivo)fMotivos[r.motivo]=(fMotivos[r.motivo]||0)+1;
+    if(r.motivo_repr)fMotivosRepr[r.motivo_repr]=(fMotivosRepr[r.motivo_repr]||0)+1;
   });
   _ajBarras(fEstados,'ajLlEstados');
   _ajBarras(fMotivos,'ajLlMotivos');
+  _ajBarras(fMotivosRepr,'ajLlMotivosRepr');
 
   // ── tabla principal ──────────────────────────────────────────────────────
   if(!SAJ.ll.colOrder)SAJ.ll.colOrder=LL_COLS.map((_,i)=>i);
