@@ -359,45 +359,40 @@ def leer_ajover_comex(stats):
                                for v in (tam_val, ped_val, cont_val))
                 tipo_carga = "CARGA SUELTA" if _is_cs else "CONTENEDOR"
 
-                # ── estado contenedor ────────────────────────────────────────
+                # ── estado contenedor (más avanzado primero → fechas faltantes no confunden) ──
                 if _is_cs:
-                    # Carga suelta: no devuelve vacíos, proceso termina en DESCARGADO
+                    # Carga suelta: proceso termina en DESCARGADO, sin devolución
                     cumpl_dev  = "No aplica"
                     estado_dev = "NO APLICA"
-                    if pd.isna(cita_r):
+                    if not pd.isna(sald):
+                        estado_cont = "DESCARGADO"
+                    elif not pd.isna(llegdc):
+                        estado_cont = "DESCARGANDO"
+                    elif not pd.isna(salp):
+                        estado_cont = "EN RUTA"
+                    elif not pd.isna(cita_r):
+                        estado_cont = "SIN SALIDA DE PUERTO"
+                    else:
                         estado_cont = "SIN LLEGADA DE RETIRO"
-                    elif pd.isna(salp):
-                        estado_cont = "SIN SALIDA DE PUERTO"
-                    elif pd.isna(llegdc):
-                        estado_cont = "EN RUTA"
-                    elif pd.isna(sald):
-                        estado_cont = "DESCARGANDO"
-                    else:
-                        estado_cont = "DESCARGADO"
                 else:
-                    # Contenedor: lógica completa con devolución
-                    if pd.isna(cita_r):
-                        estado_cont = "SIN LLEGADA DE RETIRO DEL CONTENEDOR"
-                    elif pd.isna(salp):
-                        estado_cont = "SIN SALIDA DE PUERTO"
-                    elif pd.isna(llegdc):
-                        estado_cont = "EN RUTA"
-                    elif pd.isna(sald):
-                        estado_cont = "DESCARGANDO"
-                    elif pd.isna(llegp) and not pd.isna(llegdv):
+                    # Contenedor: verificar del estado más avanzado hacia atrás
+                    # para que fechas intermedias faltantes no bloqueen el estado real
+                    if not pd.isna(llegdv):
                         estado_cont = "FINALIZADO - DEVOLUCION"
-                    elif pd.isna(llegp) and pd.isna(llegdv):
-                        estado_cont = "DESCARGADO"
-                    elif not pd.isna(llegp) and pd.isna(llegdv):
+                    elif not pd.isna(salp2):
+                        estado_cont = "EN CAMINO A DEVOLUCION"
+                    elif not pd.isna(llegp):
                         estado_cont = "BAJADO EN PATIO TEMPORAL"
-                    elif not pd.isna(llegp) and not pd.isna(llegdv):
-                        estado_cont = "FINALIZADO - DEVOLUCION"
-                    elif pd.isna(salp2):
-                        estado_cont = "DESCARGADO EN PATIO TEMPORAL"
-                    elif not pd.isna(llegdv):
-                        estado_cont = "FINALIZADO - DEVOLUCION"
+                    elif not pd.isna(sald):
+                        estado_cont = "DESCARGADO"
+                    elif not pd.isna(llegdc):
+                        estado_cont = "DESCARGANDO"
+                    elif not pd.isna(salp):
+                        estado_cont = "EN RUTA"
+                    elif not pd.isna(cita_r):
+                        estado_cont = "SIN SALIDA DE PUERTO"
                     else:
-                        estado_cont = "revisar fechas"
+                        estado_cont = "SIN LLEGADA DE RETIRO DEL CONTENEDOR"
 
                 # ── tendencia mes ────────────────────────────────────────────
                 if mes_iso:
