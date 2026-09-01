@@ -243,64 +243,41 @@ def leer_ajover_comex(stats):
                 mes_rec  = fecrecib.strftime("%Y-%m") if not pd.isna(fecrecib) else ""
 
                 # ── cumplimiento retiro ──────────────────────────────────────
-                if fuente == "CV":
-                    # CV: compara llegada real (llegr) vs cita (cita_r)
-                    if obs_val in OBS_EXENTO:
-                        cumpl_ret = "Exento (no asume)"
-                    elif pd.isna(cita_r):
-                        cumpl_ret = "Sin cita"
-                    elif pd.isna(llegr):
-                        if cita_r >= pd.Timestamp(HOY):
-                            cumpl_ret = "Pendiente"
-                        else:
-                            cumpl_ret = "Sin retiro (vencido)"
-                    elif llegr <= cita_r:
-                        cumpl_ret = "A tiempo"
+                # CV y AJOVER: "Cita retiro" = llegada real al puerto
+                #              "Bodegaje"    = fecha máxima para retirar sin bodegaje
+                # Cumplió si llegó (cita_r) antes de vencer el bodegaje (bod)
+                if obs_val in OBS_EXENTO:
+                    cumpl_ret = "Exento (no asume)"
+                elif pd.isna(bod):
+                    # sin fecha límite conocida
+                    if fuente == "CV":
+                        cumpl_ret = "Sin fecha"
                     else:
-                        horas = round((llegr - cita_r).total_seconds() / 3600, 1)
-                        cumpl_ret = f"Tarde +{horas}h"
+                        cumpl_ret = "Sin fecha"
+                elif pd.isna(cita_r):
+                    # aún no han retirado
+                    if bod.date() >= HOY:
+                        cumpl_ret = "Pendiente"
+                    else:
+                        cumpl_ret = "Sin retiro (vencido)"
+                elif cita_r.date() > bod.date():
+                    dias = (cita_r.date() - bod.date()).days
+                    cumpl_ret = f"Tarde +{dias}d"
                 else:
-                    # AJOVER: compara cita (cita_r) vs fecha bodegaje (bod)
-                    if obs_val in OBS_EXENTO:
-                        cumpl_ret = "Exento (no asume)"
-                    elif pd.isna(cita_r):
-                        if pd.isna(bod):
-                            cumpl_ret = "Sin fecha"
-                        elif bod.date() >= HOY:
-                            cumpl_ret = "Pendiente"
-                        else:
-                            cumpl_ret = "Sin cita (vencido)"
-                    elif not pd.isna(bod) and cita_r.date() > bod.date():
-                        dias = (cita_r.date() - bod.date()).days
-                        cumpl_ret = f"Tarde +{dias}d"
-                    else:
-                        cumpl_ret = "A tiempo"
+                    cumpl_ret = "A tiempo"
 
                 # ── estado retiro ────────────────────────────────────────────
-                if fuente == "CV":
-                    # CV: basado en llegr vs cita_r
-                    if pd.isna(cita_r):
+                if pd.isna(bod):
+                    estado_ret = "SIN RETIRO - A TIEMPO"
+                elif pd.isna(cita_r):
+                    if bod.date() >= HOY:
                         estado_ret = "SIN RETIRO - A TIEMPO"
-                    elif pd.isna(llegr):
-                        if cita_r >= pd.Timestamp(HOY):
-                            estado_ret = "SIN RETIRO - A TIEMPO"
-                        else:
-                            estado_ret = "SIN RETIRO - ATRASADO"
-                    elif llegr <= cita_r:
-                        estado_ret = "RETIRADO - A TIEMPO"
                     else:
-                        estado_ret = "RETIRADO - ATRASADO"
+                        estado_ret = "SIN RETIRO - ATRASADO"
+                elif cita_r.date() > bod.date():
+                    estado_ret = "RETIRADO - ATRASADO"
                 else:
-                    # AJOVER: basado en cita_r vs bod
-                    if pd.isna(cita_r):
-                        if pd.isna(bod) or bod.date() >= HOY:
-                            estado_ret = "SIN RETIRO - A TIEMPO"
-                        else:
-                            estado_ret = "SIN RETIRO - ATRASADO"
-                    elif not pd.isna(llegr) and not pd.isna(bod) and cita_r.date() > bod.date():
-                        estado_ret = "RETIRADO - ATRASADO"
-                    else:
-                        estado_ret = "RETIRADO - A TIEMPO"
+                    estado_ret = "RETIRADO - A TIEMPO"
 
                 # ── cumplimiento devolución (lógica Power Query) ─────────────
                 OBS_EXENTO_DEV = "El pedido fue enviado con demoras, TRACTOCAR NO ASUME EXTRACOSTOS"
