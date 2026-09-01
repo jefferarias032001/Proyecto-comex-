@@ -362,12 +362,20 @@ def leer_ajover_comex(stats):
                     if t_descargando is not None: t["t_descargando"].append(t_descargando)
                     if t_prom_dev    is not None: t["t_prom_dev"].append(t_prom_dev)
 
+                tam_val  = _str(df, c_tamano).iloc[i]
+                ped_val  = _str(df, c_pedido).iloc[i]
+                _cs_kw   = ("pallet","plt","carga suelta","suelto","loose","carga suel")
+                _is_cs   = any(k in str(tam_val).lower() for k in _cs_kw) or \
+                           any(k in str(ped_val).lower()  for k in _cs_kw)
+                tipo_carga = "CARGA SUELTA" if _is_cs else "CONTENEDOR"
+
                 rows.append({
                     "fuente":    fuente,
                     "cliente":   _str(df, c_cliente).iloc[i],
                     "cont":      _str(df, c_cont).iloc[i],
-                    "tamano":    _str(df, c_tamano).iloc[i],
-                    "pedido":    _str(df, c_pedido).iloc[i],
+                    "tamano":    tam_val,
+                    "pedido":    ped_val,
+                    "tipo_carga": tipo_carga,
                     "do":        _str(df, c_do).iloc[i],
                     "linea":     _str(df, c_linea).iloc[i],
                     "terminal":  _str(df, c_terminal).iloc[i],

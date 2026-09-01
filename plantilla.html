@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -410,40 +410,78 @@
           <div class="card-title">Ajover IMPO — Retiros e Importación</div>
           <div class="card-hint" id="ajcxHint"></div>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <select id="ajcxMes" style="padding:5px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink)">
-            <option value="">Todos los meses</option>
-          </select>
-          <select id="ajcxFuente" style="padding:5px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink)">
-            <option value="">Todas las fuentes</option>
-            <option value="AJOVER">IMPO AJOVER</option>
-            <option value="CV">IMPO CV</option>
-          </select>
-          <select id="ajcxFiltRet" style="padding:5px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink)">
-            <option value="">Todos los retiros</option>
-            <option value="A tiempo">A tiempo</option>
-            <option value="Tarde">Tarde</option>
-            <option value="Pendiente">Pendiente</option>
-          </select>
-          <select id="ajcxFiltDev" style="padding:5px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink)">
-            <option value="">Todas las dev.</option>
-            <option value="A tiempo">A tiempo</option>
-            <option value="Tarde">Tarde</option>
-            <option value="Pendiente">Pendiente</option>
-          </select>
-          <select id="ajcxFiltEst" style="padding:5px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink)">
-            <option value="">Todos los estados</option>
-            <option value="EN RUTA">En ruta</option>
-            <option value="DESCARGANDO">Descargando</option>
-            <option value="DESCARGADO">Descargado</option>
-            <option value="FINALIZADO - DEVOLUCION">Finalizado</option>
-            <option value="BAJADO EN PATIO TEMPORAL">Patio temporal</option>
-            <option value="SIN SALIDA DE PUERTO">Sin salida puerto</option>
-            <option value="SIN LLEGADA DE RETIRO DEL CONTENEDOR">Sin llegada retiro</option>
-          </select>
-          <input id="ajcxQ" type="text" placeholder="Buscar contenedor, pedido, cliente..." style="padding:6px 12px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink);width:200px;outline:none"/>
-          <button id="ajcxClear" style="padding:5px 12px;border:1px solid var(--line);border-radius:var(--r);font-size:11px;background:var(--surface);color:var(--ink-2);cursor:pointer">Limpiar</button>
-          <button id="ajcxCSV" style="padding:5px 12px;border:none;border-radius:var(--r);font-size:11px;background:var(--accent);color:#fff;cursor:pointer">⬇ CSV</button>
+        <!-- FILTROS ELEGANTES 3D -->
+        <div style="width:100%;background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);border-radius:14px;padding:14px 16px;box-shadow:0 8px 32px rgba(0,0,0,.22),0 2px 8px rgba(0,0,0,.14),inset 0 1px 0 rgba(255,255,255,.07);margin-top:10px">
+          <!-- Fila 1: tipo + fuente + mes + estado + cumplimiento -->
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px">
+            <div>
+              <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px">Tipo de carga</div>
+              <div id="ajcxChipsTipo" style="display:flex;gap:4px">
+                <button data-tipo="" style="padding:5px 12px;border:none;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;background:#3b82f6;color:#fff;transition:all .2s;box-shadow:0 2px 8px rgba(59,130,246,.4)">Todos</button>
+                <button data-tipo="CONTENEDOR" style="padding:5px 12px;border:none;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;background:rgba(255,255,255,.07);color:#e2e8f0;transition:all .2s">Contenedor</button>
+                <button data-tipo="CARGA SUELTA" style="padding:5px 12px;border:none;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;background:rgba(255,255,255,.07);color:#e2e8f0;transition:all .2s">Carga suelta</button>
+              </div>
+            </div>
+            <div style="width:1px;background:rgba(255,255,255,.1);align-self:stretch;margin:0 4px"></div>
+            <div>
+              <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px">Fuente</div>
+              <select id="ajcxFuente" style="padding:6px 28px 6px 10px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;background:rgba(255,255,255,.07);color:#e2e8f0;outline:none">
+                <option value="" style="background:#1e293b">Todas fuentes</option>
+                <option value="AJOVER" style="background:#1e293b">IMPO AJOVER</option>
+                <option value="CV" style="background:#1e293b">IMPO CV</option>
+              </select>
+            </div>
+            <div>
+              <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px">Mes recibido</div>
+              <select id="ajcxMes" style="padding:6px 28px 6px 10px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;background:rgba(255,255,255,.07);color:#e2e8f0;outline:none">
+                <option value="" style="background:#1e293b">Todos los meses</option>
+              </select>
+            </div>
+            <div>
+              <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px">Estado</div>
+              <select id="ajcxFiltEst" style="padding:6px 28px 6px 10px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;background:rgba(255,255,255,.07);color:#e2e8f0;outline:none">
+                <option value="" style="background:#1e293b">Todos los estados</option>
+                <option value="EN RUTA" style="background:#1e293b">En ruta</option>
+                <option value="DESCARGANDO" style="background:#1e293b">Descargando</option>
+                <option value="DESCARGADO" style="background:#1e293b">Descargado</option>
+                <option value="FINALIZADO - DEVOLUCION" style="background:#1e293b">Finalizado</option>
+                <option value="BAJADO EN PATIO TEMPORAL" style="background:#1e293b">Patio temporal</option>
+                <option value="SIN SALIDA DE PUERTO" style="background:#1e293b">Sin salida puerto</option>
+                <option value="SIN LLEGADA DE RETIRO DEL CONTENEDOR" style="background:#1e293b">Sin llegada retiro</option>
+              </select>
+            </div>
+            <div>
+              <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px">Retiro</div>
+              <select id="ajcxFiltRet" style="padding:6px 28px 6px 10px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;background:rgba(255,255,255,.07);color:#e2e8f0;outline:none">
+                <option value="" style="background:#1e293b">Todos</option>
+                <option value="A tiempo" style="background:#1e293b">A tiempo</option>
+                <option value="Tarde" style="background:#1e293b">Tarde</option>
+                <option value="Pendiente" style="background:#1e293b">Pendiente</option>
+              </select>
+            </div>
+            <div>
+              <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px">Devolucion</div>
+              <select id="ajcxFiltDev" style="padding:6px 28px 6px 10px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;background:rgba(255,255,255,.07);color:#e2e8f0;outline:none">
+                <option value="" style="background:#1e293b">Todas</option>
+                <option value="A tiempo" style="background:#1e293b">A tiempo</option>
+                <option value="Tarde" style="background:#1e293b">Tarde</option>
+                <option value="Pendiente" style="background:#1e293b">Pendiente</option>
+              </select>
+            </div>
+          </div>
+          <!-- Fila 2: busquedas -->
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <div style="position:relative;flex:1;min-width:180px">
+              <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;fill:none;stroke:#94a3b8;stroke-width:2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input id="ajcxQ" type="text" placeholder="Buscar contenedor, cliente, destino..." style="width:100%;padding:7px 12px 7px 32px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;background:rgba(255,255,255,.07);color:#e2e8f0;outline:none;box-sizing:border-box"/>
+            </div>
+            <div style="position:relative;flex:1;min-width:160px">
+              <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;fill:none;stroke:#94a3b8;stroke-width:2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input id="ajcxQob" type="text" placeholder="Buscar OB / pedido..." style="width:100%;padding:7px 12px 7px 32px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;background:rgba(255,255,255,.07);color:#e2e8f0;outline:none;box-sizing:border-box"/>
+            </div>
+            <button id="ajcxClear" style="padding:7px 16px;border:1px solid rgba(255,255,255,.15);border-radius:8px;font-size:11px;font-weight:600;background:rgba(255,255,255,.07);color:#94a3b8;cursor:pointer;white-space:nowrap">x Limpiar</button>
+            <button id="ajcxCSV" style="padding:7px 16px;border:none;border-radius:8px;font-size:11px;font-weight:600;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;cursor:pointer;box-shadow:0 4px 12px rgba(59,130,246,.35);white-space:nowrap">Exportar CSV</button>
+          </div>
         </div>
       </div>
       <div class="card-b" style="padding:12px 0 0">
@@ -1611,7 +1649,7 @@ function renderAjoverLlenos(){
 }
 
 // ═══════════════════════════ AJOVER COMEX ═══════════════════════════
-const SAC={q:'',fuente:'',filtRet:'',filtDev:'',filtEst:'',mes:'',pg:1,PER:50};
+const SAC={q:'',qob:'',fuente:'',filtRet:'',filtDev:'',filtEst:'',filtTipo:'',mes:'',pg:1,PER:50};
 function _pillRet(v){
   if(!v||v==='Sin fecha'||v==='Sin fecha bodegaje'||v==='Sin cita')return `<span style="color:var(--ink-3);font-size:10px">${v||'—'}</span>`;
   if(v==='A tiempo')return '<span style="background:#d4edda;color:#155724;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700">✓ A tiempo</span>';
@@ -1632,12 +1670,13 @@ function renderAjoverComex(){
   }
 
   // Filtrar
-  const q=SAC.q.toLowerCase();
-  const fr=SAC.filtRet, fd=SAC.filtDev, ff=SAC.fuente, fe=SAC.filtEst, fm=SAC.mes;
+  const q=SAC.q.toLowerCase(), qob=SAC.qob.toLowerCase();
+  const fr=SAC.filtRet, fd=SAC.filtDev, ff=SAC.fuente, fe=SAC.filtEst, fm=SAC.mes, ft=SAC.filtTipo;
   const filtRows=allRows.filter(r=>{
     if(fm){const rm=r.mes_rec||r.mes_iso;if(rm!==fm)return false;}
     if(ff&&r.fuente!==ff)return false;
     if(fe&&r.estado_cont!==fe)return false;
+    if(ft&&r.tipo_carga!==ft)return false;
     if(fr==='A tiempo'&&!(r.cumpl_ret==='A tiempo'||r.cumpl_ret==='Exento (no asume)'))return false;
     if(fr==='Tarde'&&!(r.cumpl_ret?.includes('Tarde')||r.cumpl_ret?.includes('vencido')))return false;
     if(fr==='Pendiente'&&!(r.cumpl_ret==='Pendiente'||r.cumpl_ret==='Sin fecha'))return false;
@@ -1645,6 +1684,7 @@ function renderAjoverComex(){
     if(fd==='Tarde'&&!(r.cumpl_dev?.includes('Tarde')||r.cumpl_dev?.includes('vencido')))return false;
     if(fd==='Pendiente'&&r.cumpl_dev!=='Pendiente')return false;
     if(q&&![r.cont,r.pedido,r.do,r.cliente,r.linea,r.terminal,r.destino].some(x=>x?.toLowerCase().includes(q)))return false;
+    if(qob&&!r.pedido?.toLowerCase().includes(qob))return false;
     return true;
   });
   $('ajcxHint').textContent=`${fN(filtRows.length)} contenedores`;
@@ -1745,17 +1785,6 @@ function renderAjoverComex(){
   // Tabla detalle
   const tdH='padding:6px 10px;font-weight:700;font-size:10px;text-transform:uppercase;color:var(--ink-3);border-bottom:2px solid var(--line);white-space:nowrap;background:var(--surface);position:sticky;top:0';
   const tdD='padding:5px 10px;border-bottom:1px solid var(--line);vertical-align:top';
-  const COLS=[
-    ['fuente','Fuente'],['eta','ETA'],['cont','Contenedor'],['tamano','Tam.'],
-    ['linea','Línea'],['terminal','Terminal'],['destino','Destino'],
-    ['estado_cont','Estado'],
-    ['f_bodegaje','Bodegaje'],['f_cita_ret','Cita retiro'],['f_llegr','Llegada retiro'],
-    ['f_salp','Salida puerto'],
-    ['cumpl_ret','Cumpl. retiro'],['estado_ret','Estado retiro'],
-    ['f_max_dev','Máx. dev.'],['f_llegdv','Llegada dev.'],
-    ['cumpl_dev','Cumpl. dev.'],['estado_dev','Estado dev.'],
-    ['tipo_dev','Tipo dev.'],['cierre','Cierre'],
-  ];
   const _pillEst=s=>{
     if(!s)return '—';
     const ok=s.includes('A TIEMPO')||s.includes('FINALIZADO');
@@ -1765,31 +1794,74 @@ function renderAjoverComex(){
     const col=bad?'#991b1b':ok?'#065f46':warn?'#92400e':'#374151';
     return `<span style="font-size:9px;background:${bg};color:${col};padding:1px 6px;border-radius:20px;white-space:nowrap">${s}</span>`;
   };
+  const _fhStr=h=>{if(h==null||h==='')return '—';const hh=Math.floor(h),mm=Math.round((h-hh)*60);return hh>0?`${hh}h ${mm}m`:`${mm}m`;};
+  const nw=`${tdD};white-space:nowrap`, sm=`${tdD};font-size:10px`;
   const pg=SAC.pg, per=SAC.PER;
   const paged=filtRows.slice((pg-1)*per, pg*per);
-  let html=`<thead><tr>${COLS.map(([,l])=>`<th style="${tdH}">${l}</th>`).join('')}</tr></thead><tbody>`;
+  let html=`<thead><tr>
+    <th style="${tdH}">Fuente</th><th style="${tdH}">F.Recibido</th><th style="${tdH}">ETA</th>
+    <th style="${tdH}">Contenedor</th><th style="${tdH}">Tam.</th><th style="${tdH}">Pedido</th>
+    <th style="${tdH}">DO</th><th style="${tdH}">Cliente</th><th style="${tdH}">Línea</th>
+    <th style="${tdH}">Terminal</th><th style="${tdH}">Destino</th>
+    <th style="${tdH}">Estado contenedor</th>
+    <th style="${tdH}">Bodegaje</th><th style="${tdH}">Cita retiro</th>
+    <th style="${tdH}">Cita reprog.</th><th style="${tdH}">Llegada retiro</th>
+    <th style="${tdH}">Salida puerto</th><th style="${tdH}">Llegada desc.</th>
+    <th style="${tdH}">Salida desc.</th><th style="${tdH}">Llegada patio</th>
+    <th style="${tdH}">Salida patio</th>
+    <th style="${tdH}">Cumpl. retiro</th><th style="${tdH}">Estado retiro</th>
+    <th style="${tdH}">Máx. dev.</th><th style="${tdH}">Cita dev.</th>
+    <th style="${tdH}">Llegada dev.</th><th style="${tdH}">Lugar dev.</th>
+    <th style="${tdH}">Cumpl. dev.</th><th style="${tdH}">Estado dev.</th>
+    <th style="${tdH}">Tipo dev.</th><th style="${tdH}">Observación</th>
+    <th style="${tdH}">Cierre</th>
+    <th style="${tdH}">h Espera retiro</th><th style="${tdH}">h En puerto</th>
+    <th style="${tdH}">h En ruta</th><th style="${tdH}">h Descargando</th>
+    <th style="${tdH}">h Prom. dev.</th><th style="${tdH}">h Sal-Cita</th>
+    <th style="${tdH}">h Ruta2</th><th style="${tdH}">h Patio temp.</th>
+  </tr></thead><tbody>`;
   paged.forEach(r=>{
     html+=`<tr>
       <td style="${tdD}"><span style="font-size:10px;background:${r.fuente==='AJOVER'?'#dbeafe':'#fef3c7'};color:${r.fuente==='AJOVER'?'#1e40af':'#92400e'};padding:1px 6px;border-radius:20px">${r.fuente}</span></td>
-      <td style="${tdD};white-space:nowrap">${r.eta||'—'}</td>
-      <td style="${tdD};font-family:monospace;font-size:10px">${esc(r.cont)||'—'}</td>
+      <td style="${nw}">${r.fecrecib||'—'}</td>
+      <td style="${nw}">${r.eta||'—'}</td>
+      <td style="${sm};font-family:monospace">${esc(r.cont)||'—'}</td>
       <td style="${tdD}">${esc(r.tamano)||'—'}</td>
-      <td style="${tdD}">${esc(r.linea)||'—'}</td>
-      <td style="${tdD};max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.terminal)||'—'}</td>
-      <td style="${tdD};max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.destino)||'—'}</td>
+      <td style="${sm}">${esc(r.pedido)||'—'}</td>
+      <td style="${sm}">${esc(r.do)||'—'}</td>
+      <td style="${sm};max-width:120px;overflow:hidden;text-overflow:ellipsis">${esc(r.cliente)||'—'}</td>
+      <td style="${sm}">${esc(r.linea)||'—'}</td>
+      <td style="${sm};max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(r.terminal)||'—'}</td>
+      <td style="${sm};max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(r.destino)||'—'}</td>
       <td style="${tdD}">${_pillEst(r.estado_cont)}</td>
-      <td style="${tdD};white-space:nowrap">${r.f_bodegaje||'—'}</td>
-      <td style="${tdD};white-space:nowrap">${r.f_cita_ret||'—'}</td>
-      <td style="${tdD};white-space:nowrap">${r.f_llegr||'—'}</td>
-      <td style="${tdD};white-space:nowrap">${r.f_salp||'—'}</td>
+      <td style="${nw}">${r.f_bodegaje||'—'}</td>
+      <td style="${nw}">${r.f_cita_ret||'—'}</td>
+      <td style="${nw}">${r.f_cita_rr||'—'}</td>
+      <td style="${nw}">${r.f_llegr||'—'}</td>
+      <td style="${nw}">${r.f_salp||'—'}</td>
+      <td style="${nw}">${r.f_llegdc||'—'}</td>
+      <td style="${nw}">${r.f_sald||'—'}</td>
+      <td style="${nw}">${r.f_llegp||'—'}</td>
+      <td style="${nw}">${r.f_salp2||'—'}</td>
       <td style="${tdD}">${_pillRet(r.cumpl_ret)}</td>
       <td style="${tdD}">${_pillEst(r.estado_ret)}</td>
-      <td style="${tdD};white-space:nowrap">${r.f_max_dev||'—'}</td>
-      <td style="${tdD};white-space:nowrap">${r.f_llegdv||'—'}</td>
+      <td style="${nw}">${r.f_max_dev||'—'}</td>
+      <td style="${nw}">${r.f_cita_dev||'—'}</td>
+      <td style="${nw}">${r.f_llegdv||'—'}</td>
+      <td style="${sm}">${esc(r.f_lugar_dev)||'—'}</td>
       <td style="${tdD}">${_pillRet(r.cumpl_dev)}</td>
       <td style="${tdD}">${_pillEst(r.estado_dev)}</td>
-      <td style="${tdD};font-size:10px">${esc(r.tipo_dev)||'—'}</td>
-      <td style="${tdD};font-size:10px">${esc(r.cierre)||'—'}</td>
+      <td style="${sm}">${esc(r.tipo_dev)||'—'}</td>
+      <td style="${sm};max-width:180px;overflow:hidden;text-overflow:ellipsis" title="${esc(r.observacion)}">${esc(r.observacion)||'—'}</td>
+      <td style="${sm}">${esc(r.cierre)||'—'}</td>
+      <td style="${tdD}">${_fhStr(r.t_espera_ret)}</td>
+      <td style="${tdD}">${_fhStr(r.t_en_puerto)}</td>
+      <td style="${tdD}">${_fhStr(r.t_en_ruta)}</td>
+      <td style="${tdD}">${_fhStr(r.t_descargando)}</td>
+      <td style="${tdD}">${_fhStr(r.t_prom_dev)}</td>
+      <td style="${tdD}">${_fhStr(r.t_salida_vs_cita)}</td>
+      <td style="${tdD}">${_fhStr(r.t_en_ruta2)}</td>
+      <td style="${tdD}">${_fhStr(r.t_patio_temp)}</td>
     </tr>`;
   });
   html+='</tbody>';
@@ -1811,7 +1883,31 @@ function renderAjoverComex(){
     $('ajcxFiltRet').onchange=e=>{SAC.filtRet=e.target.value;SAC.pg=1;renderAjoverComex();};
     $('ajcxFiltDev').onchange=e=>{SAC.filtDev=e.target.value;SAC.pg=1;renderAjoverComex();};
     $('ajcxFiltEst').onchange=e=>{SAC.filtEst=e.target.value;SAC.pg=1;renderAjoverComex();};
-    $('ajcxClear').onclick=()=>{SAC.q='';SAC.fuente='';SAC.filtRet='';SAC.filtDev='';SAC.filtEst='';SAC.mes='';SAC.pg=1;['ajcxQ','ajcxMes','ajcxFuente','ajcxFiltRet','ajcxFiltDev','ajcxFiltEst'].forEach(id=>{if($(id))$(id).value='';});renderAjoverComex();};
+    if($('ajcxQob'))$('ajcxQob').oninput=e=>{SAC.qob=e.target.value;SAC.pg=1;renderAjoverComex();};
+    // Chips tipo de carga
+    document.querySelectorAll('#ajcxChipsTipo button').forEach(btn=>{
+      btn.onclick=()=>{
+        SAC.filtTipo=btn.dataset.tipo;SAC.pg=1;
+        document.querySelectorAll('#ajcxChipsTipo button').forEach(b=>{
+          const sel=b.dataset.tipo===SAC.filtTipo;
+          const colMap={'':'#3b82f6','CONTENEDOR':'#0ea5e9','CARGA SUELTA':'#f59e0b'};
+          b.style.background=sel?(colMap[b.dataset.tipo]||'#3b82f6'):'rgba(255,255,255,.07)';
+          b.style.color=sel?'#fff':'#e2e8f0';
+          b.style.boxShadow=sel?`0 2px 8px ${colMap[b.dataset.tipo]||'#3b82f6'}66`:'none';
+        });
+        renderAjoverComex();
+      };
+    });
+    $('ajcxClear').onclick=()=>{
+      SAC.q='';SAC.qob='';SAC.fuente='';SAC.filtRet='';SAC.filtDev='';SAC.filtEst='';SAC.filtTipo='';SAC.mes='';SAC.pg=1;
+      ['ajcxQ','ajcxQob','ajcxMes','ajcxFuente','ajcxFiltRet','ajcxFiltDev','ajcxFiltEst'].forEach(id=>{if($(id))$(id).value='';});
+      document.querySelectorAll('#ajcxChipsTipo button').forEach(b=>{
+        b.style.background=b.dataset.tipo===''?'#3b82f6':'rgba(255,255,255,.07)';
+        b.style.color=b.dataset.tipo===''?'#fff':'#e2e8f0';
+        b.style.boxShadow=b.dataset.tipo===''?'0 2px 8px rgba(59,130,246,.4)':'none';
+      });
+      renderAjoverComex();
+    };
     $('ajcxCSV').onclick=()=>{
       const q=v=>{v=v==null?'':String(v);return /[;\n"]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
       const cols=[['fuente','Fuente'],['eta','ETA'],['cont','Contenedor'],['tamano','Tamaño'],['linea','Línea'],['terminal','Terminal'],['destino','Destino'],
