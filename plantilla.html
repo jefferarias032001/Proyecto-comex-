@@ -203,7 +203,7 @@
     <button class="tab" data-tab="detalle">Detalle <span class="badge" id="detBadge">0</span></button>
     <button class="tab" data-tab="ditar">DITAR <span class="badge" id="ditarBadge">0</span></button>
     <button class="tab" data-tab="ajover">Ajover EXPO</button>
-    <button class="tab" data-tab="ajcomex">Ajover COMEX</button>
+    <button class="tab" data-tab="ajcomex">Ajover IMPO</button>
     <button class="tab" data-tab="reglas">Reglas</button>
   </div>
 
@@ -401,7 +401,7 @@
     <div class="card" style="margin-bottom:16px">
       <div class="card-h" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
         <div>
-          <div class="card-title">Ajover COMEX — Retiros e Importación</div>
+          <div class="card-title">Ajover IMPO — Retiros e Importación</div>
           <div class="card-hint" id="ajcxHint"></div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -1233,6 +1233,37 @@ function _pillCumpl(v){
   return `<span style="background:#f8d7da;color:#721c24;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">✗ ${esc(v)}</span>`;
 }
 
+function _svgTend(data,cfg){
+  const _mn=s=>{const p=s.split('-');const ms=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];return (ms[parseInt(p[1])-1]||p[1])+"'"+p[0].slice(2);};
+  const W=640,H=280,PL=44,PR=12,PT=32,PB=50;
+  const cW=(W-PL-PR)/data.length;
+  const bW=Math.min(36,cW*0.55);
+  const maxV=cfg.maxV||Math.max(...data.map(t=>t[cfg.key]||0),1);
+  const yS=v=>PT+(H-PT-PB)*(1-(v/maxV));
+  let bars='',pts='',dots='',xlbls='',grid='';
+  const gVals=cfg.pct?[0,25,50,75,100]:[0,Math.round(maxV*0.25),Math.round(maxV*0.5),Math.round(maxV*0.75),Math.round(maxV)];
+  gVals.forEach(v=>{
+    const y=yS(v);
+    grid+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="var(--line-2)" stroke-width="${v===0?1.5:0.7}"/>`;
+    grid+=`<text x="${PL-4}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--ink-3)">${v}${cfg.pct?'%':''}</text>`;
+  });
+  data.forEach((t,i)=>{
+    const val=t[cfg.key]||0, x=PL+i*cW+cW/2, y=yS(val);
+    const col=typeof cfg.color==='function'?cfg.color(t,val):cfg.color;
+    bars+=`<rect x="${(x-bW/2).toFixed(1)}" y="${y.toFixed(1)}" width="${bW}" height="${Math.max(0,H-PB-y).toFixed(1)}" fill="${col}" opacity="0.22" rx="3"/>`;
+    pts+=(i===0?'M':'L')+`${x.toFixed(1)},${y.toFixed(1)}`;
+    dots+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="${col}" stroke="var(--surface)" stroke-width="2"/>`;
+    dots+=`<text x="${x.toFixed(1)}" y="${(y-10).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="${col}">${typeof cfg.label==='function'?cfg.label(t,val):val+(cfg.pct?'%':'')}</text>`;
+    xlbls+=`<text x="${x.toFixed(1)}" y="${H-PB+14}" text-anchor="middle" font-size="10" fill="var(--ink-3)">${_mn(t.mes)}</text>`;
+    if(cfg.sub)  xlbls+=`<text x="${x.toFixed(1)}" y="${H-PB+27}" text-anchor="middle" font-size="9" font-weight="600" fill="var(--ink-2)">${cfg.sub(t)}</text>`;
+    if(cfg.sub2) xlbls+=`<text x="${x.toFixed(1)}" y="${H-PB+39}" text-anchor="middle" font-size="8" fill="var(--ink-3)">${cfg.sub2(t)}</text>`;
+  });
+  return `<div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">${cfg.title||''}</div>
+    <div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" style="width:100%;min-width:${Math.max(360,data.length*72)}px;height:${H}px;display:block">
+      ${grid}${bars}<path d="${pts}" fill="none" stroke="var(--marine)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${dots}${xlbls}
+    </svg></div>`;
+}
+
 function renderAjoverVacios(){
   const AJ=window.AJOVER||{};
   const va=AJ.vacios;
@@ -1378,38 +1409,6 @@ function renderAjoverLlenos(){
         <div style="font-size:10px;color:var(--ink-3)">${pr2.delta_cita==null?'sin datos':(pr2.delta_cita||0)<=60?'dentro del rango':'tarde en promedio'}</div>
       </div>
     </div>`;
-
-  // ── helper SVG chart ─────────────────────────────────────────────────────
-  function _svgTend(data,cfg){
-    const _mn=s=>{const p=s.split('-');const ms=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];return (ms[parseInt(p[1])-1]||p[1])+"'"+p[0].slice(2);};
-    const W=640,H=280,PL=44,PR=12,PT=32,PB=50;
-    const cW=(W-PL-PR)/data.length;
-    const bW=Math.min(36,cW*0.55);
-    const maxV=cfg.maxV||Math.max(...data.map(t=>t[cfg.key]||0),1);
-    const yS=v=>PT+(H-PT-PB)*(1-(v/maxV));
-    let bars='',pts='',dots='',xlbls='',grid='';
-    const gVals=cfg.pct?[0,25,50,75,100]:[0,Math.round(maxV*0.25),Math.round(maxV*0.5),Math.round(maxV*0.75),Math.round(maxV)];
-    gVals.forEach(v=>{
-      const y=yS(v);
-      grid+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="var(--line-2)" stroke-width="${v===0?1.5:0.7}"/>`;
-      grid+=`<text x="${PL-4}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--ink-3)">${v}${cfg.pct?'%':''}</text>`;
-    });
-    data.forEach((t,i)=>{
-      const val=t[cfg.key]||0, x=PL+i*cW+cW/2, y=yS(val);
-      const col=cfg.color(t,val);
-      bars+=`<rect x="${(x-bW/2).toFixed(1)}" y="${y.toFixed(1)}" width="${bW}" height="${Math.max(0,H-PB-y).toFixed(1)}" fill="${col}" opacity="0.22" rx="3"/>`;
-      pts+=(i===0?'M':'L')+`${x.toFixed(1)},${y.toFixed(1)}`;
-      dots+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="${col}" stroke="var(--surface)" stroke-width="2"/>`;
-      dots+=`<text x="${x.toFixed(1)}" y="${(y-10).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="${col}">${cfg.label(t,val)}</text>`;
-      xlbls+=`<text x="${x.toFixed(1)}" y="${H-PB+14}" text-anchor="middle" font-size="10" fill="var(--ink-3)">${_mn(t.mes)}</text>`;
-      if(cfg.sub)  xlbls+=`<text x="${x.toFixed(1)}" y="${H-PB+27}" text-anchor="middle" font-size="9" font-weight="600" fill="var(--ink-2)">${cfg.sub(t)}</text>`;
-      if(cfg.sub2) xlbls+=`<text x="${x.toFixed(1)}" y="${H-PB+39}" text-anchor="middle" font-size="8" fill="var(--ink-3)">${cfg.sub2(t)}</text>`;
-    });
-    return `<div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">${cfg.title}</div>
-      <div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" style="width:100%;min-width:${Math.max(360,data.length*72)}px;height:${H}px;display:block">
-        ${grid}${bars}<path d="${pts}" fill="none" stroke="var(--marine)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${dots}${xlbls}
-      </svg></div>`;
-  }
 
   // ── gráfico 1: % cumplimiento, subtítulo = OBs distintos ─────────────────
   const tend=(ll.tendencia||[]).filter(t=>!S.f.meses.size||S.f.meses.has(t.mes));
@@ -1578,9 +1577,10 @@ function renderAjoverLlenos(){
 // ═══════════════════════════ AJOVER COMEX ═══════════════════════════
 const SAC={q:'',fuente:'',filtRet:'',filtDev:'',pg:1,PER:50};
 function _pillRet(v){
-  if(!v||v==='Sin fecha bodegaje'||v==='Sin cita')return `<span style="color:var(--ink-3);font-size:10px">${v||'—'}</span>`;
+  if(!v||v==='Sin fecha'||v==='Sin fecha bodegaje'||v==='Sin cita')return `<span style="color:var(--ink-3);font-size:10px">${v||'—'}</span>`;
   if(v==='A tiempo')return '<span style="background:#d4edda;color:#155724;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700">✓ A tiempo</span>';
-  if(v==='Pendiente')return '<span style="background:#e2e3e5;color:#383d41;padding:2px 7px;border-radius:20px;font-size:10px">⏳ Pendiente</span>';
+  if(v==='Exento (no asume)'||v==='A tiempo (sin límite)')return `<span style="background:#cfe2ff;color:#084298;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700">✓ ${esc(v)}</span>`;
+  if(v==='Pendiente'||v==='Sin cita (vencido)'||v==='Sin devolución (vencido)')return `<span style="background:#e2e3e5;color:#383d41;padding:2px 7px;border-radius:20px;font-size:10px">⏳ ${esc(v)}</span>`;
   return `<span style="background:#f8d7da;color:#721c24;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700">⚠ ${esc(v)}</span>`;
 }
 function renderAjoverComex(){
@@ -1593,11 +1593,11 @@ function renderAjoverComex(){
   const fr=SAC.filtRet, fd=SAC.filtDev, ff=SAC.fuente;
   const filtRows=allRows.filter(r=>{
     if(ff&&r.fuente!==ff)return false;
-    if(fr==='A tiempo'&&r.cumpl_ret!=='A tiempo')return false;
-    if(fr==='Tarde'&&!r.cumpl_ret?.includes('Tarde'))return false;
-    if(fr==='Pendiente'&&r.cumpl_ret!=='Pendiente')return false;
-    if(fd==='A tiempo'&&r.cumpl_dev!=='A tiempo')return false;
-    if(fd==='Tarde'&&!r.cumpl_dev?.includes('Tarde'))return false;
+    if(fr==='A tiempo'&&!(r.cumpl_ret==='A tiempo'||r.cumpl_ret==='Exento (no asume)'))return false;
+    if(fr==='Tarde'&&!(r.cumpl_ret?.includes('Tarde')||r.cumpl_ret?.includes('vencido')))return false;
+    if(fr==='Pendiente'&&!(r.cumpl_ret==='Pendiente'||r.cumpl_ret==='Sin fecha'))return false;
+    if(fd==='A tiempo'&&!(r.cumpl_dev==='A tiempo'||r.cumpl_dev==='Exento (no asume)'||r.cumpl_dev==='A tiempo (sin límite)'))return false;
+    if(fd==='Tarde'&&!(r.cumpl_dev?.includes('Tarde')||r.cumpl_dev?.includes('vencido')))return false;
     if(fd==='Pendiente'&&r.cumpl_dev!=='Pendiente')return false;
     if(q&&![r.cont,r.pedido,r.do,r.cliente,r.linea,r.terminal].some(x=>x?.toLowerCase().includes(q)))return false;
     return true;
@@ -1605,9 +1605,9 @@ function renderAjoverComex(){
   $('ajcxHint').textContent=`${fN(filtRows.length)} contenedores`;
 
   // KPIs retiro
-  const retAT=filtRows.filter(r=>r.cumpl_ret==='A tiempo').length;
-  const retTard=filtRows.filter(r=>r.cumpl_ret?.includes('Tarde')).length;
-  const retPend=filtRows.filter(r=>r.cumpl_ret==='Pendiente').length;
+  const retAT=filtRows.filter(r=>r.cumpl_ret==='A tiempo'||r.cumpl_ret==='Exento (no asume)').length;
+  const retTard=filtRows.filter(r=>r.cumpl_ret?.includes('Tarde')||r.cumpl_ret?.includes('vencido')).length;
+  const retPend=filtRows.filter(r=>r.cumpl_ret==='Pendiente'||r.cumpl_ret==='Sin fecha').length;
   const retCon=retAT+retTard;
   const pctRet=retCon?(retAT/retCon*100).toFixed(1):'—';
   $('ajcxKpisRet').innerHTML=`
@@ -1617,8 +1617,8 @@ function renderAjoverComex(){
     <div class="kpi"><div class="kl">⏳ Por retirar</div><div class="kv num" style="color:var(--ink-2)">${fN(retPend)}</div><div class="ks">pendientes</div></div>`;
 
   // KPIs devolución
-  const devAT=filtRows.filter(r=>r.cumpl_dev==='A tiempo').length;
-  const devTard=filtRows.filter(r=>r.cumpl_dev?.includes('Tarde')).length;
+  const devAT=filtRows.filter(r=>r.cumpl_dev==='A tiempo'||r.cumpl_dev==='Exento (no asume)'||r.cumpl_dev==='A tiempo (sin límite)').length;
+  const devTard=filtRows.filter(r=>r.cumpl_dev?.includes('Tarde')||r.cumpl_dev?.includes('vencido')).length;
   const devPend=filtRows.filter(r=>r.cumpl_dev==='Pendiente').length;
   const devCon=devAT+devTard;
   const pctDev=devCon?(devAT/devCon*100).toFixed(1):'—';
@@ -1628,15 +1628,19 @@ function renderAjoverComex(){
     <div class="kpi"><div class="kl">⏳ Dev. pendiente</div><div class="kv num" style="color:var(--ink-2)">${fN(devPend)}</div><div class="ks">sin devolver</div></div>`;
 
   // Tiempos promedio
-  const _a=arr=>{const v=arr.filter(x=>x!=null);return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length):null;};
-  const _fh=m=>{if(m==null)return '<span style="color:var(--ink-3)">—</span>';const h=Math.floor(m/60),mn=Math.round(m%60);return h>0?`<b>${h}h ${mn}min</b>`:`<b>${mn}min</b>`;};
+  const _a=arr=>{const v=arr.filter(x=>x!=null&&!isNaN(x));return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length*10)/10:null;};
+  const _fh=h=>{if(h==null)return '<span style="color:var(--ink-3)">—</span>';const hh=Math.floor(h),mm=Math.round((h-hh)*60);return hh>0?`<b>${hh}h ${mm}min</b>`:`<b>${mm}min</b>`;};
   const avgEspera=_a(filtRows.map(r=>r.t_espera_ret));
   const avgPuerto=_a(filtRows.map(r=>r.t_en_puerto));
-  const avgTransit=_a(filtRows.map(r=>r.t_transit_dest));
+  const avgEnRuta=_a(filtRows.map(r=>r.t_en_ruta));
+  const avgDescarg=_a(filtRows.map(r=>r.t_descargando));
+  const avgPromDev=_a(filtRows.map(r=>r.t_prom_dev));
   $('ajcxTiempos').innerHTML=`<div style="display:flex;gap:24px;flex-wrap:wrap;padding:8px 0 4px">
-    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase">⏱ Espera en cita de retiro</div><div style="font-size:18px;margin-top:4px">${_fh(avgEspera)}</div></div>
-    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase">🚢 Tiempo en puerto</div><div style="font-size:18px;margin-top:4px">${_fh(avgPuerto)}</div></div>
-    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase">🚛 Tránsito a descargue</div><div style="font-size:18px;margin-top:4px">${_fh(avgTransit)}</div></div>
+    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase">⏱ Espera cita retiro → llegada</div><div style="font-size:18px;margin-top:4px">${_fh(avgEspera)}</div></div>
+    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase">🚢 Llegada retiro → salida puerto</div><div style="font-size:18px;margin-top:4px">${_fh(avgPuerto)}</div></div>
+    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase">🚛 En ruta a descargue</div><div style="font-size:18px;margin-top:4px">${_fh(avgEnRuta)}</div></div>
+    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase">📦 Tiempo descargando</div><div style="font-size:18px;margin-top:4px">${_fh(avgDescarg)}</div></div>
+    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase">🔁 Prom. tiempo devolución</div><div style="font-size:18px;margin-top:4px">${_fh(avgPromDev)}</div></div>
   </div>`;
 
   // Tendencia retiros (desde datos globales sin filtro para ver todos los meses)
@@ -1654,14 +1658,18 @@ function renderAjoverComex(){
 
   if(tend.length){
     $('ajcxTendRet').innerHTML=_svgTend(tend,{
-      key:'pct_ret',pct:true,maxV:100,
-      titulo:'% Cumplimiento retiros mes a mes (vs. bodegaje)',
-      color:'#3b82f6',colorLine:'#1d4ed8',
+      key:'pct_ret', pct:true, maxV:100,
+      title:'% Cumplimiento retiros en puerto mes a mes (fecha retiro vs. fecha máx. bodegaje)',
+      color:(t,v)=>v>=90?'#1a8a34':v>=70?'#d48000':'#c82333',
+      label:(t,v)=>v+'%',
+      sub:(t)=>`${fN(t.ret_aT)} ok / ${fN(t.ret_tard)} tarde`,
     });
     $('ajcxTendDev').innerHTML=_svgTend(tend,{
-      key:'pct_dev',pct:true,maxV:100,
-      titulo:'% Cumplimiento devoluciones mes a mes (vs. fecha máx. demoras)',
-      color:'#10b981',colorLine:'#047857',
+      key:'pct_dev', pct:true, maxV:100,
+      title:'% Cumplimiento devoluciones mes a mes (vs. fecha máx. demoras)',
+      color:(t,v)=>v>=90?'#1a8a34':v>=70?'#d48000':'#c82333',
+      label:(t,v)=>v+'%',
+      sub:(t)=>`${fN(t.dev_aT)} ok / ${fN(t.dev_tard)} tarde`,
     });
   } else {$('ajcxTendRet').innerHTML='';$('ajcxTendDev').innerHTML='';}
 
@@ -1671,12 +1679,23 @@ function renderAjoverComex(){
   const COLS=[
     ['fuente','Fuente'],['eta','ETA'],['cont','Contenedor'],['tamano','Tam.'],
     ['linea','Línea'],['terminal','Terminal'],['destino','Destino'],
+    ['estado_cont','Estado'],
     ['f_bodegaje','Bodegaje'],['f_cita_ret','Cita retiro'],['f_llegr','Llegada retiro'],
-    ['cumpl_ret','Cumpl. retiro'],
-    ['f_max_dev','Máx. dev.'],['f_cita_dev','Cita dev.'],['f_llegdv','Llegada dev.'],
-    ['cumpl_dev','Cumpl. dev.'],
+    ['f_salp','Salida puerto'],
+    ['cumpl_ret','Cumpl. retiro'],['estado_ret','Estado retiro'],
+    ['f_max_dev','Máx. dev.'],['f_llegdv','Llegada dev.'],
+    ['cumpl_dev','Cumpl. dev.'],['estado_dev','Estado dev.'],
     ['tipo_dev','Tipo dev.'],['cierre','Cierre'],
   ];
+  const _pillEst=s=>{
+    if(!s)return '—';
+    const ok=s.includes('A TIEMPO')||s.includes('FINALIZADO');
+    const warn=s.includes('SIN ');
+    const bad=s.includes('ATRASADO');
+    const bg=bad?'#fde8e8':ok?'#d1fae5':warn?'#fef3c7':'#e5e7eb';
+    const col=bad?'#991b1b':ok?'#065f46':warn?'#92400e':'#374151';
+    return `<span style="font-size:9px;background:${bg};color:${col};padding:1px 6px;border-radius:20px;white-space:nowrap">${s}</span>`;
+  };
   const pg=SAC.pg, per=SAC.PER;
   const paged=filtRows.slice((pg-1)*per, pg*per);
   let html=`<thead><tr>${COLS.map(([,l])=>`<th style="${tdH}">${l}</th>`).join('')}</tr></thead><tbody>`;
@@ -1689,14 +1708,17 @@ function renderAjoverComex(){
       <td style="${tdD}">${esc(r.linea)||'—'}</td>
       <td style="${tdD};max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.terminal)||'—'}</td>
       <td style="${tdD};max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.destino)||'—'}</td>
+      <td style="${tdD}">${_pillEst(r.estado_cont)}</td>
       <td style="${tdD};white-space:nowrap">${r.f_bodegaje||'—'}</td>
       <td style="${tdD};white-space:nowrap">${r.f_cita_ret||'—'}</td>
       <td style="${tdD};white-space:nowrap">${r.f_llegr||'—'}</td>
+      <td style="${tdD};white-space:nowrap">${r.f_salp||'—'}</td>
       <td style="${tdD}">${_pillRet(r.cumpl_ret)}</td>
+      <td style="${tdD}">${_pillEst(r.estado_ret)}</td>
       <td style="${tdD};white-space:nowrap">${r.f_max_dev||'—'}</td>
-      <td style="${tdD};white-space:nowrap">${r.f_cita_dev||'—'}</td>
       <td style="${tdD};white-space:nowrap">${r.f_llegdv||'—'}</td>
       <td style="${tdD}">${_pillRet(r.cumpl_dev)}</td>
+      <td style="${tdD}">${_pillEst(r.estado_dev)}</td>
       <td style="${tdD};font-size:10px">${esc(r.tipo_dev)||'—'}</td>
       <td style="${tdD};font-size:10px">${esc(r.cierre)||'—'}</td>
     </tr>`;
@@ -1722,8 +1744,16 @@ function renderAjoverComex(){
     $('ajcxCSV').onclick=()=>{
       const q=v=>{v=v==null?'':String(v);return /[;\n"]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
       const cols=[['fuente','Fuente'],['eta','ETA'],['cont','Contenedor'],['tamano','Tamaño'],['linea','Línea'],['terminal','Terminal'],['destino','Destino'],
-        ['f_bodegaje','Bodegaje'],['f_cita_ret','Cita retiro'],['f_llegr','Llegada retiro'],['cumpl_ret','Cumpl retiro'],
-        ['f_max_dev','Fecha max dev'],['f_cita_dev','Cita dev'],['f_llegdv','Llegada dev'],['cumpl_dev','Cumpl dev'],['tipo_dev','Tipo dev'],['cierre','Cierre']];
+        ['estado_cont','Estado contenedor'],
+        ['f_bodegaje','Bodegaje'],['f_cita_ret','Cita retiro'],['f_llegr','Llegada retiro'],['f_salp','Salida puerto'],
+        ['f_llegdc','Llegada descargue'],['f_sald','Salida descargue'],
+        ['cumpl_ret','Cumpl retiro'],['estado_ret','Estado retiro'],
+        ['f_max_dev','Fecha max dev'],['f_llegdv','Llegada dev'],
+        ['cumpl_dev','Cumpl dev'],['estado_dev','Estado dev'],
+        ['tipo_dev','Tipo dev'],['cierre','Cierre'],['observacion','Observacion'],
+        ['t_espera_ret','h espera retiro'],['t_en_puerto','h en puerto'],
+        ['t_en_ruta','h en ruta'],['t_descargando','h descargando'],
+        ['t_prom_dev','h prom devolucion']];
       const out=[cols.map(c=>c[1]).join(';')].concat(filtRows.map(r=>cols.map(c=>q(r[c[0]])).join(';'))).join('\r\n');
       const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(out);a.download='ajover_comex.csv';a.click();
     };

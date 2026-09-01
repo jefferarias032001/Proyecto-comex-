@@ -138,6 +138,14 @@ def _copiar_ajover(ruta):
 def leer_ajover_comex(stats):
     """Lee IMPO AJOVER e IMPO CV de IMPORTACIÓN COMEX.xlsx y calcula KPIs de retiros y devoluciones."""
     import shutil, tempfile
+    HOY = dt.date.today()
+    OBS_EXENTO = {
+        "El pedido fue enviado con Bodegajes, TRACTOCAR NO ASUME EXTRACOSTOS",
+        "El pedido fue enviado con demoras y bodegajes, TRACTOCAR NO ASUME EXTRACOSTOS",
+        "El pedido fue enviado con demoras, TRACTOCAR NO ASUME EXTRACOSTOS",
+        "El pedido fue enviado el mismo día que tenia Bodegajes, TRACTOCAR NO ASUME EXTRACOSTOS",
+        "Las planillas se reflearon el mismo día que vencian los bodegajes, TRACTOCAR NO ASUME EXTRACOSTOS",
+    }
     ruta = os.environ.get("TRACTOCAR_AJCOMEX", ARCHIVO_AJCOMEX)
     if not os.path.isfile(ruta):
         stats["avisos"].append(f"Ajover COMEX omitido: no se encontró '{ruta}'")
@@ -190,6 +198,9 @@ def leer_ajover_comex(stats):
             c_llegada_dev   = _col("fecha y hora de llegada a devolucion unidad vacia")
             c_lugar_dev     = _col("lugar devolucion unidad vacia", "sitio devolucion")
             c_cierre        = _col("cierre de pedido")
+            c_salida_desc   = _col("fecha y hora de salida a descargue")
+            c_llegada_patio = _col("fecha y hora de llegada a patio temporal")
+            c_salida_patio  = _col("fecha y hora de salida patio temporal")
 
             f_eta         = _ts(df, c_eta)
             f_bodegaje    = _ts(df, c_bodegaje)
@@ -199,10 +210,13 @@ def leer_ajover_comex(stats):
             f_llegada_ret = _ts(df, c_llegada_ret)
             f_salida_puer = _ts(df, c_salida_puer)
             f_llegada_desc= _ts(df, c_llegada_desc)
+            f_salida_desc = _ts(df, c_salida_desc)
+            f_llegada_patio = _ts(df, c_llegada_patio)
+            f_salida_patio  = _ts(df, c_salida_patio)
             f_cita_dev    = _ts(df, c_cita_dev)
             f_llegada_dev = _ts(df, c_llegada_dev)
+            obs_series    = _str(df, _col("observacion", "observaciones"))
 
-            VENTANA = pd.Timedelta(hours=1)
             rows = []
             tend_raw = {}  # {YYYY-MM: {...}}
 
@@ -215,85 +229,134 @@ def leer_ajover_comex(stats):
                 llegr   = f_llegada_ret.iloc[i]
                 salp    = f_salida_puer.iloc[i]
                 llegdc  = f_llegada_desc.iloc[i]
+                sald    = f_salida_desc.iloc[i]
+                llegp   = f_llegada_patio.iloc[i]
+                salp2   = f_salida_patio.iloc[i]
                 cita_d  = f_cita_dev.iloc[i]
                 llegdv  = f_llegada_dev.iloc[i]
+                obs_val = obs_series.iloc[i]
 
                 mes_iso = eta.strftime("%Y-%m") if not pd.isna(eta) else ""
 
-                # ── cumplimiento retiro (vs bodegaje) ───────────────────────
-                if pd.isna(llegr):
-                    cumpl_ret = "Pendiente"
-                elif not pd.isna(bod) and llegr.date() <= bod.date():
-                    cumpl_ret = "A tiempo"
-                elif not pd.isna(bod):
-                    dias = (llegr.date() - bod.date()).days
+                # ── cumplimiento retiro (lógica exacta Power Query) ──────────
+                if obs_val in OBS_EXENTO:
+                    cumpl_ret = "Exento (no asume)"
+                elif pd.isna(cita_r):
+                    if pd.isna(bod):
+                        cumpl_ret = "Sin fecha"
+                    elif bod.date() >= HOY:
+                        cumpl_ret = "Pendiente"
+                    else:
+                        cumpl_ret = "Sin cita (vencido)"
+                elif not pd.isna(bod) and cita_r.date() > bod.date():
+                    dias = (cita_r.date() - bod.date()).days
                     cumpl_ret = f"Tarde +{dias}d"
                 else:
-                    cumpl_ret = "Sin fecha bodegaje"
+                    cumpl_ret = "A tiempo"
 
-                # ── cumplimiento cita de retiro ─────────────────────────────
-                if pd.isna(llegr):
-                    cumpl_cita_ret = "Pendiente"
-                elif pd.isna(cita_r):
-                    cumpl_cita_ret = "Sin cita"
-                elif llegr <= cita_r + VENTANA:
-                    cumpl_cita_ret = "A tiempo"
+                # ── estado retiro ────────────────────────────────────────────
+                if pd.isna(cita_r):
+                    if pd.isna(bod) or bod.date() >= HOY:
+                        estado_ret = "SIN RETIRO - A TIEMPO"
+                    else:
+                        estado_ret = "SIN RETIRO - ATRASADO"
+                elif not pd.isna(llegr) and not pd.isna(bod) and cita_r.date() > bod.date():
+                    estado_ret = "RETIRADO - ATRASADO"
                 else:
-                    mins = round((llegr - cita_r).total_seconds() / 60)
-                    cumpl_cita_ret = f"Tarde +{mins}min"
+                    estado_ret = "RETIRADO - A TIEMPO"
 
-                # ── cumplimiento devolución (vs fecha max demoras) ──────────
-                if pd.isna(llegdv):
-                    cumpl_dev = "Pendiente"
-                elif not pd.isna(max_dev) and llegdv.date() <= max_dev.date():
-                    cumpl_dev = "A tiempo"
-                elif not pd.isna(max_dev):
+                # ── cumplimiento devolución (lógica Power Query) ─────────────
+                OBS_EXENTO_DEV = "El pedido fue enviado con demoras, TRACTOCAR NO ASUME EXTRACOSTOS"
+                if pd.isna(max_dev):
+                    cumpl_dev = "A tiempo (sin límite)"
+                elif obs_val == OBS_EXENTO_DEV:
+                    cumpl_dev = "Exento (no asume)"
+                elif pd.isna(llegdv):
+                    if max_dev.date() >= HOY:
+                        cumpl_dev = "Pendiente"
+                    else:
+                        cumpl_dev = "Sin devolución (vencido)"
+                elif llegdv.date() > max_dev.date():
                     dias = (llegdv.date() - max_dev.date()).days
                     cumpl_dev = f"Tarde +{dias}d"
                 else:
-                    cumpl_dev = "Sin fecha límite"
+                    cumpl_dev = "A tiempo"
 
-                # ── cumplimiento cita de devolución ─────────────────────────
-                if pd.isna(llegdv):
-                    cumpl_cita_dev = "Pendiente"
-                elif pd.isna(cita_d):
-                    cumpl_cita_dev = "Sin cita"
-                elif llegdv <= cita_d + VENTANA:
-                    cumpl_cita_dev = "A tiempo"
+                # ── estado devolución ────────────────────────────────────────
+                if pd.isna(llegdv) and not pd.isna(max_dev) and max_dev.date() >= HOY:
+                    estado_dev = "SIN DEVOLUCION - A TIEMPO"
+                elif pd.isna(max_dev) and not pd.isna(llegdv):
+                    estado_dev = "CON DEVOLUCION - A TIEMPO"
+                elif pd.isna(llegdv) and not pd.isna(max_dev) and max_dev.date() < HOY:
+                    estado_dev = "SIN DEVOLUCION - ATRASADO"
+                elif not pd.isna(llegdv) and not pd.isna(max_dev) and llegdv.date() > max_dev.date():
+                    estado_dev = "CON DEVOLUCION - ATRASADO"
                 else:
-                    mins = round((llegdv - cita_d).total_seconds() / 60)
-                    cumpl_cita_dev = f"Tarde +{mins}min"
+                    estado_dev = "CON DEVOLUCION - A TIEMPO"
 
-                # ── tiempos (minutos) ────────────────────────────────────────
-                def _dmin(a, b):
+                # ── tiempos (horas) ──────────────────────────────────────────
+                def _dh(a, b):
                     if pd.isna(a) or pd.isna(b): return None
-                    d = (b - a).total_seconds() / 60
-                    return round(d, 1) if d >= 0 else None
+                    h = (b - a).total_seconds() / 3600
+                    return round(h, 2)
 
-                t_espera_ret  = _dmin(cita_r, llegr)   # cita → llegada retiro
-                t_en_puerto   = _dmin(llegr, salp)      # llegada retiro → salida puerto
-                t_transit_dest= _dmin(salp, llegdc)     # salida puerto → llegada descargue
+                # En ruta: solo si llegada y salida son el mismo día
+                if not pd.isna(salp) and not pd.isna(llegdc) and salp.date() == llegdc.date():
+                    t_en_ruta = _dh(salp, llegdc)
+                else:
+                    t_en_ruta = None
+                t_descargando   = _dh(llegdc, sald)
+                t_prom_dev      = _dh(sald, llegdv)
+                t_salida_vs_cita= _dh(cita_r, salp)
+                t_en_ruta2      = _dh(salp2 if not pd.isna(salp2) else sald, llegdv)
+                t_patio_temp    = _dh(llegp, salp2) if not pd.isna(salp2) else None
+                t_espera_ret    = _dh(cita_r, llegr)
+                t_en_puerto     = _dh(llegr, salp)
+
+                # ── estado contenedor ────────────────────────────────────────
+                if pd.isna(cita_r):
+                    estado_cont = "SIN LLEGADA DE RETIRO DEL CONTENEDOR"
+                elif pd.isna(salp):
+                    estado_cont = "SIN SALIDA DE PUERTO"
+                elif pd.isna(llegdc):
+                    estado_cont = "EN RUTA"
+                elif pd.isna(sald):
+                    estado_cont = "DESCARGANDO"
+                elif pd.isna(llegp) and not pd.isna(llegdv):
+                    estado_cont = "FINALIZADO - DEVOLUCION"
+                elif pd.isna(llegp) and pd.isna(llegdv):
+                    estado_cont = "DESCARGADO"
+                elif not pd.isna(llegp) and pd.isna(llegdv):
+                    estado_cont = "BAJADO EN PATIO TEMPORAL"
+                elif not pd.isna(llegp) and not pd.isna(llegdv):
+                    estado_cont = "FINALIZADO - DEVOLUCION"
+                elif pd.isna(salp2):
+                    estado_cont = "DESCARGADO EN PATIO TEMPORAL"
+                elif not pd.isna(llegdv):
+                    estado_cont = "FINALIZADO - DEVOLUCION"
+                else:
+                    estado_cont = "revisar fechas"
 
                 # ── tendencia mes ────────────────────────────────────────────
                 if mes_iso:
                     t = tend_raw.setdefault(mes_iso, {
                         "total":0,"ret_aT":0,"ret_tard":0,"ret_pend":0,
                         "dev_aT":0,"dev_tard":0,"dev_pend":0,
-                        "cita_ret_aT":0,"cita_ret_tard":0,
-                        "t_espera_ret":[],"t_en_puerto":[],"t_transit_dest":[]
+                        "t_espera_ret":[],"t_en_puerto":[],"t_en_ruta":[],
+                        "t_descargando":[],"t_prom_dev":[]
                     })
                     t["total"] += 1
-                    if cumpl_ret == "A tiempo":    t["ret_aT"] += 1
-                    elif "Tarde" in cumpl_ret:     t["ret_tard"] += 1
+                    if cumpl_ret in ("A tiempo","Exento (no asume)"): t["ret_aT"] += 1
+                    elif "Tarde" in cumpl_ret or "vencido" in cumpl_ret: t["ret_tard"] += 1
                     else:                          t["ret_pend"] += 1
-                    if cumpl_dev == "A tiempo":    t["dev_aT"] += 1
-                    elif "Tarde" in cumpl_dev:     t["dev_tard"] += 1
+                    if cumpl_dev in ("A tiempo","Exento (no asume)","A tiempo (sin límite)"): t["dev_aT"] += 1
+                    elif "Tarde" in cumpl_dev or "vencido" in cumpl_dev: t["dev_tard"] += 1
                     else:                          t["dev_pend"] += 1
-                    if cumpl_cita_ret == "A tiempo":   t["cita_ret_aT"] += 1
-                    elif "Tarde" in cumpl_cita_ret:    t["cita_ret_tard"] += 1
-                    if t_espera_ret is not None:   t["t_espera_ret"].append(t_espera_ret)
-                    if t_en_puerto is not None:    t["t_en_puerto"].append(t_en_puerto)
-                    if t_transit_dest is not None: t["t_transit_dest"].append(t_transit_dest)
+                    if t_espera_ret  is not None: t["t_espera_ret"].append(t_espera_ret)
+                    if t_en_puerto   is not None: t["t_en_puerto"].append(t_en_puerto)
+                    if t_en_ruta     is not None: t["t_en_ruta"].append(t_en_ruta)
+                    if t_descargando is not None: t["t_descargando"].append(t_descargando)
+                    if t_prom_dev    is not None: t["t_prom_dev"].append(t_prom_dev)
 
                 rows.append({
                     "fuente":    fuente,
@@ -306,24 +369,36 @@ def leer_ajover_comex(stats):
                     "terminal":  _str(df, c_terminal).iloc[i],
                     "destino":   _str(df, c_destino).iloc[i],
                     "tipo_dev":  _str(df, c_tipo_dev).iloc[i],
+                    "observacion": obs_val,
                     "eta":       eta.strftime("%Y-%m-%d") if not pd.isna(eta) else "",
                     "mes_iso":   mes_iso,
-                    "f_bodegaje":bod.strftime("%Y-%m-%d")     if not pd.isna(bod)     else "",
-                    "f_max_dev": max_dev.strftime("%Y-%m-%d") if not pd.isna(max_dev) else "",
+                    "f_bodegaje":bod.strftime("%Y-%m-%d")         if not pd.isna(bod)    else "",
+                    "f_max_dev": max_dev.strftime("%Y-%m-%d")     if not pd.isna(max_dev) else "",
                     "f_cita_ret":cita_r.strftime("%d-%m-%Y %H:%M") if not pd.isna(cita_r) else "",
                     "f_cita_rr": cita_rr.strftime("%d-%m-%Y %H:%M") if not pd.isna(cita_rr) else "",
-                    "f_llegr":   llegr.strftime("%d-%m-%Y %H:%M")  if not pd.isna(llegr) else "",
+                    "f_llegr":   llegr.strftime("%d-%m-%Y %H:%M")  if not pd.isna(llegr)  else "",
+                    "f_salp":    salp.strftime("%d-%m-%Y %H:%M")   if not pd.isna(salp)   else "",
+                    "f_llegdc":  llegdc.strftime("%d-%m-%Y %H:%M") if not pd.isna(llegdc) else "",
+                    "f_sald":    sald.strftime("%d-%m-%Y %H:%M")   if not pd.isna(sald)   else "",
+                    "f_llegp":   llegp.strftime("%d-%m-%Y %H:%M")  if not pd.isna(llegp)  else "",
+                    "f_salp2":   salp2.strftime("%d-%m-%Y %H:%M")  if not pd.isna(salp2)  else "",
                     "f_cita_dev":cita_d.strftime("%d-%m-%Y %H:%M") if not pd.isna(cita_d) else "",
                     "f_llegdv":  llegdv.strftime("%d-%m-%Y %H:%M") if not pd.isna(llegdv) else "",
                     "f_lugar_dev": _str(df, c_lugar_dev).iloc[i],
                     "cierre":    _str(df, c_cierre).iloc[i],
-                    "cumpl_ret":      cumpl_ret,
-                    "cumpl_cita_ret": cumpl_cita_ret,
-                    "cumpl_dev":      cumpl_dev,
-                    "cumpl_cita_dev": cumpl_cita_dev,
-                    "t_espera_ret":   t_espera_ret,
-                    "t_en_puerto":    t_en_puerto,
-                    "t_transit_dest": t_transit_dest,
+                    "cumpl_ret":  cumpl_ret,
+                    "estado_ret": estado_ret,
+                    "cumpl_dev":  cumpl_dev,
+                    "estado_dev": estado_dev,
+                    "estado_cont":estado_cont,
+                    "t_espera_ret":     t_espera_ret,
+                    "t_en_puerto":      t_en_puerto,
+                    "t_en_ruta":        t_en_ruta,
+                    "t_descargando":    t_descargando,
+                    "t_prom_dev":       t_prom_dev,
+                    "t_salida_vs_cita": t_salida_vs_cita,
+                    "t_en_ruta2":       t_en_ruta2,
+                    "t_patio_temp":     t_patio_temp,
                 })
 
             def _avg(lst): return round(sum(lst)/len(lst),1) if lst else None
@@ -341,16 +416,18 @@ def leer_ajover_comex(stats):
                     "pct_dev": round(v["dev_aT"]/dev_con*100,1) if dev_con else 0,
                     "avg_espera_ret":  _avg(v["t_espera_ret"]),
                     "avg_en_puerto":   _avg(v["t_en_puerto"]),
-                    "avg_transit":     _avg(v["t_transit_dest"]),
+                    "avg_en_ruta":     _avg(v["t_en_ruta"]),
+                    "avg_descargando": _avg(v["t_descargando"]),
+                    "avg_prom_dev":    _avg(v["t_prom_dev"]),
                 })
 
             tot = len(rows)
-            ret_aT   = sum(1 for r in rows if r["cumpl_ret"]=="A tiempo")
-            ret_tard = sum(1 for r in rows if "Tarde" in r["cumpl_ret"])
-            ret_pend = sum(1 for r in rows if r["cumpl_ret"]=="Pendiente")
-            dev_aT   = sum(1 for r in rows if r["cumpl_dev"]=="A tiempo")
-            dev_tard = sum(1 for r in rows if "Tarde" in r["cumpl_dev"])
-            dev_pend = sum(1 for r in rows if r["cumpl_dev"]=="Pendiente")
+            ret_aT   = sum(1 for r in rows if r["cumpl_ret"] in ("A tiempo","Exento (no asume)"))
+            ret_tard = sum(1 for r in rows if "Tarde" in r["cumpl_ret"] or "vencido" in r["cumpl_ret"])
+            ret_pend = sum(1 for r in rows if r["cumpl_ret"] in ("Pendiente","Sin fecha"))
+            dev_aT   = sum(1 for r in rows if r["cumpl_dev"] in ("A tiempo","Exento (no asume)","A tiempo (sin límite)"))
+            dev_tard = sum(1 for r in rows if "Tarde" in r["cumpl_dev"] or "vencido" in r["cumpl_dev"])
+            dev_pend = sum(1 for r in rows if r["cumpl_dev"] == "Pendiente")
             ret_con  = ret_aT + ret_tard
             dev_con  = dev_aT + dev_tard
 
@@ -360,9 +437,11 @@ def leer_ajover_comex(stats):
                 "pct_ret": round(ret_aT/ret_con*100,1) if ret_con else 0,
                 "dev_aT": dev_aT, "dev_tard": dev_tard, "dev_pend": dev_pend,
                 "pct_dev": round(dev_aT/dev_con*100,1) if dev_con else 0,
-                "avg_espera_ret": _avg([r["t_espera_ret"] for r in rows if r["t_espera_ret"] is not None]),
-                "avg_en_puerto":  _avg([r["t_en_puerto"]  for r in rows if r["t_en_puerto"]  is not None]),
-                "avg_transit":    _avg([r["t_transit_dest"] for r in rows if r["t_transit_dest"] is not None]),
+                "avg_espera_ret":  _avg([r["t_espera_ret"]     for r in rows if r["t_espera_ret"]     is not None]),
+                "avg_en_puerto":   _avg([r["t_en_puerto"]       for r in rows if r["t_en_puerto"]       is not None]),
+                "avg_en_ruta":     _avg([r["t_en_ruta"]         for r in rows if r["t_en_ruta"]         is not None]),
+                "avg_descargando": _avg([r["t_descargando"]     for r in rows if r["t_descargando"]     is not None]),
+                "avg_prom_dev":    _avg([r["t_prom_dev"]        for r in rows if r["t_prom_dev"]        is not None]),
                 "tendencia": tendencia,
                 "rows": rows,
             }
