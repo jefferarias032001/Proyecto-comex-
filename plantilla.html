@@ -342,7 +342,10 @@
           <div style="flex:1;min-width:200px"><div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">Por Línea</div><div id="ajVacLineas"></div></div>
         </div>
         <div style="display:flex;gap:10px;padding:0 16px 10px;align-items:center;flex-wrap:wrap">
-          <input id="ajVacQ" type="text" placeholder="Buscar contenedor, patio, línea..." style="padding:6px 12px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink);width:260px;outline:none"/>
+          <select id="ajVacMes" style="padding:6px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink)">
+            <option value="">Todos los meses</option>
+          </select>
+          <input id="ajVacQ" type="text" placeholder="Buscar contenedor, patio, línea..." style="padding:6px 12px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink);width:230px;outline:none"/>
           <select id="ajVacFiltCumpl" style="padding:6px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink)">
             <option value="">Todos</option><option value="A tiempo">A tiempo</option><option value="Tarde">Tarde</option><option value="Sin fecha">Sin fecha</option>
           </select>
@@ -376,7 +379,10 @@
           <div style="flex:1;min-width:220px"><div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">🔄 Motivos de reprogramación</div><div id="ajLlMotivosRepr"></div></div>
         </div>
         <div style="display:flex;gap:10px;padding:0 16px 10px;align-items:center;flex-wrap:wrap">
-          <input id="ajLlQ" type="text" placeholder="Buscar contenedor, placa, terminal..." style="padding:6px 12px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink);width:260px;outline:none"/>
+          <select id="ajLlMes" style="padding:6px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink)">
+            <option value="">Todos los meses</option>
+          </select>
+          <input id="ajLlQ" type="text" placeholder="Buscar contenedor, placa, terminal..." style="padding:6px 12px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink);width:230px;outline:none"/>
           <select id="ajLlFiltEst" style="padding:6px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink)">
             <option value="">Todos</option><option value="EXITOSO">Exitoso</option><option value="FALLIDO">Fallido</option>
           </select>
@@ -405,6 +411,9 @@
           <div class="card-hint" id="ajcxHint"></div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select id="ajcxMes" style="padding:5px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink)">
+            <option value="">Todos los meses</option>
+          </select>
           <select id="ajcxFuente" style="padding:5px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink)">
             <option value="">Todas las fuentes</option>
             <option value="AJOVER">IMPO AJOVER</option>
@@ -417,19 +426,32 @@
             <option value="Pendiente">Pendiente</option>
           </select>
           <select id="ajcxFiltDev" style="padding:5px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink)">
-            <option value="">Todas las devoluciones</option>
+            <option value="">Todas las dev.</option>
             <option value="A tiempo">A tiempo</option>
             <option value="Tarde">Tarde</option>
             <option value="Pendiente">Pendiente</option>
           </select>
-          <input id="ajcxQ" type="text" placeholder="Buscar contenedor, pedido, DO..." style="padding:6px 12px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink);width:220px;outline:none"/>
+          <select id="ajcxFiltEst" style="padding:5px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink)">
+            <option value="">Todos los estados</option>
+            <option value="EN RUTA">En ruta</option>
+            <option value="DESCARGANDO">Descargando</option>
+            <option value="DESCARGADO">Descargado</option>
+            <option value="FINALIZADO - DEVOLUCION">Finalizado</option>
+            <option value="BAJADO EN PATIO TEMPORAL">Patio temporal</option>
+            <option value="SIN SALIDA DE PUERTO">Sin salida puerto</option>
+            <option value="SIN LLEGADA DE RETIRO DEL CONTENEDOR">Sin llegada retiro</option>
+          </select>
+          <input id="ajcxQ" type="text" placeholder="Buscar contenedor, pedido, cliente..." style="padding:6px 12px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink);width:200px;outline:none"/>
           <button id="ajcxClear" style="padding:5px 12px;border:1px solid var(--line);border-radius:var(--r);font-size:11px;background:var(--surface);color:var(--ink-2);cursor:pointer">Limpiar</button>
           <button id="ajcxCSV" style="padding:5px 12px;border:none;border-radius:var(--r);font-size:11px;background:var(--accent);color:#fff;cursor:pointer">⬇ CSV</button>
         </div>
       </div>
       <div class="card-b" style="padding:12px 0 0">
+        <!-- ESTADO CONTENEDORES -->
+        <div style="padding:0 16px 6px;font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em">Estado de los contenedores</div>
+        <div style="margin:0 16px 12px" id="ajcxEstadoCont"></div>
         <!-- KPIs RETIROS -->
-        <div style="padding:0 16px 6px;font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em">Retiros en puerto (vs. fecha bodegaje)</div>
+        <div style="padding:0 16px 6px;font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em">Retiros en puerto (cita vs. fecha bodegaje)</div>
         <div class="kpis" id="ajcxKpisRet" style="margin-bottom:12px"></div>
         <!-- KPIs DEVOLUCIONES -->
         <div style="padding:0 16px 6px;font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em">Devoluciones unidad vacía (vs. fecha máx. demoras)</div>
@@ -1172,7 +1194,7 @@ function init(){
 /* ============================================================
    AJOVER — vaciós y llenos
    ============================================================ */
-const SAJ={vac:{q:'',cumpl:'',pg:1,colOrder:null},ll:{q:'',est:'',pg:1,colOrder:null}};
+const SAJ={vac:{q:'',cumpl:'',mes:'',pg:1,colOrder:null},ll:{q:'',est:'',mes:'',pg:1,colOrder:null}};
 const VAC_COLS=[
   {k:'mes',     l:'Mes',              cell:(r,s)=>`<td style="${s}">${esc(r.mes)}</td>`},
   {k:'fprog',   l:'Fecha programada', cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fprog)}</td>`},
@@ -1268,6 +1290,14 @@ function renderAjoverVacios(){
   const AJ=window.AJOVER||{};
   const va=AJ.vacios;
   if(!va){$('ajVacHint').textContent='Sin datos (archivo no encontrado)';return;}
+
+  // Poblar dropdown de mes
+  const vacMesEl=$('ajVacMes');
+  if(vacMesEl&&vacMesEl.options.length<=1){
+    const meses=[...new Set((va.rows||[]).map(r=>r.mes).filter(Boolean))].sort();
+    meses.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;vacMesEl.appendChild(o);});
+  }
+
   $('ajVacHint').textContent=`${fN(va.total)} registros`;
 
   const tot=va.total||1, pctOk=((va.a_tiempo/tot)*100).toFixed(1);
@@ -1318,10 +1348,9 @@ function renderAjoverVacios(){
   const vacThead=$('ajVacHead').closest('thead')||$('ajVacHead').parentElement;
   $('ajVacHead').innerHTML=vacCols.map(c=>`<th style="${thS}" title="Arrastra para reordenar">${c.l}</th>`).join('');
 
-  const q=SAJ.vac.q.toLowerCase(), fc=SAJ.vac.cumpl;
-  const _mesStr=s=>{if(!s||s.length<10)return '';return s.slice(6,10)+'-'+s.slice(3,5);};
+  const q=SAJ.vac.q.toLowerCase(), fc=SAJ.vac.cumpl, fm=SAJ.vac.mes;
   let rows=(va.rows||[]).filter(r=>{
-    if(S.f.meses.size&&!S.f.meses.has(_mesStr(r.fprog)))return false;
+    if(fm&&r.mes!==fm)return false;
     if(q&&!`${r.patio}${r.linea}${r.cont}${r.man}`.toLowerCase().includes(q))return false;
     if(fc&&!r.cumpl.startsWith(fc))return false;
     return true;
@@ -1344,9 +1373,16 @@ function renderAjoverLlenos(){
   const ll=AJ.llenos;
   if(!ll){$('ajLlHint').textContent='Sin datos';return;}
 
+  // Poblar dropdown de mes
+  const llMesEl=$('ajLlMes');
+  if(llMesEl&&llMesEl.options.length<=1){
+    const meses=[...new Set((ll.rows||[]).map(r=>r.mes_iso).filter(Boolean))].sort();
+    meses.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;llMesEl.appendChild(o);});
+  }
+
   // ── filas filtradas por mes ──────────────────────────────────────────────
   const allRows=ll.rows||[];
-  const filtRows=allRows.filter(r=>!S.f.meses.size||S.f.meses.has(r.mes_iso));
+  const filtRows=allRows.filter(r=>!SAJ.ll.mes||r.mes_iso===SAJ.ll.mes);
   const fTot=filtRows.length;
   $('ajLlHint').textContent=`${fN(fTot)} registros`;
 
@@ -1575,7 +1611,7 @@ function renderAjoverLlenos(){
 }
 
 // ═══════════════════════════ AJOVER COMEX ═══════════════════════════
-const SAC={q:'',fuente:'',filtRet:'',filtDev:'',pg:1,PER:50};
+const SAC={q:'',fuente:'',filtRet:'',filtDev:'',filtEst:'',mes:'',pg:1,PER:50};
 function _pillRet(v){
   if(!v||v==='Sin fecha'||v==='Sin fecha bodegaje'||v==='Sin cita')return `<span style="color:var(--ink-3);font-size:10px">${v||'—'}</span>`;
   if(v==='A tiempo')return '<span style="background:#d4edda;color:#155724;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700">✓ A tiempo</span>';
@@ -1588,21 +1624,54 @@ function renderAjoverComex(){
   const allRows=[...(AC.ajover?.rows||[]),...(AC.cv?.rows||[])];
   if(!allRows.length){$('ajcxHint').textContent='Sin datos';return;}
 
+  // Poblar dropdown de mes (desde mes_rec = fecha recibido del pedido)
+  const mesEl=$('ajcxMes');
+  if(mesEl&&mesEl.options.length<=1){
+    const meses=[...new Set(allRows.map(r=>r.mes_rec||r.mes_iso).filter(Boolean))].sort();
+    meses.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;mesEl.appendChild(o);});
+  }
+
   // Filtrar
   const q=SAC.q.toLowerCase();
-  const fr=SAC.filtRet, fd=SAC.filtDev, ff=SAC.fuente;
+  const fr=SAC.filtRet, fd=SAC.filtDev, ff=SAC.fuente, fe=SAC.filtEst, fm=SAC.mes;
   const filtRows=allRows.filter(r=>{
+    if(fm){const rm=r.mes_rec||r.mes_iso;if(rm!==fm)return false;}
     if(ff&&r.fuente!==ff)return false;
+    if(fe&&r.estado_cont!==fe)return false;
     if(fr==='A tiempo'&&!(r.cumpl_ret==='A tiempo'||r.cumpl_ret==='Exento (no asume)'))return false;
     if(fr==='Tarde'&&!(r.cumpl_ret?.includes('Tarde')||r.cumpl_ret?.includes('vencido')))return false;
     if(fr==='Pendiente'&&!(r.cumpl_ret==='Pendiente'||r.cumpl_ret==='Sin fecha'))return false;
     if(fd==='A tiempo'&&!(r.cumpl_dev==='A tiempo'||r.cumpl_dev==='Exento (no asume)'||r.cumpl_dev==='A tiempo (sin límite)'))return false;
     if(fd==='Tarde'&&!(r.cumpl_dev?.includes('Tarde')||r.cumpl_dev?.includes('vencido')))return false;
     if(fd==='Pendiente'&&r.cumpl_dev!=='Pendiente')return false;
-    if(q&&![r.cont,r.pedido,r.do,r.cliente,r.linea,r.terminal].some(x=>x?.toLowerCase().includes(q)))return false;
+    if(q&&![r.cont,r.pedido,r.do,r.cliente,r.linea,r.terminal,r.destino].some(x=>x?.toLowerCase().includes(q)))return false;
     return true;
   });
   $('ajcxHint').textContent=`${fN(filtRows.length)} contenedores`;
+
+  // Estado de contenedores (breakdown)
+  {
+    const estCnt={};
+    filtRows.forEach(r=>{const e=r.estado_cont||'Sin estado';estCnt[e]=(estCnt[e]||0)+1;});
+    const colEst={
+      'FINALIZADO - DEVOLUCION':'#1a8a34','RETIRADO - A TIEMPO':'#1a8a34',
+      'DESCARGADO':'#2563eb','EN RUTA':'#7c3aed','DESCARGANDO':'#d97706',
+      'BAJADO EN PATIO TEMPORAL':'#9ca3af','SIN SALIDA DE PUERTO':'#ef4444',
+      'SIN LLEGADA DE RETIRO DEL CONTENEDOR':'#ef4444','DESCARGADO EN PATIO TEMPORAL':'#6b7280',
+    };
+    const tot=filtRows.length||1;
+    const html=Object.entries(estCnt).sort((a,b)=>b[1]-a[1]).map(([e,n])=>{
+      const pct=(n/tot*100).toFixed(0);
+      const col=colEst[e]||'#6b7280';
+      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <div style="font-size:10px;color:var(--ink-3);width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(e)}">${esc(e)}</div>
+        <div style="flex:1;background:var(--line);border-radius:4px;height:12px;min-width:60px"><div style="width:${pct}%;background:${col};border-radius:4px;height:12px"></div></div>
+        <div style="font-size:11px;font-weight:700;color:${col};width:28px;text-align:right">${n}</div>
+        <div style="font-size:10px;color:var(--ink-3);width:32px">${pct}%</div>
+      </div>`;
+    }).join('');
+    $('ajcxEstadoCont').innerHTML=`<div style="background:var(--surface-2,var(--surface));border:1px solid var(--line);border-radius:8px;padding:10px 14px">${html}</div>`;
+  }
 
   // KPIs retiro
   const retAT=filtRows.filter(r=>r.cumpl_ret==='A tiempo'||r.cumpl_ret==='Exento (no asume)').length;
@@ -1737,10 +1806,12 @@ function renderAjoverComex(){
   if(!SAC._wired){
     SAC._wired=true;
     $('ajcxQ').oninput=e=>{SAC.q=e.target.value;SAC.pg=1;renderAjoverComex();};
+    $('ajcxMes').onchange=e=>{SAC.mes=e.target.value;SAC.pg=1;renderAjoverComex();};
     $('ajcxFuente').onchange=e=>{SAC.fuente=e.target.value;SAC.pg=1;renderAjoverComex();};
     $('ajcxFiltRet').onchange=e=>{SAC.filtRet=e.target.value;SAC.pg=1;renderAjoverComex();};
     $('ajcxFiltDev').onchange=e=>{SAC.filtDev=e.target.value;SAC.pg=1;renderAjoverComex();};
-    $('ajcxClear').onclick=()=>{SAC.q='';SAC.fuente='';SAC.filtRet='';SAC.filtDev='';SAC.pg=1;$('ajcxQ').value='';$('ajcxFuente').value='';$('ajcxFiltRet').value='';$('ajcxFiltDev').value='';renderAjoverComex();};
+    $('ajcxFiltEst').onchange=e=>{SAC.filtEst=e.target.value;SAC.pg=1;renderAjoverComex();};
+    $('ajcxClear').onclick=()=>{SAC.q='';SAC.fuente='';SAC.filtRet='';SAC.filtDev='';SAC.filtEst='';SAC.mes='';SAC.pg=1;['ajcxQ','ajcxMes','ajcxFuente','ajcxFiltRet','ajcxFiltDev','ajcxFiltEst'].forEach(id=>{if($(id))$(id).value='';});renderAjoverComex();};
     $('ajcxCSV').onclick=()=>{
       const q=v=>{v=v==null?'':String(v);return /[;\n"]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
       const cols=[['fuente','Fuente'],['eta','ETA'],['cont','Contenedor'],['tamano','Tamaño'],['linea','Línea'],['terminal','Terminal'],['destino','Destino'],
@@ -1766,12 +1837,14 @@ function renderAjover(){
   renderAjoverLlenos();
   if(_ajovWired)return;
   _ajovWired=true;
-  $('ajVacQ').oninput=e=>{SAJ.vac.q=e.target.value.trim();SAJ.vac.pg=1;renderAjoverVacios();};
-  $('ajVacFiltCumpl').onchange=e=>{SAJ.vac.cumpl=e.target.value;SAJ.vac.pg=1;renderAjoverVacios();};
-  $('ajVacClear').onclick=()=>{SAJ.vac.q='';SAJ.vac.cumpl='';SAJ.vac.pg=1;$('ajVacQ').value='';$('ajVacFiltCumpl').value='';renderAjoverVacios();};
-  $('ajLlQ').oninput=e=>{SAJ.ll.q=e.target.value.trim();SAJ.ll.pg=1;renderAjoverLlenos();};
-  $('ajLlFiltEst').onchange=e=>{SAJ.ll.est=e.target.value;SAJ.ll.pg=1;renderAjoverLlenos();};
-  $('ajLlClear').onclick=()=>{SAJ.ll.q='';SAJ.ll.est='';SAJ.ll.pg=1;$('ajLlQ').value='';$('ajLlFiltEst').value='';renderAjoverLlenos();};
+  $('ajVacMes').onchange=e=>{SAJ.vac.mes=e.target.value;SAJ.vac.pg=1;renderAjoverVacios()};
+  $('ajVacQ').oninput=e=>{SAJ.vac.q=e.target.value.trim();SAJ.vac.pg=1;renderAjoverVacios()};
+  $('ajVacFiltCumpl').onchange=e=>{SAJ.vac.cumpl=e.target.value;SAJ.vac.pg=1;renderAjoverVacios()};
+  $('ajVacClear').onclick=()=>{SAJ.vac.q='';SAJ.vac.cumpl='';SAJ.vac.mes='';SAJ.vac.pg=1;$('ajVacQ').value='';$('ajVacFiltCumpl').value='';$('ajVacMes').value='';renderAjoverVacios()};
+  $('ajLlMes').onchange=e=>{SAJ.ll.mes=e.target.value;SAJ.ll.pg=1;renderAjoverLlenos()};
+  $('ajLlQ').oninput=e=>{SAJ.ll.q=e.target.value.trim();SAJ.ll.pg=1;renderAjoverLlenos()};
+  $('ajLlFiltEst').onchange=e=>{SAJ.ll.est=e.target.value;SAJ.ll.pg=1;renderAjoverLlenos()};
+  $('ajLlClear').onclick=()=>{SAJ.ll.q='';SAJ.ll.est='';SAJ.ll.mes='';SAJ.ll.pg=1;$('ajLlQ').value='';$('ajLlFiltEst').value='';$('ajLlMes').value='';renderAjoverLlenos()};
   const csvDl=(rows,cols,fname)=>{const q=v=>{v=v==null?'':String(v);return /[;\n"]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};const out=[cols.map(c=>c[1]).join(';')].concat(rows.map(r=>cols.map(c=>q(r[c[0]])).join(';'))).join('\r\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(out);a.download=fname;a.click();};
   $('ajVacCSV').onclick=()=>{const va=(window.AJOVER||{}).vacios;if(!va)return;csvDl(va.rows,[['mes','Mes'],['fprog','Fecha programada'],['faten','Fecha atención'],['fplanta','Llegada planta'],['patio','Patio'],['linea','Línea'],['cont','Contenedor'],['man','Manifiesto'],['cumpl','Cumplimiento']],'ajover_vacios.csv');};
   $('ajLlCSV').onclick=()=>{const ll=(window.AJOVER||{}).llenos;if(!ll)return;csvDl(ll.rows,[['fecha','Fecha'],['cont','Contenedor'],['terminal','Terminal'],['placa','Placa'],['estado','Estado'],['cumpl_planta','Cumpl.planta'],['cumpl_puerto','Cumpl.puerto'],['motivo','Motivo fallo'],['obs','Observaciones']],'ajover_llenos.csv');};
@@ -1781,6 +1854,9 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));t.classList.add('on');
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
   $('panel-'+t.dataset.tab).classList.add('on');
+  const isAjTab=['ajover','ajcomex'].includes(t.dataset.tab);
+  $('filterbar').style.display=isAjTab?'none':'';
+  $('kpis').style.display=isAjTab?'none':'';
   if(t.dataset.tab==='ditar')renderDitar();
   if(t.dataset.tab==='ajover')renderAjover();
   if(t.dataset.tab==='ajcomex')renderAjoverComex();

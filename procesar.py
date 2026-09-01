@@ -198,6 +198,7 @@ def leer_ajover_comex(stats):
             c_llegada_dev   = _col("fecha y hora de llegada a devolucion unidad vacia")
             c_lugar_dev     = _col("lugar devolucion unidad vacia", "sitio devolucion")
             c_cierre        = _col("cierre de pedido")
+            c_fecrecib      = _col("fecha de recibido del pedido", "fecha recibido del pedido", "fecha recibido", "recibido pedido")
             c_salida_desc   = _col("fecha y hora de salida a descargue")
             c_llegada_patio = _col("fecha y hora de llegada a patio temporal")
             c_salida_patio  = _col("fecha y hora de salida patio temporal")
@@ -210,6 +211,7 @@ def leer_ajover_comex(stats):
             f_llegada_ret = _ts(df, c_llegada_ret)
             f_salida_puer = _ts(df, c_salida_puer)
             f_llegada_desc= _ts(df, c_llegada_desc)
+            f_fecrecib    = _ts(df, c_fecrecib)
             f_salida_desc = _ts(df, c_salida_desc)
             f_llegada_patio = _ts(df, c_llegada_patio)
             f_salida_patio  = _ts(df, c_salida_patio)
@@ -221,6 +223,7 @@ def leer_ajover_comex(stats):
             tend_raw = {}  # {YYYY-MM: {...}}
 
             for i in range(len(df)):
+                fecrecib= f_fecrecib.iloc[i]
                 eta     = f_eta.iloc[i]
                 bod     = f_bodegaje.iloc[i]
                 max_dev = f_max_dev.iloc[i]
@@ -236,7 +239,8 @@ def leer_ajover_comex(stats):
                 llegdv  = f_llegada_dev.iloc[i]
                 obs_val = obs_series.iloc[i]
 
-                mes_iso = eta.strftime("%Y-%m") if not pd.isna(eta) else ""
+                mes_iso  = eta.strftime("%Y-%m") if not pd.isna(eta) else ""
+                mes_rec  = fecrecib.strftime("%Y-%m") if not pd.isna(fecrecib) else ""
 
                 # ── cumplimiento retiro (lógica exacta Power Query) ──────────
                 if obs_val in OBS_EXENTO:
@@ -371,7 +375,9 @@ def leer_ajover_comex(stats):
                     "tipo_dev":  _str(df, c_tipo_dev).iloc[i],
                     "observacion": obs_val,
                     "eta":       eta.strftime("%Y-%m-%d") if not pd.isna(eta) else "",
+                    "fecrecib":  fecrecib.strftime("%Y-%m-%d") if not pd.isna(fecrecib) else "",
                     "mes_iso":   mes_iso,
+                    "mes_rec":   mes_rec,
                     "f_bodegaje":bod.strftime("%Y-%m-%d")         if not pd.isna(bod)    else "",
                     "f_max_dev": max_dev.strftime("%Y-%m-%d")     if not pd.isna(max_dev) else "",
                     "f_cita_ret":cita_r.strftime("%d-%m-%Y %H:%M") if not pd.isna(cita_r) else "",
