@@ -2011,13 +2011,16 @@ function renderAjoverComex(){
     });
   });
 
-  // Tendencia retiros (desde datos globales sin filtro para ver todos los meses)
-  const tendSrc=[...(AC.ajover?.tendencia||[]),...(AC.cv?.tendencia||[])];
+  // Tendencia retiros — calculada desde filtRows para reflejar los filtros activos
   const tendMap={};
-  tendSrc.forEach(t=>{
-    if(!tendMap[t.mes])tendMap[t.mes]={mes:t.mes,total:0,ret_aT:0,ret_tard:0,dev_aT:0,dev_tard:0};
-    const m=tendMap[t.mes];
-    m.total+=t.total;m.ret_aT+=t.ret_aT;m.ret_tard+=t.ret_tard;m.dev_aT+=t.dev_aT;m.dev_tard+=t.dev_tard;
+  filtRows.forEach(r=>{
+    const mes=r.mes_rec||r.mes_iso;if(!mes)return;
+    if(!tendMap[mes])tendMap[mes]={mes,total:0,ret_aT:0,ret_tard:0,dev_aT:0,dev_tard:0};
+    const m=tendMap[mes];m.total++;
+    if(r.cumpl_ret==='A tiempo'||r.cumpl_ret==='Exento (no asume)')m.ret_aT++;
+    else if(r.cumpl_ret?.includes('Tarde')||r.cumpl_ret?.includes('vencido'))m.ret_tard++;
+    if(r.cumpl_dev==='A tiempo'||r.cumpl_dev==='Exento (no asume)'||r.cumpl_dev==='A tiempo (sin límite)')m.dev_aT++;
+    else if(r.cumpl_dev?.includes('Tarde')||r.cumpl_dev?.includes('vencido'))m.dev_tard++;
   });
   const tend=Object.values(tendMap).sort((a,b)=>a.mes.localeCompare(b.mes)).map(t=>{
     const rc=t.ret_aT+t.ret_tard, dc=t.dev_aT+t.dev_tard;
