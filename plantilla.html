@@ -183,6 +183,57 @@
 </style>
 </head>
 <body>
+
+<!-- ======== LOGIN OVERLAY ======== -->
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#0f172a 100%)">
+  <div style="width:100%;max-width:400px;padding:0 20px">
+    <!-- Logo -->
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;background:linear-gradient(135deg,#3b82f6,#2563eb);border-radius:18px;box-shadow:0 8px 32px rgba(59,130,246,.4);margin-bottom:16px">
+        <svg viewBox="0 0 24 24" fill="none" style="width:36px;height:36px"><path d="M2.5 6.5h11v8h-11zM13.5 9h4l3.5 3.5v2h-7.5z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/><circle cx="7" cy="17" r="1.7" stroke="#fff" stroke-width="1.5"/><circle cx="17.5" cy="17" r="1.7" stroke="#fff" stroke-width="1.5"/></svg>
+      </div>
+      <div style="color:#f1f5f9;font-size:22px;font-weight:800;letter-spacing:-.02em">Tractocar</div>
+      <div style="color:#64748b;font-size:13px;margin-top:4px">Control de Ventas &amp; Logistics</div>
+    </div>
+    <!-- Card -->
+    <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:28px;box-shadow:0 24px 64px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.08)">
+      <div style="font-size:16px;font-weight:700;color:#f1f5f9;margin-bottom:6px">Iniciar sesion</div>
+      <div style="font-size:12px;color:#64748b;margin-bottom:22px">Ingresa tu correo y contrasena para acceder</div>
+      <!-- Email -->
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Correo</label>
+        <input id="loginEmail" type="email" placeholder="tu@correo.com" autocomplete="email"
+          style="width:100%;padding:10px 14px;border:1px solid rgba(255,255,255,.12);border-radius:10px;font-size:13px;background:rgba(255,255,255,.07);color:#f1f5f9;outline:none;box-sizing:border-box;transition:border-color .2s"
+          onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='rgba(255,255,255,.12)'"/>
+      </div>
+      <!-- Password -->
+      <div style="margin-bottom:22px">
+        <label style="display:block;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Contrasena</label>
+        <div style="position:relative">
+          <input id="loginPwd" type="password" placeholder="••••••••" autocomplete="current-password"
+            style="width:100%;padding:10px 42px 10px 14px;border:1px solid rgba(255,255,255,.12);border-radius:10px;font-size:13px;background:rgba(255,255,255,.07);color:#f1f5f9;outline:none;box-sizing:border-box;transition:border-color .2s"
+            onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='rgba(255,255,255,.12)'"
+            onkeydown="if(event.key==='Enter')doLogin()"/>
+          <button onclick="var i=document.getElementById('loginPwd');i.type=i.type==='password'?'text':'password'" tabindex="-1"
+            style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#64748b;padding:4px">
+            <svg viewBox="0 0 24 24" fill="none" style="width:16px;height:16px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/></svg>
+          </button>
+        </div>
+      </div>
+      <!-- Error -->
+      <div id="loginErr" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:8px 12px;font-size:12px;color:#fca5a5;margin-bottom:14px"></div>
+      <!-- Submit -->
+      <button onclick="doLogin()"
+        style="width:100%;padding:12px;border:none;border-radius:10px;font-size:14px;font-weight:700;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;cursor:pointer;box-shadow:0 4px 16px rgba(59,130,246,.4);transition:all .2s;letter-spacing:.01em"
+        onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 8px 24px rgba(59,130,246,.5)'"
+        onmouseout="this.style.transform='';this.style.boxShadow='0 4px 16px rgba(59,130,246,.4)'">
+        Entrar
+      </button>
+    </div>
+    <div style="text-align:center;margin-top:18px;font-size:11px;color:#334155">Acceso restringido - Tractocar Logistics SAS</div>
+  </div>
+</div>
+
 <header class="topbar"><div class="topbar-in">
   <div class="brand">
     <div class="logo"><svg viewBox="0 0 24 24" fill="none"><path d="M2.5 6.5h11v8h-11zM13.5 9h4l3.5 3.5v2h-7.5z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/><circle cx="7" cy="17" r="1.7" stroke="#fff" stroke-width="1.5"/><circle cx="17.5" cy="17" r="1.7" stroke="#fff" stroke-width="1.5"/></svg></div>
@@ -190,6 +241,11 @@
   </div>
   <div class="top-actions">
     <span class="meta-info" id="metaInfo"></span>
+    <div id="userChip" style="display:none;align-items:center;gap:8px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:5px 14px 5px 10px">
+      <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff" id="userAvatar"></div>
+      <span id="userLabel" style="font-size:12px;font-weight:600;color:#e2e8f0;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <button onclick="doLogout()" style="background:rgba(255,255,255,.15);border:none;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:600;color:#e2e8f0;cursor:pointer;margin-left:4px">Salir</button>
+    </div>
     <button class="btn btn-amber" id="btnCSV"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Descargar vista (CSV)</button>
   </div>
 </div></header>
@@ -524,6 +580,99 @@ const SEGC={'Comex Impo':'#C2740B','Comex Expo':'#E0A030','Nacional':'#0C4A5A','
 const segColor=s=>SEGC[s]||'#647B82';
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const $=id=>document.getElementById(id);
+
+/* ============================================================
+   AUTH — control de acceso por usuario
+   ============================================================ */
+const AUTH_USERS={
+  'jefferarias032001@hotmail.com':{pwd:'ajover2024', tabs:['ajover','ajcomex'], name:'Jeffer Arias'},
+  'jarias@tractocar.com':         {pwd:'tractocar2024', tabs:'all', name:'Jeffer Arias (Admin)'},
+};
+
+let AUTH_SESSION=null;
+
+function _authHash(s){
+  let h=0;for(let i=0;i<s.length;i++){h=(Math.imul(31,h)+s.charCodeAt(i))|0;}return h.toString(36);
+}
+
+function doLogin(){
+  const email=($('loginEmail').value||'').trim().toLowerCase();
+  const pwd=$('loginPwd').value||'';
+  const errEl=$('loginErr');
+  errEl.style.display='none';
+  const user=AUTH_USERS[email];
+  if(!user||user.pwd!==pwd){
+    errEl.textContent='Correo o contrasena incorrectos.';
+    errEl.style.display='block';
+    $('loginPwd').style.borderColor='rgba(239,68,68,.5)';
+    setTimeout(()=>{if($('loginPwd'))$('loginPwd').style.borderColor='rgba(255,255,255,.12)';},2000);
+    return;
+  }
+  AUTH_SESSION={email,tabs:user.tabs,name:user.name};
+  try{sessionStorage.setItem('tc_auth',JSON.stringify({email,tabs:user.tabs,name:user.name}));}catch(e){}
+  _applyAuth();
+}
+
+function doLogout(){
+  AUTH_SESSION=null;
+  try{sessionStorage.removeItem('tc_auth');}catch(e){}
+  location.reload();
+}
+
+function _applyAuth(){
+  const s=AUTH_SESSION;
+  if(!s)return;
+  // Ocultar overlay
+  const ov=$('loginOverlay');
+  if(ov){ov.style.opacity='0';ov.style.transition='opacity .4s';setTimeout(()=>{ov.remove();},400);}
+  // Mostrar chip de usuario
+  const chip=$('userChip');
+  if(chip){
+    chip.style.display='flex';
+    $('userLabel').textContent=s.name||s.email;
+    $('userAvatar').textContent=(s.name||s.email).charAt(0).toUpperCase();
+  }
+  // Filtrar tabs
+  if(s.tabs!=='all'){
+    document.querySelectorAll('.tab[data-tab]').forEach(btn=>{
+      if(!s.tabs.includes(btn.dataset.tab)){
+        btn.style.display='none';
+        const panel=$('panel-'+btn.dataset.tab);
+        if(panel){panel.style.display='none';panel.classList.remove('on');}
+      }
+    });
+    // Activar el primer tab permitido
+    const firstAllowed=document.querySelector('.tab[data-tab]:not([style*="display: none"]):not([style*="display:none"])');
+    if(firstAllowed){
+      document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+      firstAllowed.classList.add('on');
+      const fp=$('panel-'+firstAllowed.dataset.tab);
+      if(fp)fp.classList.add('on');
+    }
+  }
+  // Inicializar dashboard
+  init();
+}
+
+// Verificar sesion al cargar
+(function checkSession(){
+  try{
+    const saved=sessionStorage.getItem('tc_auth');
+    if(saved){
+      const parsed=JSON.parse(saved);
+      if(parsed&&parsed.email&&AUTH_USERS[parsed.email]){
+        AUTH_SESSION=parsed;
+        window.addEventListener('DOMContentLoaded',_applyAuth);
+        return;
+      }
+    }
+  }catch(e){}
+  // Sin sesion: init se llama solo despues del login
+  window.addEventListener('DOMContentLoaded',()=>{
+    $('loginEmail')&&$('loginEmail').focus();
+  });
+})();
 
 const S={rows:[],ob:new Map(),
   f:{meses:new Set(),segs:new Set(),tips:new Set(),prop:'todos',ac:'todos',sam:'todos',q:'',desde:'',hasta:''},
@@ -1227,6 +1376,9 @@ function init(){
   $('metaInfo').innerHTML=`<b>${fN(meta.movimientos||S.rows.length)}</b> movimientos<br>generado ${esc(meta.generado||'')}`;
   if(!S.rows.length){$('kpis').innerHTML='<div class="note" style="grid-column:1/-1">No hay datos. Revisa la carpeta en el código y vuelve a correr <code>python procesar.py</code>.</div>';return;}
   buildFilters();renderRules();wireDitar();render();
+  $('trendSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$('trendSeg').querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');S.trend=b.dataset.t;renderTrend(S.rows.filter(passes));});
+  $('obMultiTgl').addEventListener('change',e=>{S.obMulti=e.target.checked;render();});
+  $('btnCSV').onclick=exportCSV;$('btnCSV2').onclick=exportOBCSV;
 }
 
 /* ============================================================
@@ -1957,11 +2109,8 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   if(t.dataset.tab==='ajover')renderAjover();
   if(t.dataset.tab==='ajcomex')renderAjoverComex();
 });
-$('trendSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$('trendSeg').querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');S.trend=b.dataset.t;renderTrend(S.rows.filter(passes));});
-$('obMultiTgl').addEventListener('change',e=>{S.obMulti=e.target.checked;render();});
-$('btnCSV').onclick=exportCSV;$('btnCSV2').onclick=exportOBCSV;
 document.addEventListener('click',()=>document.querySelectorAll('.dd.open').forEach(x=>x.classList.remove('open')));
-init();
+// init() solo se llama desde _applyAuth() despues del login exitoso
 </script>
 </body>
 </html>
