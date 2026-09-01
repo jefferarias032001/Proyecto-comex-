@@ -540,28 +540,20 @@
           </div>
         </div>
       </div>
-      <div class="card-b" style="padding:12px 0 0">
-        <!-- ESTADO CONTENEDORES -->
-        <div style="padding:0 16px 6px;font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em">Estado de los contenedores</div>
-        <div style="margin:0 16px 12px" id="ajcxEstadoCont"></div>
-        <!-- KPIs RETIROS -->
-        <div style="padding:0 16px 6px;font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em">Retiros en puerto (cita vs. fecha bodegaje)</div>
-        <div class="kpis" id="ajcxKpisRet" style="margin-bottom:12px"></div>
-        <!-- KPIs DEVOLUCIONES -->
-        <div style="padding:0 16px 6px;font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em">Devoluciones unidad vacía (vs. fecha máx. demoras)</div>
-        <div class="kpis" id="ajcxKpisDev" style="margin-bottom:12px"></div>
-        <!-- TIEMPOS PROMEDIO -->
-        <div style="margin:0 16px 16px" id="ajcxTiempos"></div>
+            <div class="card-b" style="padding:16px 16px 0">
+        <!-- DASHBOARD EJECUTIVO -->
+        <div id="ajcxDashboard"></div>
         <!-- TENDENCIA RETIROS -->
-        <div style="margin:0 16px 16px" id="ajcxTendRet"></div>
+        <div style="margin:0 0 16px" id="ajcxTendRet"></div>
         <!-- TENDENCIA DEVOLUCIONES -->
-        <div style="margin:0 16px 16px" id="ajcxTendDev"></div>
+        <div style="margin:0 0 16px" id="ajcxTendDev"></div>
         <!-- TABLA DETALLE -->
-        <div style="padding:0 16px 12px">
-          <div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:8px">Detalle por contenedor</div>
+        <div style="margin-bottom:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:8px;letter-spacing:.08em">Detalle por contenedor</div>
           <div style="overflow-x:auto"><table id="ajcxTabla" style="width:100%;border-collapse:collapse;font-size:11px"></table></div>
           <div id="ajcxPag" style="display:flex;gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap"></div>
         </div>
+      </div>  </div>
       </div>
     </div>
   </div>
@@ -1862,47 +1854,174 @@ function renderAjoverComex(){
         <div style="font-size:10px;color:var(--ink-3);width:32px">${pct}%</div>
       </div>`;
     }).join('');
-    $('ajcxEstadoCont').innerHTML=`<div style="background:var(--surface-2,var(--surface));border:1px solid var(--line);border-radius:8px;padding:10px 14px">${html}</div>`;
   }
 
-  // KPIs retiro
+  // ── KPIs ──────────────────────────────────────────────────────────────────
   const retAT=filtRows.filter(r=>r.cumpl_ret==='A tiempo'||r.cumpl_ret==='Exento (no asume)').length;
   const retTard=filtRows.filter(r=>r.cumpl_ret?.includes('Tarde')||r.cumpl_ret?.includes('vencido')).length;
   const retPend=filtRows.filter(r=>r.cumpl_ret==='Pendiente'||r.cumpl_ret==='Sin fecha').length;
   const retCon=retAT+retTard;
-  const pctRet=retCon?(retAT/retCon*100).toFixed(1):'—';
-  $('ajcxKpisRet').innerHTML=`
-    <div class="kpi"><div class="kl">Total contenedores</div><div class="kv num">${fN(filtRows.length)}</div><div class="ks">registros</div></div>
-    <div class="kpi k-pos"><div class="kl">✓ Retiro a tiempo</div><div class="kv num" style="color:var(--pos)">${pctRet}%</div><div class="ks">${fN(retAT)} de ${fN(retCon)}</div></div>
-    <div class="kpi kpi-alerta"><div class="kl">⚠ Retiro tarde</div><div class="kv num" style="color:var(--neg)">${fN(retTard)}</div><div class="ks">incurrieron en bodegaje</div></div>
-    <div class="kpi"><div class="kl">⏳ Por retirar</div><div class="kv num" style="color:var(--ink-2)">${fN(retPend)}</div><div class="ks">pendientes</div></div>`;
-
-  // KPIs devolución
+  const pctRet=retCon?+(retAT/retCon*100).toFixed(1):0;
   const devAT=filtRows.filter(r=>r.cumpl_dev==='A tiempo'||r.cumpl_dev==='Exento (no asume)'||r.cumpl_dev==='A tiempo (sin límite)').length;
   const devTard=filtRows.filter(r=>r.cumpl_dev?.includes('Tarde')||r.cumpl_dev?.includes('vencido')).length;
   const devPend=filtRows.filter(r=>r.cumpl_dev==='Pendiente').length;
   const devCon=devAT+devTard;
-  const pctDev=devCon?(devAT/devCon*100).toFixed(1):'—';
-  $('ajcxKpisDev').innerHTML=`
-    <div class="kpi k-pos"><div class="kl">✓ Dev. a tiempo</div><div class="kv num" style="color:var(--pos)">${pctDev}%</div><div class="ks">${fN(devAT)} de ${fN(devCon)}</div></div>
-    <div class="kpi kpi-alerta"><div class="kl">⚠ Dev. tarde</div><div class="kv num" style="color:var(--neg)">${fN(devTard)}</div><div class="ks">con demoras</div></div>
-    <div class="kpi"><div class="kl">⏳ Dev. pendiente</div><div class="kv num" style="color:var(--ink-2)">${fN(devPend)}</div><div class="ks">sin devolver</div></div>`;
-
-  // Tiempos promedio
+  const pctDev=devCon?+(devAT/devCon*100).toFixed(1):0;
   const _a=arr=>{const v=arr.filter(x=>x!=null&&!isNaN(x));return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length*10)/10:null;};
-  const _fh=h=>{if(h==null)return '<span style="color:var(--ink-3)">—</span>';const hh=Math.floor(h),mm=Math.round((h-hh)*60);return hh>0?`<b>${hh}h ${mm}min</b>`:`<b>${mm}min</b>`;};
+  const _fh=h=>{if(h==null)return '—';const hh=Math.floor(h),mm=Math.round((h-hh)*60);return hh>0?`${hh}h ${mm}m`:`${mm}m`;};
   const avgEspera=_a(filtRows.map(r=>r.t_espera_ret));
   const avgPuerto=_a(filtRows.map(r=>r.t_en_puerto));
   const avgEnRuta=_a(filtRows.map(r=>r.t_en_ruta));
   const avgDescarg=_a(filtRows.map(r=>r.t_descargando));
   const avgPromDev=_a(filtRows.map(r=>r.t_prom_dev));
-  $('ajcxTiempos').innerHTML=`<div style="display:flex;gap:24px;flex-wrap:wrap;padding:8px 0 4px">
-    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase">⏱ Espera cita retiro → llegada</div><div style="font-size:18px;margin-top:4px">${_fh(avgEspera)}</div></div>
-    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase">🚢 Llegada retiro → salida puerto</div><div style="font-size:18px;margin-top:4px">${_fh(avgPuerto)}</div></div>
-    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase">🚛 En ruta a descargue</div><div style="font-size:18px;margin-top:4px">${_fh(avgEnRuta)}</div></div>
-    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase">📦 Tiempo descargando</div><div style="font-size:18px;margin-top:4px">${_fh(avgDescarg)}</div></div>
-    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase">🔁 Prom. tiempo devolución</div><div style="font-size:18px;margin-top:4px">${_fh(avgPromDev)}</div></div>
+
+  // helper: gauge SVG animado
+  const _gauge=(pct,color,id)=>{
+    const R=44,C=2*Math.PI*R,arc=C*(pct/100);
+    return `<svg width="110" height="110" viewBox="0 0 110 110">
+      <circle cx="55" cy="55" r="${R}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="10"/>
+      <circle cx="55" cy="55" r="${R}" fill="none" stroke="${color}" stroke-width="10"
+        stroke-linecap="round" stroke-dasharray="0 ${C}" stroke-dashoffset="${C*.25}"
+        id="garc_${id}" style="transition:stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1)"/>
+      <text x="55" y="51" text-anchor="middle" fill="${color}" font-size="17" font-weight="800" font-family="inherit">${pct}%</text>
+      <text x="55" y="67" text-anchor="middle" fill="rgba(255,255,255,.45)" font-size="9" font-family="inherit">cumplimiento</text>
+    </svg>`;
+  };
+  // helper: counter animado
+  const _cntHtml=(val,id,color='#f1f5f9')=>`<span id="cnt_${id}" data-target="${val}" style="font-size:42px;font-weight:900;color:${color};line-height:1;letter-spacing:-.03em">0</span>`;
+
+  // colores estado
+  const _retColor=p=>p>=90?'#22c55e':p>=70?'#f59e0b':'#ef4444';
+  const _devColor=p=>p>=90?'#34d399':p>=70?'#f59e0b':'#ef4444';
+
+  // ── DASHBOARD HTML ──────────────────────────────────────────────────────────
+  const dashHtml=`
+  <style>
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+    @keyframes barGrow{from{width:0}to{width:var(--w)}}
+    .impo-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 4px 20px rgba(0,0,0,.06);animation:fadeUp .5s ease both;position:relative;overflow:hidden}
+    .impo-card::before{content:'';position:absolute;inset:0;border-radius:16px;opacity:.04;pointer-events:none}
+    .impo-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:14px}
+    .impo-mid-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+    @media(max-width:780px){.impo-mid-grid{grid-template-columns:1fr}}
+    .impo-time-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+    .stat-bar{height:8px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:6px}
+    .stat-bar-fill{height:100%;border-radius:4px;width:0;transition:width 1s cubic-bezier(.4,0,.2,1)}
+  </style>
+  <!-- Fila 1: KPI cards principales -->
+  <div class="impo-kpi-grid">
+    <!-- Total -->
+    <div class="impo-card" style="animation-delay:.0s;background:linear-gradient(135deg,#1e293b,#0f172a);border-color:rgba(255,255,255,.08)">
+      <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Total registros</div>
+      ${_cntHtml(filtRows.length,'total','#f1f5f9')}
+      <div style="font-size:12px;color:#475569;margin-top:4px">contenedores</div>
+      <div style="margin-top:12px;display:flex;gap:6px">
+        <span style="font-size:10px;background:rgba(59,130,246,.15);color:#60a5fa;padding:2px 8px;border-radius:20px">${fN(filtRows.filter(r=>r.tipo_carga==='CONTENEDOR').length)} cont.</span>
+        <span style="font-size:10px;background:rgba(245,158,11,.15);color:#fbbf24;padding:2px 8px;border-radius:20px">${fN(filtRows.filter(r=>r.tipo_carga==='CARGA SUELTA').length)} sueltos</span>
+      </div>
+    </div>
+    <!-- Gauge retiro -->
+    <div class="impo-card" style="animation-delay:.08s;background:linear-gradient(135deg,#0f2720,#052e16);border-color:rgba(34,197,94,.15);display:flex;flex-direction:column;align-items:center">
+      <div style="font-size:10px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:.1em;margin-bottom:2px">Retiro a tiempo</div>
+      ${_gauge(pctRet,_retColor(pctRet),'ret')}
+      <div style="text-align:center;margin-top:-4px">
+        <span style="font-size:12px;color:#86efac">${fN(retAT)} ok</span>
+        <span style="font-size:12px;color:#475569;margin:0 4px">/</span>
+        <span style="font-size:12px;color:#f87171">${fN(retTard)} tarde</span>
+      </div>
+      <div style="font-size:11px;color:#475569;margin-top:2px">${fN(retPend)} pendientes</div>
+    </div>
+    <!-- Gauge devolucion -->
+    <div class="impo-card" style="animation-delay:.16s;background:linear-gradient(135deg,#0a1628,#0c1a3a);border-color:rgba(52,211,153,.15);display:flex;flex-direction:column;align-items:center">
+      <div style="font-size:10px;font-weight:700;color:#34d399;text-transform:uppercase;letter-spacing:.1em;margin-bottom:2px">Devolucion a tiempo</div>
+      ${_gauge(pctDev,_devColor(pctDev),'dev')}
+      <div style="text-align:center;margin-top:-4px">
+        <span style="font-size:12px;color:#6ee7b7">${fN(devAT)} ok</span>
+        <span style="font-size:12px;color:#475569;margin:0 4px">/</span>
+        <span style="font-size:12px;color:#f87171">${fN(devTard)} tarde</span>
+      </div>
+      <div style="font-size:11px;color:#475569;margin-top:2px">${fN(devPend)} pendientes</div>
+    </div>
+    <!-- Alertas -->
+    <div class="impo-card" style="animation-delay:.24s;background:linear-gradient(135deg,#1c0a0a,#2d1010);border-color:rgba(239,68,68,.15)">
+      <div style="font-size:10px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">Alertas activas</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:12px;color:#94a3b8">Retiros tarde</span>
+          <span style="font-size:22px;font-weight:800;color:#ef4444">${fN(retTard)}</span>
+        </div>
+        <div style="height:1px;background:rgba(255,255,255,.05)"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:12px;color:#94a3b8">Dev. tarde</span>
+          <span style="font-size:22px;font-weight:800;color:#f59e0b">${fN(devTard)}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fila 2: Estado + Tiempos -->
+  <div class="impo-mid-grid">
+    <!-- Estado contenedores -->
+    <div class="impo-card" style="animation-delay:.32s">
+      <div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px">Estado de contenedores</div>
+      ${Object.entries(estCnt).sort((a,b)=>b[1]-a[1]).map(([e,n],i)=>{
+        const pct=+(n/tot*100).toFixed(1);
+        const col=colEst[e]||'#6b7280';
+        const delay=(0.35+i*0.05).toFixed(2);
+        return `<div style="margin-bottom:10px;animation:fadeUp .4s ${delay}s ease both">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:11px;color:var(--ink-2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(e)}">${esc(e)}</span>
+            <span style="font-size:12px;font-weight:700;color:${col}">${n} <span style="font-size:10px;color:var(--ink-3);font-weight:400">${pct}%</span></span>
+          </div>
+          <div class="stat-bar"><div class="stat-bar-fill" style="background:${col};--w:${pct}%"></div></div>
+        </div>`;
+      }).join('')}
+    </div>
+    <!-- Tiempos promedio -->
+    <div class="impo-card" style="animation-delay:.36s">
+      <div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px">Tiempos promedio del proceso</div>
+      <div style="display:flex;flex-direction:column;gap:0">
+        ${[
+          {icon:'⏱',label:'Espera cita → llegada retiro',val:avgEspera,color:'#7c3aed'},
+          {icon:'🚢',label:'Llegada retiro → salida puerto',val:avgPuerto,color:'#0ea5e9'},
+          {icon:'🚛',label:'En ruta a descargue',val:avgEnRuta,color:'#10b981'},
+          {icon:'📦',label:'Tiempo descargando',val:avgDescarg,color:'#f59e0b'},
+          {icon:'🔁',label:'Tiempo hasta devolucion',val:avgPromDev,color:'#ec4899'},
+        ].map((m,i)=>`
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);animation:fadeUp .4s ${(0.38+i*0.06).toFixed(2)}s ease both">
+            <div style="width:36px;height:36px;border-radius:10px;background:${m.color}18;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${m.icon}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:11px;color:var(--ink-3)">${m.label}</div>
+              <div style="font-size:20px;font-weight:800;color:${m.color};line-height:1.2;margin-top:2px">${_fh(m.val)}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
   </div>`;
+
+  $('ajcxDashboard').innerHTML=dashHtml;
+
+  // Animar gauges
+  requestAnimationFrame(()=>{
+    const C=2*Math.PI*44;
+    [['garc_ret',pctRet],['garc_dev',pctDev]].forEach(([id,pct])=>{
+      const el=document.getElementById(id);
+      if(el){const arc=C*(pct/100);el.style.strokeDasharray=`${arc} ${C}`;}
+    });
+    // Animar barras
+    document.querySelectorAll('.stat-bar-fill').forEach(el=>{
+      el.style.width=el.style.getPropertyValue('--w')||el.parentElement?.style.getPropertyValue('--w');
+      const w=el.style.cssText.match(/--w:([^;]+)/)?.[1];
+      if(w)el.style.width=w;
+    });
+    // Animar contadores
+    document.querySelectorAll('[data-target]').forEach(el=>{
+      const target=+el.dataset.target;if(!target)return;
+      let start=null;
+      const step=ts=>{if(!start)start=ts;const p=Math.min((ts-start)/800,1);el.textContent=Math.round(target*p*(2-p));if(p<1)requestAnimationFrame(step);};
+      requestAnimationFrame(step);
+    });
+  });
 
   // Tendencia retiros (desde datos globales sin filtro para ver todos los meses)
   const tendSrc=[...(AC.ajover?.tendencia||[]),...(AC.cv?.tendencia||[])];
