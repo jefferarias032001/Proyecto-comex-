@@ -543,10 +543,11 @@
             <div class="card-b" style="padding:16px 16px 0">
         <!-- DASHBOARD EJECUTIVO -->
         <div id="ajcxDashboard"></div>
-        <!-- TENDENCIA RETIROS -->
-        <div style="margin:0 0 16px" id="ajcxTendRet"></div>
-        <!-- TENDENCIA DEVOLUCIONES -->
-        <div style="margin:0 0 16px" id="ajcxTendDev"></div>
+        <!-- TENDENCIAS LADO A LADO -->
+        <div style="display:flex;gap:14px;margin:0 0 16px;flex-wrap:wrap">
+          <div style="flex:1;min-width:280px" id="ajcxTendRet"></div>
+          <div style="flex:1;min-width:280px" id="ajcxTendDev"></div>
+        </div>
         <!-- TABLA DETALLE -->
         <div style="margin-bottom:12px">
           <div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:8px;letter-spacing:.08em">Detalle por contenedor</div>
@@ -1462,7 +1463,7 @@ function _svgTend(data,cfg){
     if(cfg.sub)  xlbls+=`<text x="${x.toFixed(1)}" y="${H-PB+27}" text-anchor="middle" font-size="9" font-weight="600" fill="var(--ink-2)">${cfg.sub(t)}</text>`;
     if(cfg.sub2) xlbls+=`<text x="${x.toFixed(1)}" y="${H-PB+39}" text-anchor="middle" font-size="8" fill="var(--ink-3)">${cfg.sub2(t)}</text>`;
   });
-  return `<div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">${cfg.title||''}</div>
+  return `<div style="font-size:12px;font-weight:800;color:var(--ink);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--line)">${cfg.title||''}</div>
     <div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" style="width:100%;min-width:${Math.max(360,data.length*72)}px;height:${H}px;display:block">
       ${grid}${bars}<path d="${pts}" fill="none" stroke="var(--marine)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${dots}${xlbls}
     </svg></div>`;
