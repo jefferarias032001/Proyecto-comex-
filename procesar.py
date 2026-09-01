@@ -350,29 +350,54 @@ def leer_ajover_comex(stats):
                 t_espera_ret    = _dh(cita_r, llegr)
                 t_en_puerto     = _dh(llegr, salp)
 
+                # ── tipo de carga (antes de estado_cont) ────────────────────
+                tam_val  = _str(df, c_tamano).iloc[i]
+                ped_val  = _str(df, c_pedido).iloc[i]
+                cont_val = _str(df, c_cont).iloc[i]
+                _cs_kw   = ("pallet","pallets","plt","bulto","bultos","carga suelta","suelto","loose","carga suel")
+                _is_cs   = any(k in str(v).lower() for k in _cs_kw
+                               for v in (tam_val, ped_val, cont_val))
+                tipo_carga = "CARGA SUELTA" if _is_cs else "CONTENEDOR"
+
                 # ── estado contenedor ────────────────────────────────────────
-                if pd.isna(cita_r):
-                    estado_cont = "SIN LLEGADA DE RETIRO DEL CONTENEDOR"
-                elif pd.isna(salp):
-                    estado_cont = "SIN SALIDA DE PUERTO"
-                elif pd.isna(llegdc):
-                    estado_cont = "EN RUTA"
-                elif pd.isna(sald):
-                    estado_cont = "DESCARGANDO"
-                elif pd.isna(llegp) and not pd.isna(llegdv):
-                    estado_cont = "FINALIZADO - DEVOLUCION"
-                elif pd.isna(llegp) and pd.isna(llegdv):
-                    estado_cont = "DESCARGADO"
-                elif not pd.isna(llegp) and pd.isna(llegdv):
-                    estado_cont = "BAJADO EN PATIO TEMPORAL"
-                elif not pd.isna(llegp) and not pd.isna(llegdv):
-                    estado_cont = "FINALIZADO - DEVOLUCION"
-                elif pd.isna(salp2):
-                    estado_cont = "DESCARGADO EN PATIO TEMPORAL"
-                elif not pd.isna(llegdv):
-                    estado_cont = "FINALIZADO - DEVOLUCION"
+                if _is_cs:
+                    # Carga suelta: no devuelve vacíos, proceso termina en DESCARGADO
+                    cumpl_dev  = "No aplica"
+                    estado_dev = "NO APLICA"
+                    if pd.isna(cita_r):
+                        estado_cont = "SIN LLEGADA DE RETIRO"
+                    elif pd.isna(salp):
+                        estado_cont = "SIN SALIDA DE PUERTO"
+                    elif pd.isna(llegdc):
+                        estado_cont = "EN RUTA"
+                    elif pd.isna(sald):
+                        estado_cont = "DESCARGANDO"
+                    else:
+                        estado_cont = "DESCARGADO"
                 else:
-                    estado_cont = "revisar fechas"
+                    # Contenedor: lógica completa con devolución
+                    if pd.isna(cita_r):
+                        estado_cont = "SIN LLEGADA DE RETIRO DEL CONTENEDOR"
+                    elif pd.isna(salp):
+                        estado_cont = "SIN SALIDA DE PUERTO"
+                    elif pd.isna(llegdc):
+                        estado_cont = "EN RUTA"
+                    elif pd.isna(sald):
+                        estado_cont = "DESCARGANDO"
+                    elif pd.isna(llegp) and not pd.isna(llegdv):
+                        estado_cont = "FINALIZADO - DEVOLUCION"
+                    elif pd.isna(llegp) and pd.isna(llegdv):
+                        estado_cont = "DESCARGADO"
+                    elif not pd.isna(llegp) and pd.isna(llegdv):
+                        estado_cont = "BAJADO EN PATIO TEMPORAL"
+                    elif not pd.isna(llegp) and not pd.isna(llegdv):
+                        estado_cont = "FINALIZADO - DEVOLUCION"
+                    elif pd.isna(salp2):
+                        estado_cont = "DESCARGADO EN PATIO TEMPORAL"
+                    elif not pd.isna(llegdv):
+                        estado_cont = "FINALIZADO - DEVOLUCION"
+                    else:
+                        estado_cont = "revisar fechas"
 
                 # ── tendencia mes ────────────────────────────────────────────
                 if mes_iso:
@@ -394,13 +419,6 @@ def leer_ajover_comex(stats):
                     if t_en_ruta     is not None: t["t_en_ruta"].append(t_en_ruta)
                     if t_descargando is not None: t["t_descargando"].append(t_descargando)
                     if t_prom_dev    is not None: t["t_prom_dev"].append(t_prom_dev)
-
-                tam_val  = _str(df, c_tamano).iloc[i]
-                ped_val  = _str(df, c_pedido).iloc[i]
-                _cs_kw   = ("pallet","plt","carga suelta","suelto","loose","carga suel")
-                _is_cs   = any(k in str(tam_val).lower() for k in _cs_kw) or \
-                           any(k in str(ped_val).lower()  for k in _cs_kw)
-                tipo_carga = "CARGA SUELTA" if _is_cs else "CONTENEDOR"
 
                 rows.append({
                     "fuente":    fuente,
