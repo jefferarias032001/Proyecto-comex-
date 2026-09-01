@@ -410,6 +410,8 @@ def leer_ajover_comex(stats):
                     "mes_iso":   mes_iso,
                     "mes_rec":   mes_rec,
                     "f_bodegaje":bod.strftime("%Y-%m-%d")         if not pd.isna(bod)    else "",
+                    "bod_iso":   bod.strftime("%Y-%m-%d")         if not pd.isna(bod)    else "",
+                    "dias_disponibles": int((bod.date() - fecrecib.date()).days) if not pd.isna(bod) and not pd.isna(fecrecib) else None,
                     "f_max_dev": max_dev.strftime("%Y-%m-%d")     if not pd.isna(max_dev) else "",
                     "f_cita_ret":cita_r.strftime("%d-%m-%Y %H:%M") if not pd.isna(cita_r) else "",
                     "f_cita_rr": cita_rr.strftime("%d-%m-%Y %H:%M") if not pd.isna(cita_rr) else "",

@@ -1796,7 +1796,7 @@ function renderAjoverLlenos(){
 }
 
 // ═══════════════════════════ AJOVER COMEX ═══════════════════════════
-const SAC={q:'',qob:'',fuente:'',filtRet:'',filtDev:'',filtEst:'',filtTipo:'',mes:'',pg:1,PER:50};
+const SAC={q:'',qob:'',fuente:'',filtRet:'',filtDev:'',filtEst:'',filtTipo:'',mes:'',pg:1,PER:50,sortCol:'',sortDir:1};
 function _pillRet(v){
   if(!v||v==='Sin fecha'||v==='Sin fecha bodegaje'||v==='Sin cita')return `<span style="color:var(--ink-3);font-size:10px">${v||'—'}</span>`;
   if(v==='A tiempo')return '<span style="background:#d4edda;color:#155724;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700">✓ A tiempo</span>';
@@ -1953,6 +1953,48 @@ function renderAjoverComex(){
     </div>
   </div>
 
+  <!-- Alertas de vencimiento de bodegaje -->
+  ${(()=>{
+    const today=new Date();today.setHours(0,0,0,0);
+    const _dStr=d=>{const t=new Date(d);t.setHours(0,0,0,0);return t;};
+    const _diffD=s=>{if(!s)return null;const diff=_dStr(s)-today;return Math.round(diff/86400000);};
+    const pendRet=filtRows.filter(r=>r.cumpl_ret==='Pendiente');
+    const vencidos=filtRows.filter(r=>r.estado_ret==='SIN RETIRO - ATRASADO');
+    const hoy=pendRet.filter(r=>_diffD(r.bod_iso)===0);
+    const man=pendRet.filter(r=>_diffD(r.bod_iso)===1);
+    const sem=pendRet.filter(r=>{const d=_diffD(r.bod_iso);return d!=null&&d>=2&&d<=7;});
+    const _urgCard=(n,lbl,col,bg,icon)=>n>0?`<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:${bg};border:1px solid ${col}33;border-radius:12px;animation:fadeUp .4s ease both">
+      <span style="font-size:20px">${icon}</span>
+      <div>
+        <div style="font-size:22px;font-weight:800;color:${col};line-height:1">${n}</div>
+        <div style="font-size:11px;color:${col};opacity:.8">${lbl}</div>
+      </div>
+    </div>`:'';
+    const cardsHtml=[
+      _urgCard(vencidos.length,'Vencidos sin retirar','#ef4444','#fef2f2','🔴'),
+      _urgCard(hoy.length,'Vencen HOY','#f97316','#fff7ed','🟠'),
+      _urgCard(man.length,'Vencen mañana','#f59e0b','#fffbeb','🟡'),
+      _urgCard(sem.length,'Vencen esta semana','#10b981','#f0fdf4','🟢'),
+    ].filter(Boolean).join('');
+    // Días disponibles stats
+    const diasRows=filtRows.filter(r=>r.dias_disponibles!=null);
+    const yaVencidos=diasRows.filter(r=>r.dias_disponibles<0).length;
+    const poco=diasRows.filter(r=>r.dias_disponibles>=0&&r.dias_disponibles<=3).length;
+    const normal=diasRows.filter(r=>r.dias_disponibles>3&&r.dias_disponibles<=7).length;
+    const holgado=diasRows.filter(r=>r.dias_disponibles>7).length;
+    return cardsHtml||yaVencidos||poco?`
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:800;color:var(--ink);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--line)">Urgencias — Retiros pendientes</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">${cardsHtml||'<span style="font-size:12px;color:var(--ink-3)">Sin retiros urgentes con los filtros actuales.</span>'}</div>
+      <div style="font-size:11px;font-weight:700;color:var(--ink-2);margin-bottom:6px">Tiempo disponible al recibir (bodegaje − fecha recibido)</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${yaVencidos?`<span style="font-size:11px;background:#fde8e8;color:#991b1b;padding:3px 10px;border-radius:20px;font-weight:700">⚠ ${yaVencidos} recibidos ya vencidos</span>`:''}
+        ${poco?`<span style="font-size:11px;background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:20px;font-weight:700">⏱ ${poco} con ≤3 días</span>`:''}
+        ${normal?`<span style="font-size:11px;background:#fffbeb;color:#78350f;padding:3px 10px;border-radius:20px">📅 ${normal} con 4-7 días</span>`:''}
+        ${holgado?`<span style="font-size:11px;background:#d1fae5;color:#065f46;padding:3px 10px;border-radius:20px">✓ ${holgado} con +7 días</span>`:''}
+      </div>
+    </div>`:''})()}
+
   `;
 
   const midHtml=`<div class="impo-mid-grid">
@@ -2065,74 +2107,75 @@ function renderAjoverComex(){
     return `<span style="font-size:9px;background:${bg};color:${col};padding:1px 6px;border-radius:20px;white-space:nowrap">${s}</span>`;
   };
   const _fhStr=h=>{if(h==null||h==='')return '—';const hh=Math.floor(h),mm=Math.round((h-hh)*60);return hh>0?`${hh}h ${mm}m`:`${mm}m`;};
-  const nw=`${tdD};white-space:nowrap`, sm=`${tdD};font-size:10px`;
+
+  // Definición de columnas: [etiqueta, campo en row, tipo s/d/n]
+  const COLS=[
+    ['Fuente','fuente','s'],['F.Recibido','fecrecib','d'],['ETA','eta','d'],
+    ['Contenedor','cont','s'],['Tam.','tamano','s'],['Tipo carga','tipo_carga','s'],
+    ['Pedido','pedido','s'],['DO','do','s'],['Cliente','cliente','s'],
+    ['Línea','linea','s'],['Terminal','terminal','s'],['Destino','destino','s'],
+    ['Estado cont.','estado_cont','s'],
+    ['Bodegaje','f_bodegaje','d'],['Días disp.','dias_disponibles','n'],['Cita retiro','f_cita_ret','d'],
+    ['Cita reprog.','f_cita_rr','d'],['Llegada retiro','f_llegr','d'],
+    ['Salida puerto','f_salp','d'],['Llegada desc.','f_llegdc','d'],
+    ['Salida desc.','f_sald','d'],['Llegada patio','f_llegp','d'],['Salida patio','f_salp2','d'],
+    ['Cumpl. retiro','cumpl_ret','s'],['Estado retiro','estado_ret','s'],
+    ['Máx. dev.','f_max_dev','d'],['Cita dev.','f_cita_dev','d'],
+    ['Llegada dev.','f_llegdv','d'],['Lugar dev.','f_lugar_dev','s'],
+    ['Cumpl. dev.','cumpl_dev','s'],['Estado dev.','estado_dev','s'],
+    ['Tipo dev.','tipo_dev','s'],['Observación','observacion','s'],['Cierre','cierre','s'],
+    ['h Espera ret.','t_espera_ret','n'],['h En puerto','t_en_puerto','n'],
+    ['h En ruta','t_en_ruta','n'],['h Descargando','t_descargando','n'],
+    ['h Prom. dev.','t_prom_dev','n'],['h Sal-Cita','t_salida_vs_cita','n'],
+    ['h Ruta2','t_en_ruta2','n'],['h Patio temp.','t_patio_temp','n'],
+  ];
+
+  // Ordenar filtRows según columna activa
+  const sc=SAC.sortCol, sd=SAC.sortDir;
+  let sortedRows=[...filtRows];
+  if(sc){
+    const colDef=COLS.find(c=>c[1]===sc);
+    const t=colDef?colDef[2]:'s';
+    sortedRows.sort((a,b)=>{
+      let va=a[sc], vb=b[sc];
+      if(t==='n'){va=va??-Infinity;vb=vb??-Infinity;return sd*(va-vb);}
+      va=String(va??'');vb=String(vb??'');return sd*va.localeCompare(vb,'es',{numeric:true});
+    });
+  }
+
+  // Renderizado de celda según columna
+  const _cell=(r,k)=>{
+    if(k==='fuente')return `<span style="font-size:10px;background:${r.fuente==='AJOVER'?'#dbeafe':'#fef3c7'};color:${r.fuente==='AJOVER'?'#1e40af':'#92400e'};padding:1px 6px;border-radius:20px">${r.fuente}</span>`;
+    if(k==='estado_cont')return _pillEst(r.estado_cont);
+    if(k==='estado_ret')return _pillEst(r.estado_ret);
+    if(k==='estado_dev')return _pillEst(r.estado_dev);
+    if(k==='cumpl_ret')return _pillRet(r.cumpl_ret);
+    if(k==='cumpl_dev')return _pillRet(r.cumpl_dev);
+    if(k==='dias_disponibles'){
+      const d=r[k];if(d==null)return '—';
+      const col=d<0?'#991b1b':d<=3?'#92400e':d<=7?'#78350f':'#065f46';
+      const bg=d<0?'#fde8e8':d<=3?'#fef3c7':d<=7?'#fffbeb':'#d1fae5';
+      const lbl=d<0?`Vencido ${-d}d`:`${d}d`;
+      return `<span style="font-size:10px;background:${bg};color:${col};padding:1px 7px;border-radius:20px;font-weight:600;white-space:nowrap">${lbl}</span>`;
+    }
+    if(k.startsWith('t_'))return _fhStr(r[k]);
+    const v=r[k];return v==null||v===''?'—':esc(String(v));
+  };
+
+  // Cabecera con clic para ordenar
+  const _th=(l,k)=>{
+    const on=sc===k;
+    const arr=on?(sd===1?'▲':'▼'):'⇅';
+    const hi=on?'background:rgba(59,130,246,.1);color:#3b82f6;':''
+    return `<th style="${tdH};cursor:pointer;user-select:none;${hi}white-space:nowrap" onclick="SAC.sortDir=SAC.sortCol==='${k}'&&SAC.sortDir===1?-1:1;SAC.sortCol='${k}';SAC.pg=1;renderAjoverComex()">${l} <span style="font-size:9px;opacity:${on?1:.4}">${arr}</span></th>`;
+  };
+
   const pg=SAC.pg, per=SAC.PER;
-  const paged=filtRows.slice((pg-1)*per, pg*per);
-  let html=`<thead><tr>
-    <th style="${tdH}">Fuente</th><th style="${tdH}">F.Recibido</th><th style="${tdH}">ETA</th>
-    <th style="${tdH}">Contenedor</th><th style="${tdH}">Tam.</th><th style="${tdH}">Pedido</th>
-    <th style="${tdH}">DO</th><th style="${tdH}">Cliente</th><th style="${tdH}">Línea</th>
-    <th style="${tdH}">Terminal</th><th style="${tdH}">Destino</th>
-    <th style="${tdH}">Estado contenedor</th>
-    <th style="${tdH}">Bodegaje</th><th style="${tdH}">Cita retiro</th>
-    <th style="${tdH}">Cita reprog.</th><th style="${tdH}">Llegada retiro</th>
-    <th style="${tdH}">Salida puerto</th><th style="${tdH}">Llegada desc.</th>
-    <th style="${tdH}">Salida desc.</th><th style="${tdH}">Llegada patio</th>
-    <th style="${tdH}">Salida patio</th>
-    <th style="${tdH}">Cumpl. retiro</th><th style="${tdH}">Estado retiro</th>
-    <th style="${tdH}">Máx. dev.</th><th style="${tdH}">Cita dev.</th>
-    <th style="${tdH}">Llegada dev.</th><th style="${tdH}">Lugar dev.</th>
-    <th style="${tdH}">Cumpl. dev.</th><th style="${tdH}">Estado dev.</th>
-    <th style="${tdH}">Tipo dev.</th><th style="${tdH}">Observación</th>
-    <th style="${tdH}">Cierre</th>
-    <th style="${tdH}">h Espera retiro</th><th style="${tdH}">h En puerto</th>
-    <th style="${tdH}">h En ruta</th><th style="${tdH}">h Descargando</th>
-    <th style="${tdH}">h Prom. dev.</th><th style="${tdH}">h Sal-Cita</th>
-    <th style="${tdH}">h Ruta2</th><th style="${tdH}">h Patio temp.</th>
-  </tr></thead><tbody>`;
+  const paged=sortedRows.slice((pg-1)*per, pg*per);
+
+  let html=`<thead><tr>${COLS.map(([l,k])=>_th(l,k)).join('')}</tr></thead><tbody>`;
   paged.forEach(r=>{
-    html+=`<tr>
-      <td style="${tdD}"><span style="font-size:10px;background:${r.fuente==='AJOVER'?'#dbeafe':'#fef3c7'};color:${r.fuente==='AJOVER'?'#1e40af':'#92400e'};padding:1px 6px;border-radius:20px">${r.fuente}</span></td>
-      <td style="${nw}">${r.fecrecib||'—'}</td>
-      <td style="${nw}">${r.eta||'—'}</td>
-      <td style="${sm};font-family:monospace">${esc(r.cont)||'—'}</td>
-      <td style="${tdD}">${esc(r.tamano)||'—'}</td>
-      <td style="${sm}">${esc(r.pedido)||'—'}</td>
-      <td style="${sm}">${esc(r.do)||'—'}</td>
-      <td style="${sm};max-width:120px;overflow:hidden;text-overflow:ellipsis">${esc(r.cliente)||'—'}</td>
-      <td style="${sm}">${esc(r.linea)||'—'}</td>
-      <td style="${sm};max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(r.terminal)||'—'}</td>
-      <td style="${sm};max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(r.destino)||'—'}</td>
-      <td style="${tdD}">${_pillEst(r.estado_cont)}</td>
-      <td style="${nw}">${r.f_bodegaje||'—'}</td>
-      <td style="${nw}">${r.f_cita_ret||'—'}</td>
-      <td style="${nw}">${r.f_cita_rr||'—'}</td>
-      <td style="${nw}">${r.f_llegr||'—'}</td>
-      <td style="${nw}">${r.f_salp||'—'}</td>
-      <td style="${nw}">${r.f_llegdc||'—'}</td>
-      <td style="${nw}">${r.f_sald||'—'}</td>
-      <td style="${nw}">${r.f_llegp||'—'}</td>
-      <td style="${nw}">${r.f_salp2||'—'}</td>
-      <td style="${tdD}">${_pillRet(r.cumpl_ret)}</td>
-      <td style="${tdD}">${_pillEst(r.estado_ret)}</td>
-      <td style="${nw}">${r.f_max_dev||'—'}</td>
-      <td style="${nw}">${r.f_cita_dev||'—'}</td>
-      <td style="${nw}">${r.f_llegdv||'—'}</td>
-      <td style="${sm}">${esc(r.f_lugar_dev)||'—'}</td>
-      <td style="${tdD}">${_pillRet(r.cumpl_dev)}</td>
-      <td style="${tdD}">${_pillEst(r.estado_dev)}</td>
-      <td style="${sm}">${esc(r.tipo_dev)||'—'}</td>
-      <td style="${sm};max-width:180px;overflow:hidden;text-overflow:ellipsis" title="${esc(r.observacion)}">${esc(r.observacion)||'—'}</td>
-      <td style="${sm}">${esc(r.cierre)||'—'}</td>
-      <td style="${tdD}">${_fhStr(r.t_espera_ret)}</td>
-      <td style="${tdD}">${_fhStr(r.t_en_puerto)}</td>
-      <td style="${tdD}">${_fhStr(r.t_en_ruta)}</td>
-      <td style="${tdD}">${_fhStr(r.t_descargando)}</td>
-      <td style="${tdD}">${_fhStr(r.t_prom_dev)}</td>
-      <td style="${tdD}">${_fhStr(r.t_salida_vs_cita)}</td>
-      <td style="${tdD}">${_fhStr(r.t_en_ruta2)}</td>
-      <td style="${tdD}">${_fhStr(r.t_patio_temp)}</td>
-    </tr>`;
+    html+=`<tr>${COLS.map(([,k])=>`<td style="${tdD};white-space:nowrap;font-size:11px">${_cell(r,k)}</td>`).join('')}</tr>`;
   });
   html+='</tbody>';
   $('ajcxTabla').innerHTML=html;
@@ -2169,7 +2212,7 @@ function renderAjoverComex(){
       };
     });
     $('ajcxClear').onclick=()=>{
-      SAC.q='';SAC.qob='';SAC.fuente='';SAC.filtRet='';SAC.filtDev='';SAC.filtEst='';SAC.filtTipo='';SAC.mes='';SAC.pg=1;
+      SAC.q='';SAC.qob='';SAC.fuente='';SAC.filtRet='';SAC.filtDev='';SAC.filtEst='';SAC.filtTipo='';SAC.mes='';SAC.pg=1;SAC.sortCol='';SAC.sortDir=1;
       ['ajcxQ','ajcxQob','ajcxMes','ajcxFuente','ajcxFiltRet','ajcxFiltDev','ajcxFiltEst'].forEach(id=>{if($(id))$(id).value='';});
       document.querySelectorAll('#ajcxChipsTipo button').forEach(b=>{
         b.style.background=b.dataset.tipo===''?'#3b82f6':'rgba(255,255,255,.07)';
