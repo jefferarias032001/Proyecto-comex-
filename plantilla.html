@@ -1834,27 +1834,15 @@ function renderAjoverComex(){
   $('ajcxHint').textContent=`${fN(filtRows.length)} contenedores`;
 
   // Estado de contenedores (breakdown)
-  {
-    const estCnt={};
-    filtRows.forEach(r=>{const e=r.estado_cont||'Sin estado';estCnt[e]=(estCnt[e]||0)+1;});
-    const colEst={
-      'FINALIZADO - DEVOLUCION':'#1a8a34','RETIRADO - A TIEMPO':'#1a8a34',
-      'DESCARGADO':'#2563eb','EN RUTA':'#7c3aed','DESCARGANDO':'#d97706',
-      'BAJADO EN PATIO TEMPORAL':'#9ca3af','SIN SALIDA DE PUERTO':'#ef4444',
-      'SIN LLEGADA DE RETIRO DEL CONTENEDOR':'#ef4444','DESCARGADO EN PATIO TEMPORAL':'#6b7280',
-    };
-    const tot=filtRows.length||1;
-    const html=Object.entries(estCnt).sort((a,b)=>b[1]-a[1]).map(([e,n])=>{
-      const pct=(n/tot*100).toFixed(0);
-      const col=colEst[e]||'#6b7280';
-      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-        <div style="font-size:10px;color:var(--ink-3);width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(e)}">${esc(e)}</div>
-        <div style="flex:1;background:var(--line);border-radius:4px;height:12px;min-width:60px"><div style="width:${pct}%;background:${col};border-radius:4px;height:12px"></div></div>
-        <div style="font-size:11px;font-weight:700;color:${col};width:28px;text-align:right">${n}</div>
-        <div style="font-size:10px;color:var(--ink-3);width:32px">${pct}%</div>
-      </div>`;
-    }).join('');
-  }
+  const estCnt={};
+  filtRows.forEach(r=>{const e=r.estado_cont||'Sin estado';estCnt[e]=(estCnt[e]||0)+1;});
+  const colEst={
+    'FINALIZADO - DEVOLUCION':'#1a8a34','RETIRADO - A TIEMPO':'#1a8a34',
+    'DESCARGADO':'#2563eb','EN RUTA':'#7c3aed','DESCARGANDO':'#d97706',
+    'BAJADO EN PATIO TEMPORAL':'#9ca3af','SIN SALIDA DE PUERTO':'#ef4444',
+    'SIN LLEGADA DE RETIRO DEL CONTENEDOR':'#ef4444','DESCARGADO EN PATIO TEMPORAL':'#6b7280',
+  };
+  const tot=filtRows.length||1;
 
   // ── KPIs ──────────────────────────────────────────────────────────────────
   const retAT=filtRows.filter(r=>r.cumpl_ret==='A tiempo'||r.cumpl_ret==='Exento (no asume)').length;
