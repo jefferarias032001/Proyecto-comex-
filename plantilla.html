@@ -541,13 +541,15 @@
         </div>
       </div>
             <div class="card-b" style="padding:16px 16px 0">
-        <!-- DASHBOARD EJECUTIVO -->
+        <!-- KPI CARDS -->
         <div id="ajcxDashboard"></div>
         <!-- TENDENCIAS LADO A LADO -->
         <div style="display:flex;gap:14px;margin:0 0 16px;flex-wrap:wrap">
           <div style="flex:1;min-width:280px" id="ajcxTendRet"></div>
           <div style="flex:1;min-width:280px" id="ajcxTendDev"></div>
         </div>
+        <!-- ESTADO + TIEMPOS -->
+        <div id="ajcxMidGrid"></div>
         <!-- TABLA DETALLE -->
         <div style="margin-bottom:12px">
           <div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:8px;letter-spacing:.08em">Detalle por contenedor</div>
@@ -1951,8 +1953,9 @@ function renderAjoverComex(){
     </div>
   </div>
 
-  <!-- Fila 2: Estado + Tiempos -->
-  <div class="impo-mid-grid">
+  `;
+
+  const midHtml=`<div class="impo-mid-grid">
     <!-- Estado contenedores -->
     <div class="impo-card" style="animation-delay:.32s">
       <div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px">Estado de contenedores</div>
@@ -1992,6 +1995,7 @@ function renderAjoverComex(){
   </div>`;
 
   $('ajcxDashboard').innerHTML=dashHtml;
+  if($('ajcxMidGrid'))$('ajcxMidGrid').innerHTML=midHtml;
 
   // Animar gauges
   requestAnimationFrame(()=>{
