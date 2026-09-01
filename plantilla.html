@@ -203,6 +203,7 @@
     <button class="tab" data-tab="detalle">Detalle <span class="badge" id="detBadge">0</span></button>
     <button class="tab" data-tab="ditar">DITAR <span class="badge" id="ditarBadge">0</span></button>
     <button class="tab" data-tab="ajover">Ajover EXPO</button>
+    <button class="tab" data-tab="ajcomex">Ajover COMEX</button>
     <button class="tab" data-tab="reglas">Reglas</button>
   </div>
 
@@ -394,6 +395,60 @@
   </div>
 
   <div id="panel-reglas" class="panel"><div class="card"><div class="card-b rules" id="rulesBox"></div></div></div>
+
+  <!-- ===================== PANEL AJOVER COMEX ===================== -->
+  <div id="panel-ajcomex" class="panel">
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-h" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div>
+          <div class="card-title">Ajover COMEX — Retiros e Importación</div>
+          <div class="card-hint" id="ajcxHint"></div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select id="ajcxFuente" style="padding:5px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink)">
+            <option value="">Todas las fuentes</option>
+            <option value="AJOVER">IMPO AJOVER</option>
+            <option value="CV">IMPO CV</option>
+          </select>
+          <select id="ajcxFiltRet" style="padding:5px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink)">
+            <option value="">Todos los retiros</option>
+            <option value="A tiempo">A tiempo</option>
+            <option value="Tarde">Tarde</option>
+            <option value="Pendiente">Pendiente</option>
+          </select>
+          <select id="ajcxFiltDev" style="padding:5px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink)">
+            <option value="">Todas las devoluciones</option>
+            <option value="A tiempo">A tiempo</option>
+            <option value="Tarde">Tarde</option>
+            <option value="Pendiente">Pendiente</option>
+          </select>
+          <input id="ajcxQ" type="text" placeholder="Buscar contenedor, pedido, DO..." style="padding:6px 12px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink);width:220px;outline:none"/>
+          <button id="ajcxClear" style="padding:5px 12px;border:1px solid var(--line);border-radius:var(--r);font-size:11px;background:var(--surface);color:var(--ink-2);cursor:pointer">Limpiar</button>
+          <button id="ajcxCSV" style="padding:5px 12px;border:none;border-radius:var(--r);font-size:11px;background:var(--accent);color:#fff;cursor:pointer">⬇ CSV</button>
+        </div>
+      </div>
+      <div class="card-b" style="padding:12px 0 0">
+        <!-- KPIs RETIROS -->
+        <div style="padding:0 16px 6px;font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em">Retiros en puerto (vs. fecha bodegaje)</div>
+        <div class="kpis" id="ajcxKpisRet" style="margin-bottom:12px"></div>
+        <!-- KPIs DEVOLUCIONES -->
+        <div style="padding:0 16px 6px;font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em">Devoluciones unidad vacía (vs. fecha máx. demoras)</div>
+        <div class="kpis" id="ajcxKpisDev" style="margin-bottom:12px"></div>
+        <!-- TIEMPOS PROMEDIO -->
+        <div style="margin:0 16px 16px" id="ajcxTiempos"></div>
+        <!-- TENDENCIA RETIROS -->
+        <div style="margin:0 16px 16px" id="ajcxTendRet"></div>
+        <!-- TENDENCIA DEVOLUCIONES -->
+        <div style="margin:0 16px 16px" id="ajcxTendDev"></div>
+        <!-- TABLA DETALLE -->
+        <div style="padding:0 16px 12px">
+          <div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:8px">Detalle por contenedor</div>
+          <div style="overflow-x:auto"><table id="ajcxTabla" style="width:100%;border-collapse:collapse;font-size:11px"></table></div>
+          <div id="ajcxPag" style="display:flex;gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 </main>
 
 <script>/*__DATOS__*/</script>
@@ -1520,6 +1575,161 @@ function renderAjoverLlenos(){
   _dragCols($('ajLlHead').parentElement,llOrd,()=>renderAjoverLlenos());
 }
 
+// ═══════════════════════════ AJOVER COMEX ═══════════════════════════
+const SAC={q:'',fuente:'',filtRet:'',filtDev:'',pg:1,PER:50};
+function _pillRet(v){
+  if(!v||v==='Sin fecha bodegaje'||v==='Sin cita')return `<span style="color:var(--ink-3);font-size:10px">${v||'—'}</span>`;
+  if(v==='A tiempo')return '<span style="background:#d4edda;color:#155724;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700">✓ A tiempo</span>';
+  if(v==='Pendiente')return '<span style="background:#e2e3e5;color:#383d41;padding:2px 7px;border-radius:20px;font-size:10px">⏳ Pendiente</span>';
+  return `<span style="background:#f8d7da;color:#721c24;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700">⚠ ${esc(v)}</span>`;
+}
+function renderAjoverComex(){
+  const AC=window.AJCOMEX||{};
+  const allRows=[...(AC.ajover?.rows||[]),...(AC.cv?.rows||[])];
+  if(!allRows.length){$('ajcxHint').textContent='Sin datos';return;}
+
+  // Filtrar
+  const q=SAC.q.toLowerCase();
+  const fr=SAC.filtRet, fd=SAC.filtDev, ff=SAC.fuente;
+  const filtRows=allRows.filter(r=>{
+    if(ff&&r.fuente!==ff)return false;
+    if(fr==='A tiempo'&&r.cumpl_ret!=='A tiempo')return false;
+    if(fr==='Tarde'&&!r.cumpl_ret?.includes('Tarde'))return false;
+    if(fr==='Pendiente'&&r.cumpl_ret!=='Pendiente')return false;
+    if(fd==='A tiempo'&&r.cumpl_dev!=='A tiempo')return false;
+    if(fd==='Tarde'&&!r.cumpl_dev?.includes('Tarde'))return false;
+    if(fd==='Pendiente'&&r.cumpl_dev!=='Pendiente')return false;
+    if(q&&![r.cont,r.pedido,r.do,r.cliente,r.linea,r.terminal].some(x=>x?.toLowerCase().includes(q)))return false;
+    return true;
+  });
+  $('ajcxHint').textContent=`${fN(filtRows.length)} contenedores`;
+
+  // KPIs retiro
+  const retAT=filtRows.filter(r=>r.cumpl_ret==='A tiempo').length;
+  const retTard=filtRows.filter(r=>r.cumpl_ret?.includes('Tarde')).length;
+  const retPend=filtRows.filter(r=>r.cumpl_ret==='Pendiente').length;
+  const retCon=retAT+retTard;
+  const pctRet=retCon?(retAT/retCon*100).toFixed(1):'—';
+  $('ajcxKpisRet').innerHTML=`
+    <div class="kpi"><div class="kl">Total contenedores</div><div class="kv num">${fN(filtRows.length)}</div><div class="ks">registros</div></div>
+    <div class="kpi k-pos"><div class="kl">✓ Retiro a tiempo</div><div class="kv num" style="color:var(--pos)">${pctRet}%</div><div class="ks">${fN(retAT)} de ${fN(retCon)}</div></div>
+    <div class="kpi kpi-alerta"><div class="kl">⚠ Retiro tarde</div><div class="kv num" style="color:var(--neg)">${fN(retTard)}</div><div class="ks">incurrieron en bodegaje</div></div>
+    <div class="kpi"><div class="kl">⏳ Por retirar</div><div class="kv num" style="color:var(--ink-2)">${fN(retPend)}</div><div class="ks">pendientes</div></div>`;
+
+  // KPIs devolución
+  const devAT=filtRows.filter(r=>r.cumpl_dev==='A tiempo').length;
+  const devTard=filtRows.filter(r=>r.cumpl_dev?.includes('Tarde')).length;
+  const devPend=filtRows.filter(r=>r.cumpl_dev==='Pendiente').length;
+  const devCon=devAT+devTard;
+  const pctDev=devCon?(devAT/devCon*100).toFixed(1):'—';
+  $('ajcxKpisDev').innerHTML=`
+    <div class="kpi k-pos"><div class="kl">✓ Dev. a tiempo</div><div class="kv num" style="color:var(--pos)">${pctDev}%</div><div class="ks">${fN(devAT)} de ${fN(devCon)}</div></div>
+    <div class="kpi kpi-alerta"><div class="kl">⚠ Dev. tarde</div><div class="kv num" style="color:var(--neg)">${fN(devTard)}</div><div class="ks">con demoras</div></div>
+    <div class="kpi"><div class="kl">⏳ Dev. pendiente</div><div class="kv num" style="color:var(--ink-2)">${fN(devPend)}</div><div class="ks">sin devolver</div></div>`;
+
+  // Tiempos promedio
+  const _a=arr=>{const v=arr.filter(x=>x!=null);return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length):null;};
+  const _fh=m=>{if(m==null)return '<span style="color:var(--ink-3)">—</span>';const h=Math.floor(m/60),mn=Math.round(m%60);return h>0?`<b>${h}h ${mn}min</b>`:`<b>${mn}min</b>`;};
+  const avgEspera=_a(filtRows.map(r=>r.t_espera_ret));
+  const avgPuerto=_a(filtRows.map(r=>r.t_en_puerto));
+  const avgTransit=_a(filtRows.map(r=>r.t_transit_dest));
+  $('ajcxTiempos').innerHTML=`<div style="display:flex;gap:24px;flex-wrap:wrap;padding:8px 0 4px">
+    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase">⏱ Espera en cita de retiro</div><div style="font-size:18px;margin-top:4px">${_fh(avgEspera)}</div></div>
+    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase">🚢 Tiempo en puerto</div><div style="font-size:18px;margin-top:4px">${_fh(avgPuerto)}</div></div>
+    <div><div style="font-size:10px;color:var(--ink-3);text-transform:uppercase">🚛 Tránsito a descargue</div><div style="font-size:18px;margin-top:4px">${_fh(avgTransit)}</div></div>
+  </div>`;
+
+  // Tendencia retiros (desde datos globales sin filtro para ver todos los meses)
+  const tendSrc=[...(AC.ajover?.tendencia||[]),...(AC.cv?.tendencia||[])];
+  const tendMap={};
+  tendSrc.forEach(t=>{
+    if(!tendMap[t.mes])tendMap[t.mes]={mes:t.mes,total:0,ret_aT:0,ret_tard:0,dev_aT:0,dev_tard:0};
+    const m=tendMap[t.mes];
+    m.total+=t.total;m.ret_aT+=t.ret_aT;m.ret_tard+=t.ret_tard;m.dev_aT+=t.dev_aT;m.dev_tard+=t.dev_tard;
+  });
+  const tend=Object.values(tendMap).sort((a,b)=>a.mes.localeCompare(b.mes)).map(t=>{
+    const rc=t.ret_aT+t.ret_tard, dc=t.dev_aT+t.dev_tard;
+    return {...t,pct_ret:rc?+(t.ret_aT/rc*100).toFixed(1):0,pct_dev:dc?+(t.dev_aT/dc*100).toFixed(1):0};
+  });
+
+  if(tend.length){
+    $('ajcxTendRet').innerHTML=_svgTend(tend,{
+      key:'pct_ret',pct:true,maxV:100,
+      titulo:'% Cumplimiento retiros mes a mes (vs. bodegaje)',
+      color:'#3b82f6',colorLine:'#1d4ed8',
+    });
+    $('ajcxTendDev').innerHTML=_svgTend(tend,{
+      key:'pct_dev',pct:true,maxV:100,
+      titulo:'% Cumplimiento devoluciones mes a mes (vs. fecha máx. demoras)',
+      color:'#10b981',colorLine:'#047857',
+    });
+  } else {$('ajcxTendRet').innerHTML='';$('ajcxTendDev').innerHTML='';}
+
+  // Tabla detalle
+  const tdH='padding:6px 10px;font-weight:700;font-size:10px;text-transform:uppercase;color:var(--ink-3);border-bottom:2px solid var(--line);white-space:nowrap;background:var(--surface);position:sticky;top:0';
+  const tdD='padding:5px 10px;border-bottom:1px solid var(--line);vertical-align:top';
+  const COLS=[
+    ['fuente','Fuente'],['eta','ETA'],['cont','Contenedor'],['tamano','Tam.'],
+    ['linea','Línea'],['terminal','Terminal'],['destino','Destino'],
+    ['f_bodegaje','Bodegaje'],['f_cita_ret','Cita retiro'],['f_llegr','Llegada retiro'],
+    ['cumpl_ret','Cumpl. retiro'],
+    ['f_max_dev','Máx. dev.'],['f_cita_dev','Cita dev.'],['f_llegdv','Llegada dev.'],
+    ['cumpl_dev','Cumpl. dev.'],
+    ['tipo_dev','Tipo dev.'],['cierre','Cierre'],
+  ];
+  const pg=SAC.pg, per=SAC.PER;
+  const paged=filtRows.slice((pg-1)*per, pg*per);
+  let html=`<thead><tr>${COLS.map(([,l])=>`<th style="${tdH}">${l}</th>`).join('')}</tr></thead><tbody>`;
+  paged.forEach(r=>{
+    html+=`<tr>
+      <td style="${tdD}"><span style="font-size:10px;background:${r.fuente==='AJOVER'?'#dbeafe':'#fef3c7'};color:${r.fuente==='AJOVER'?'#1e40af':'#92400e'};padding:1px 6px;border-radius:20px">${r.fuente}</span></td>
+      <td style="${tdD};white-space:nowrap">${r.eta||'—'}</td>
+      <td style="${tdD};font-family:monospace;font-size:10px">${esc(r.cont)||'—'}</td>
+      <td style="${tdD}">${esc(r.tamano)||'—'}</td>
+      <td style="${tdD}">${esc(r.linea)||'—'}</td>
+      <td style="${tdD};max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.terminal)||'—'}</td>
+      <td style="${tdD};max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.destino)||'—'}</td>
+      <td style="${tdD};white-space:nowrap">${r.f_bodegaje||'—'}</td>
+      <td style="${tdD};white-space:nowrap">${r.f_cita_ret||'—'}</td>
+      <td style="${tdD};white-space:nowrap">${r.f_llegr||'—'}</td>
+      <td style="${tdD}">${_pillRet(r.cumpl_ret)}</td>
+      <td style="${tdD};white-space:nowrap">${r.f_max_dev||'—'}</td>
+      <td style="${tdD};white-space:nowrap">${r.f_cita_dev||'—'}</td>
+      <td style="${tdD};white-space:nowrap">${r.f_llegdv||'—'}</td>
+      <td style="${tdD}">${_pillRet(r.cumpl_dev)}</td>
+      <td style="${tdD};font-size:10px">${esc(r.tipo_dev)||'—'}</td>
+      <td style="${tdD};font-size:10px">${esc(r.cierre)||'—'}</td>
+    </tr>`;
+  });
+  html+='</tbody>';
+  $('ajcxTabla').innerHTML=html;
+
+  // Paginación
+  const pages=Math.ceil(filtRows.length/per)||1;
+  let pag=`<span style="font-size:11px;color:var(--ink-2)">Pág ${pg}/${pages} (${fN(filtRows.length)} registros)</span>`;
+  if(pg>1)pag+=`<button onclick="SAC.pg=${pg-1};renderAjoverComex()" style="padding:3px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);color:var(--ink);cursor:pointer;font-size:11px">← Ant</button>`;
+  if(pg<pages)pag+=`<button onclick="SAC.pg=${pg+1};renderAjoverComex()" style="padding:3px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);color:var(--ink);cursor:pointer;font-size:11px">Sig →</button>`;
+  $('ajcxPag').innerHTML=pag;
+
+  // Wiring controles (solo una vez)
+  if(!SAC._wired){
+    SAC._wired=true;
+    $('ajcxQ').oninput=e=>{SAC.q=e.target.value;SAC.pg=1;renderAjoverComex();};
+    $('ajcxFuente').onchange=e=>{SAC.fuente=e.target.value;SAC.pg=1;renderAjoverComex();};
+    $('ajcxFiltRet').onchange=e=>{SAC.filtRet=e.target.value;SAC.pg=1;renderAjoverComex();};
+    $('ajcxFiltDev').onchange=e=>{SAC.filtDev=e.target.value;SAC.pg=1;renderAjoverComex();};
+    $('ajcxClear').onclick=()=>{SAC.q='';SAC.fuente='';SAC.filtRet='';SAC.filtDev='';SAC.pg=1;$('ajcxQ').value='';$('ajcxFuente').value='';$('ajcxFiltRet').value='';$('ajcxFiltDev').value='';renderAjoverComex();};
+    $('ajcxCSV').onclick=()=>{
+      const q=v=>{v=v==null?'':String(v);return /[;\n"]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+      const cols=[['fuente','Fuente'],['eta','ETA'],['cont','Contenedor'],['tamano','Tamaño'],['linea','Línea'],['terminal','Terminal'],['destino','Destino'],
+        ['f_bodegaje','Bodegaje'],['f_cita_ret','Cita retiro'],['f_llegr','Llegada retiro'],['cumpl_ret','Cumpl retiro'],
+        ['f_max_dev','Fecha max dev'],['f_cita_dev','Cita dev'],['f_llegdv','Llegada dev'],['cumpl_dev','Cumpl dev'],['tipo_dev','Tipo dev'],['cierre','Cierre']];
+      const out=[cols.map(c=>c[1]).join(';')].concat(filtRows.map(r=>cols.map(c=>q(r[c[0]])).join(';'))).join('\r\n');
+      const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(out);a.download='ajover_comex.csv';a.click();
+    };
+  }
+}
+
 let _ajovWired=false;
 function renderAjover(){
   renderAjoverVacios();
@@ -1543,6 +1753,7 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   $('panel-'+t.dataset.tab).classList.add('on');
   if(t.dataset.tab==='ditar')renderDitar();
   if(t.dataset.tab==='ajover')renderAjover();
+  if(t.dataset.tab==='ajcomex')renderAjoverComex();
 });
 $('trendSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$('trendSeg').querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');S.trend=b.dataset.t;renderTrend(S.rows.filter(passes));});
 $('obMultiTgl').addEventListener('change',e=>{S.obMulti=e.target.checked;render();});

@@ -29,6 +29,7 @@ CARPETA2 = r"C:\Users\jarias\OneDrive - TRACTOCAR LOGISTICS SAS\POWER BI JEFFER\
 # Ruta del archivo 'exportación Ajover.xlsx' (hoja 'VACIOS AJOVER'). Si no existe, se omite el cruce.
 ARCHIVO_AJOVER = r"C:\Users\jarias\OneDrive - TRACTOCAR LOGISTICS SAS\Archivos de Data Quality Analyst Tractocar - Analisis Operacion y Venta\14.Comex\EXPO\exportación Ajover.xlsx"
 HOJA_AJOVER = "VACIOS AJOVER"
+ARCHIVO_AJCOMEX = r"C:\Users\jarias\OneDrive - TRACTOCAR LOGISTICS SAS\Archivos de Data Quality Analyst Tractocar - Analisis Operacion y Venta\14.comex\IMPO\IMPORTACIÓN COMEX.xlsx"
 PATIOS_SAMARITIMA = ["SIMARITIMA_NUEVO"]
 AJUSTE_SAMARITIMA = 340126   # COP a sumar al 'a facturar' por cada manifiesto que tocó Samaritima
 # ---------------------------------------------------
@@ -132,6 +133,245 @@ def _copiar_ajover(ruta):
     tmp = os.path.join(tempfile.gettempdir(), "ajover_tmp.xlsx")
     shutil.copy2(ruta, tmp)
     return tmp
+
+
+def leer_ajover_comex(stats):
+    """Lee IMPO AJOVER e IMPO CV de IMPORTACIÓN COMEX.xlsx y calcula KPIs de retiros y devoluciones."""
+    import shutil, tempfile
+    ruta = os.environ.get("TRACTOCAR_AJCOMEX", ARCHIVO_AJCOMEX)
+    if not os.path.isfile(ruta):
+        stats["avisos"].append(f"Ajover COMEX omitido: no se encontró '{ruta}'")
+        return {}
+    try:
+        tmp = os.path.join(tempfile.gettempdir(), "ajcomex_tmp.xlsx")
+        shutil.copy2(ruta, tmp)
+    except Exception as e:
+        stats["avisos"].append(f"Ajover COMEX: no pude copiar archivo ({e})")
+        return {}
+
+    def _ts(df, col):
+        return pd.to_datetime(df[col], errors="coerce", dayfirst=True) if col and col in df.columns else pd.Series([pd.NaT]*len(df))
+
+    def _str(df, col):
+        if col not in df.columns: return pd.Series([""]*len(df))
+        return df[col].astype(str).str.strip().replace({"nan":"","None":"","NAN":"","NONE":""})
+
+    result = {}
+
+    for hoja, fuente in [("IMPO AJOVER","AJOVER"), ("IMPO CV","CV")]:
+        try:
+            df = pd.read_excel(tmp, sheet_name=hoja)
+            df.columns = [str(c).strip() for c in df.columns]
+            nm = {_norm(c): c for c in df.columns}
+
+            def _col(*keys):
+                for k in keys:
+                    if k in nm: return nm[k]
+                return None
+
+            c_cliente   = _col("cliente")
+            c_cont      = _col("contenedor")
+            c_tamano    = _col("tamano", "tamaño")
+            c_eta       = _col("eta")
+            c_pedido    = _col("pedido")
+            c_do        = _col("do")
+            c_linea     = _col("linea")
+            c_terminal  = _col("terminal portuaria (retiro)", "lugar de retiro")
+            c_destino   = _col("destino descargue")
+            c_tipo_dev  = _col("tipo de devolucion")
+            c_bodegaje  = _col("fecha de bodegaje")
+            c_max_dev   = _col("fecha maxima de devolucion de unidad vacia (demoras)")
+            c_cita_ret  = _col("fecha y hora de cita de retiro del contenedor", "cita")
+            c_cita_ret_repr = _col("fecha y hora de cita reprogramada de retiro del contenedor")
+            c_llegada_ret   = _col("fecha y hora de llegada a retiro del contenedor")
+            c_salida_puer   = _col("fecha y hora de salida de puerto")
+            c_llegada_desc  = _col("fecha y hora de llegada a descargue")
+            c_cita_dev      = _col("fecha y hora de cita de devolucion unidad vacia")
+            c_llegada_dev   = _col("fecha y hora de llegada a devolucion unidad vacia")
+            c_lugar_dev     = _col("lugar devolucion unidad vacia", "sitio devolucion")
+            c_cierre        = _col("cierre de pedido")
+
+            f_eta         = _ts(df, c_eta)
+            f_bodegaje    = _ts(df, c_bodegaje)
+            f_max_dev     = _ts(df, c_max_dev)
+            f_cita_ret    = _ts(df, c_cita_ret)
+            f_cita_ret_repr = _ts(df, c_cita_ret_repr)
+            f_llegada_ret = _ts(df, c_llegada_ret)
+            f_salida_puer = _ts(df, c_salida_puer)
+            f_llegada_desc= _ts(df, c_llegada_desc)
+            f_cita_dev    = _ts(df, c_cita_dev)
+            f_llegada_dev = _ts(df, c_llegada_dev)
+
+            VENTANA = pd.Timedelta(hours=1)
+            rows = []
+            tend_raw = {}  # {YYYY-MM: {...}}
+
+            for i in range(len(df)):
+                eta     = f_eta.iloc[i]
+                bod     = f_bodegaje.iloc[i]
+                max_dev = f_max_dev.iloc[i]
+                cita_r  = f_cita_ret.iloc[i]
+                cita_rr = f_cita_ret_repr.iloc[i]
+                llegr   = f_llegada_ret.iloc[i]
+                salp    = f_salida_puer.iloc[i]
+                llegdc  = f_llegada_desc.iloc[i]
+                cita_d  = f_cita_dev.iloc[i]
+                llegdv  = f_llegada_dev.iloc[i]
+
+                mes_iso = eta.strftime("%Y-%m") if not pd.isna(eta) else ""
+
+                # ── cumplimiento retiro (vs bodegaje) ───────────────────────
+                if pd.isna(llegr):
+                    cumpl_ret = "Pendiente"
+                elif not pd.isna(bod) and llegr.date() <= bod.date():
+                    cumpl_ret = "A tiempo"
+                elif not pd.isna(bod):
+                    dias = (llegr.date() - bod.date()).days
+                    cumpl_ret = f"Tarde +{dias}d"
+                else:
+                    cumpl_ret = "Sin fecha bodegaje"
+
+                # ── cumplimiento cita de retiro ─────────────────────────────
+                if pd.isna(llegr):
+                    cumpl_cita_ret = "Pendiente"
+                elif pd.isna(cita_r):
+                    cumpl_cita_ret = "Sin cita"
+                elif llegr <= cita_r + VENTANA:
+                    cumpl_cita_ret = "A tiempo"
+                else:
+                    mins = round((llegr - cita_r).total_seconds() / 60)
+                    cumpl_cita_ret = f"Tarde +{mins}min"
+
+                # ── cumplimiento devolución (vs fecha max demoras) ──────────
+                if pd.isna(llegdv):
+                    cumpl_dev = "Pendiente"
+                elif not pd.isna(max_dev) and llegdv.date() <= max_dev.date():
+                    cumpl_dev = "A tiempo"
+                elif not pd.isna(max_dev):
+                    dias = (llegdv.date() - max_dev.date()).days
+                    cumpl_dev = f"Tarde +{dias}d"
+                else:
+                    cumpl_dev = "Sin fecha límite"
+
+                # ── cumplimiento cita de devolución ─────────────────────────
+                if pd.isna(llegdv):
+                    cumpl_cita_dev = "Pendiente"
+                elif pd.isna(cita_d):
+                    cumpl_cita_dev = "Sin cita"
+                elif llegdv <= cita_d + VENTANA:
+                    cumpl_cita_dev = "A tiempo"
+                else:
+                    mins = round((llegdv - cita_d).total_seconds() / 60)
+                    cumpl_cita_dev = f"Tarde +{mins}min"
+
+                # ── tiempos (minutos) ────────────────────────────────────────
+                def _dmin(a, b):
+                    if pd.isna(a) or pd.isna(b): return None
+                    d = (b - a).total_seconds() / 60
+                    return round(d, 1) if d >= 0 else None
+
+                t_espera_ret  = _dmin(cita_r, llegr)   # cita → llegada retiro
+                t_en_puerto   = _dmin(llegr, salp)      # llegada retiro → salida puerto
+                t_transit_dest= _dmin(salp, llegdc)     # salida puerto → llegada descargue
+
+                # ── tendencia mes ────────────────────────────────────────────
+                if mes_iso:
+                    t = tend_raw.setdefault(mes_iso, {
+                        "total":0,"ret_aT":0,"ret_tard":0,"ret_pend":0,
+                        "dev_aT":0,"dev_tard":0,"dev_pend":0,
+                        "cita_ret_aT":0,"cita_ret_tard":0,
+                        "t_espera_ret":[],"t_en_puerto":[],"t_transit_dest":[]
+                    })
+                    t["total"] += 1
+                    if cumpl_ret == "A tiempo":    t["ret_aT"] += 1
+                    elif "Tarde" in cumpl_ret:     t["ret_tard"] += 1
+                    else:                          t["ret_pend"] += 1
+                    if cumpl_dev == "A tiempo":    t["dev_aT"] += 1
+                    elif "Tarde" in cumpl_dev:     t["dev_tard"] += 1
+                    else:                          t["dev_pend"] += 1
+                    if cumpl_cita_ret == "A tiempo":   t["cita_ret_aT"] += 1
+                    elif "Tarde" in cumpl_cita_ret:    t["cita_ret_tard"] += 1
+                    if t_espera_ret is not None:   t["t_espera_ret"].append(t_espera_ret)
+                    if t_en_puerto is not None:    t["t_en_puerto"].append(t_en_puerto)
+                    if t_transit_dest is not None: t["t_transit_dest"].append(t_transit_dest)
+
+                rows.append({
+                    "fuente":    fuente,
+                    "cliente":   _str(df, c_cliente).iloc[i],
+                    "cont":      _str(df, c_cont).iloc[i],
+                    "tamano":    _str(df, c_tamano).iloc[i],
+                    "pedido":    _str(df, c_pedido).iloc[i],
+                    "do":        _str(df, c_do).iloc[i],
+                    "linea":     _str(df, c_linea).iloc[i],
+                    "terminal":  _str(df, c_terminal).iloc[i],
+                    "destino":   _str(df, c_destino).iloc[i],
+                    "tipo_dev":  _str(df, c_tipo_dev).iloc[i],
+                    "eta":       eta.strftime("%Y-%m-%d") if not pd.isna(eta) else "",
+                    "mes_iso":   mes_iso,
+                    "f_bodegaje":bod.strftime("%Y-%m-%d")     if not pd.isna(bod)     else "",
+                    "f_max_dev": max_dev.strftime("%Y-%m-%d") if not pd.isna(max_dev) else "",
+                    "f_cita_ret":cita_r.strftime("%d-%m-%Y %H:%M") if not pd.isna(cita_r) else "",
+                    "f_cita_rr": cita_rr.strftime("%d-%m-%Y %H:%M") if not pd.isna(cita_rr) else "",
+                    "f_llegr":   llegr.strftime("%d-%m-%Y %H:%M")  if not pd.isna(llegr) else "",
+                    "f_cita_dev":cita_d.strftime("%d-%m-%Y %H:%M") if not pd.isna(cita_d) else "",
+                    "f_llegdv":  llegdv.strftime("%d-%m-%Y %H:%M") if not pd.isna(llegdv) else "",
+                    "f_lugar_dev": _str(df, c_lugar_dev).iloc[i],
+                    "cierre":    _str(df, c_cierre).iloc[i],
+                    "cumpl_ret":      cumpl_ret,
+                    "cumpl_cita_ret": cumpl_cita_ret,
+                    "cumpl_dev":      cumpl_dev,
+                    "cumpl_cita_dev": cumpl_cita_dev,
+                    "t_espera_ret":   t_espera_ret,
+                    "t_en_puerto":    t_en_puerto,
+                    "t_transit_dest": t_transit_dest,
+                })
+
+            def _avg(lst): return round(sum(lst)/len(lst),1) if lst else None
+
+            tendencia = []
+            for m, v in sorted(tend_raw.items()):
+                ret_con = v["ret_aT"] + v["ret_tard"]
+                dev_con = v["dev_aT"] + v["dev_tard"]
+                tendencia.append({
+                    "mes": m,
+                    "total": v["total"],
+                    "ret_aT": v["ret_aT"], "ret_tard": v["ret_tard"], "ret_pend": v["ret_pend"],
+                    "dev_aT": v["dev_aT"], "dev_tard": v["dev_tard"], "dev_pend": v["dev_pend"],
+                    "pct_ret": round(v["ret_aT"]/ret_con*100,1) if ret_con else 0,
+                    "pct_dev": round(v["dev_aT"]/dev_con*100,1) if dev_con else 0,
+                    "avg_espera_ret":  _avg(v["t_espera_ret"]),
+                    "avg_en_puerto":   _avg(v["t_en_puerto"]),
+                    "avg_transit":     _avg(v["t_transit_dest"]),
+                })
+
+            tot = len(rows)
+            ret_aT   = sum(1 for r in rows if r["cumpl_ret"]=="A tiempo")
+            ret_tard = sum(1 for r in rows if "Tarde" in r["cumpl_ret"])
+            ret_pend = sum(1 for r in rows if r["cumpl_ret"]=="Pendiente")
+            dev_aT   = sum(1 for r in rows if r["cumpl_dev"]=="A tiempo")
+            dev_tard = sum(1 for r in rows if "Tarde" in r["cumpl_dev"])
+            dev_pend = sum(1 for r in rows if r["cumpl_dev"]=="Pendiente")
+            ret_con  = ret_aT + ret_tard
+            dev_con  = dev_aT + dev_tard
+
+            result[fuente.lower()] = {
+                "total": tot,
+                "ret_aT": ret_aT, "ret_tard": ret_tard, "ret_pend": ret_pend,
+                "pct_ret": round(ret_aT/ret_con*100,1) if ret_con else 0,
+                "dev_aT": dev_aT, "dev_tard": dev_tard, "dev_pend": dev_pend,
+                "pct_dev": round(dev_aT/dev_con*100,1) if dev_con else 0,
+                "avg_espera_ret": _avg([r["t_espera_ret"] for r in rows if r["t_espera_ret"] is not None]),
+                "avg_en_puerto":  _avg([r["t_en_puerto"]  for r in rows if r["t_en_puerto"]  is not None]),
+                "avg_transit":    _avg([r["t_transit_dest"] for r in rows if r["t_transit_dest"] is not None]),
+                "tendencia": tendencia,
+                "rows": rows,
+            }
+            print(f"  Ajover COMEX {hoja:<20}: {tot} filas | Retiros a tiempo: {ret_aT}/{ret_con} ({result[fuente.lower()]['pct_ret']}%) | Dev a tiempo: {dev_aT}/{dev_con} ({result[fuente.lower()]['pct_dev']}%)")
+        except Exception as e:
+            import traceback
+            stats["avisos"].append(f"Ajover COMEX {hoja} error: {e} | {traceback.format_exc()[:300]}")
+
+    return result
 
 
 def leer_ajover_completo(stats):
@@ -976,6 +1216,7 @@ def main():
                            "ajuste": float(ob["AjusteSamaritima"].sum()),
                            "info": stats.get("sam_info")}}
 
+    ajcomex_data = leer_ajover_comex(stats)
     ajover_data = leer_ajover_completo(stats)
     if ajover_data:
         v = ajover_data.get("vacios") or {}
@@ -985,11 +1226,12 @@ def main():
         print(f"  Ajover LLENOS              : {l.get('total',0)} filas | "
               f"Exitosos: {l.get('exitosos',0)} | Fallidos: {l.get('fallidos',0)}")
 
-    payload = "window.DATA=%s;window.OBT=%s;window.META=%s;window.AJOVER=%s;" % (
+    payload = "window.DATA=%s;window.OBT=%s;window.META=%s;window.AJOVER=%s;window.AJCOMEX=%s;" % (
         json.dumps(records, ensure_ascii=False),
         json.dumps(obt, ensure_ascii=False),
         json.dumps(meta, ensure_ascii=False),
-        json.dumps(ajover_data or {}, ensure_ascii=False))
+        json.dumps(ajover_data or {}, ensure_ascii=False),
+        json.dumps(ajcomex_data or {}, ensure_ascii=False))
     payload = payload.replace("</", "<\\/")
 
     tpl_path = os.path.join(BASE, "plantilla.html")
