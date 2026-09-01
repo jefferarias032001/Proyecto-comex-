@@ -1817,8 +1817,8 @@ function renderAjoverComex(){
   // Filtrar
   const q=SAC.q.toLowerCase(), qob=SAC.qob.toLowerCase();
   const fr=SAC.filtRet, fd=SAC.filtDev, ff=SAC.fuente, fe=SAC.filtEst, fm=SAC.mes, ft=SAC.filtTipo;
-  const filtRows=allRows.filter(r=>{
-    if(fm){const rm=r.mes_rec||r.mes_iso;if(rm!==fm)return false;}
+  const _baseFilter=(r,ignoreMes)=>{
+    if(!ignoreMes&&fm){const rm=r.mes_rec||r.mes_iso;if(rm!==fm)return false;}
     if(ff&&r.fuente!==ff)return false;
     if(fe&&r.estado_cont!==fe)return false;
     if(ft&&r.tipo_carga!==ft)return false;
@@ -1831,7 +1831,10 @@ function renderAjoverComex(){
     if(q&&![r.cont,r.pedido,r.do,r.cliente,r.linea,r.terminal,r.destino].some(x=>x?.toLowerCase().includes(q)))return false;
     if(qob&&!r.pedido?.toLowerCase().includes(qob))return false;
     return true;
-  });
+  };
+  const filtRows=allRows.filter(r=>_baseFilter(r,false));
+  // tendRows ignora el mes para que las gráficas muestren siempre todos los meses
+  const tendRows=allRows.filter(r=>_baseFilter(r,true));
   $('ajcxHint').textContent=`${fN(filtRows.length)} contenedores`;
 
   // Estado de contenedores (breakdown)
@@ -2012,9 +2015,9 @@ function renderAjoverComex(){
     });
   });
 
-  // Tendencia retiros — calculada desde filtRows para reflejar los filtros activos
+  // Tendencia — usa tendRows (sin filtro de mes) para mostrar siempre todos los meses
   const tendMap={};
-  filtRows.forEach(r=>{
+  tendRows.forEach(r=>{
     const mes=r.mes_rec||r.mes_iso;if(!mes)return;
     if(!tendMap[mes])tendMap[mes]={mes,total:0,ret_aT:0,ret_tard:0,dev_aT:0,dev_tard:0};
     const m=tendMap[mes];m.total++;
