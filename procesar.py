@@ -187,7 +187,7 @@ def leer_ajover_comex(stats):
             c_terminal  = _col("terminal portuaria (retiro)", "lugar de retiro")
             c_destino   = _col("destino descargue")
             c_tipo_dev  = _col("tipo de devolucion")
-            c_bodegaje  = _col("fecha de bodegaje")
+            c_bodegaje  = _col("fecha de bodegaje", "bodegajes", "bodegaje")
             c_max_dev   = _col("fecha maxima de devolucion de unidad vacia (demoras)")
             c_cita_ret  = _col("fecha y hora de cita de retiro del contenedor", "cita")
             c_cita_ret_repr = _col("fecha y hora de cita reprogramada de retiro del contenedor")
