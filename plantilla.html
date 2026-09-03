@@ -391,22 +391,36 @@
     <div class="card" style="margin-bottom:16px">
       <div class="card-h"><h3>📦 Vaciós Ajover — cumplimiento de fechas programadas</h3><span class="hint" id="ajVacHint"></span></div>
       <div class="card-b" style="padding:12px 0 0">
-        <div class="kpis" id="ajVacKpis" style="margin-bottom:12px"></div>
+        <!-- FILTROS EXPO VACIOS (arriba) -->
+        <div style="background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);border-radius:12px;padding:12px 16px;margin:0 16px 14px;box-shadow:0 4px 20px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.06)">
+          <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+            <div>
+              <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Mes</div>
+              <select id="ajVacMes" style="padding:5px 10px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;background:rgba(255,255,255,.07);color:#e2e8f0;outline:none">
+                <option value="" style="background:#1e293b">Todos los meses</option>
+              </select>
+            </div>
+            <div>
+              <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Buscar</div>
+              <input id="ajVacQ" type="text" placeholder="Contenedor, patio, línea..." style="padding:5px 12px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;background:rgba(255,255,255,.07);color:#e2e8f0;width:210px;outline:none"/>
+            </div>
+            <div>
+              <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Cumplimiento</div>
+              <select id="ajVacFiltCumpl" style="padding:5px 10px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;background:rgba(255,255,255,.07);color:#e2e8f0;outline:none">
+                <option value="" style="background:#1e293b">Todos</option><option value="A tiempo" style="background:#1e293b">A tiempo</option><option value="Tarde" style="background:#1e293b">Tarde</option><option value="Sin fecha" style="background:#1e293b">Sin fecha</option>
+              </select>
+            </div>
+            <div style="margin-left:auto;display:flex;gap:8px">
+              <button class="btn btn-light" id="ajVacClear">Limpiar</button>
+              <button class="btn btn-light" id="ajVacCSV">↓ CSV</button>
+            </div>
+          </div>
+        </div>
+        <div id="ajVacKpis" style="margin:0 16px 14px"></div>
         <div style="margin:0 16px 12px" id="ajVacPromedios"></div>
         <div style="display:flex;gap:16px;margin:0 16px 12px;flex-wrap:wrap">
           <div style="flex:1;min-width:200px"><div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">Por Patio</div><div id="ajVacPatios"></div></div>
           <div style="flex:1;min-width:200px"><div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">Por Línea</div><div id="ajVacLineas"></div></div>
-        </div>
-        <div style="display:flex;gap:10px;padding:0 16px 10px;align-items:center;flex-wrap:wrap">
-          <select id="ajVacMes" style="padding:6px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink)">
-            <option value="">Todos los meses</option>
-          </select>
-          <input id="ajVacQ" type="text" placeholder="Buscar contenedor, patio, línea..." style="padding:6px 12px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink);width:230px;outline:none"/>
-          <select id="ajVacFiltCumpl" style="padding:6px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink)">
-            <option value="">Todos</option><option value="A tiempo">A tiempo</option><option value="Tarde">Tarde</option><option value="Sin fecha">Sin fecha</option>
-          </select>
-          <button class="btn btn-light" id="ajVacClear">Limpiar</button>
-          <button class="btn btn-light" id="ajVacCSV" style="margin-left:auto">↓ CSV</button>
         </div>
         <div class="tbl-wrap" style="max-height:340px">
           <table style="width:100%;border-collapse:collapse;font-size:12px" id="ajVacTable">
@@ -422,10 +436,38 @@
     <div class="card">
       <div class="card-h"><h3>🚢 Llenos Ajover — cumplimiento de citas y operación</h3><span class="hint" id="ajLlHint"></span></div>
       <div class="card-b" style="padding:12px 0 0">
-        <div class="kpis" id="ajLlKpis" style="margin-bottom:12px"></div>
+        <!-- FILTROS EXPO LLENOS (arriba) -->
+        <div style="background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);border-radius:12px;padding:12px 16px;margin:0 16px 14px;box-shadow:0 4px 20px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.06)">
+          <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+            <div>
+              <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Mes</div>
+              <select id="ajLlMes" style="padding:5px 10px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;background:rgba(255,255,255,.07);color:#e2e8f0;outline:none">
+                <option value="" style="background:#1e293b">Todos los meses</option>
+              </select>
+            </div>
+            <div>
+              <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Buscar</div>
+              <input id="ajLlQ" type="text" placeholder="Contenedor, placa, terminal..." style="padding:5px 12px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;background:rgba(255,255,255,.07);color:#e2e8f0;width:210px;outline:none"/>
+            </div>
+            <div>
+              <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Estado</div>
+              <select id="ajLlFiltEst" style="padding:5px 10px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;background:rgba(255,255,255,.07);color:#e2e8f0;outline:none">
+                <option value="" style="background:#1e293b">Todos</option><option value="EXITOSO" style="background:#1e293b">Exitoso</option><option value="FALLIDO" style="background:#1e293b">Fallido</option>
+              </select>
+            </div>
+            <div style="margin-left:auto;display:flex;gap:8px">
+              <button class="btn btn-light" id="ajLlClear">Limpiar</button>
+              <button class="btn btn-light" id="ajLlCSV">↓ CSV</button>
+            </div>
+          </div>
+        </div>
+        <div id="ajLlKpis" style="margin:0 16px 14px"></div>
         <div style="margin:0 16px 12px" id="ajLlPromedios"></div>
-        <div style="margin:0 16px 16px" id="ajLlTendencia"></div>
-        <div style="margin:0 16px 16px" id="ajLlTendMov"></div>
+        <!-- Tendencias lado a lado -->
+        <div style="display:flex;gap:14px;margin:0 16px 16px;flex-wrap:wrap">
+          <div style="flex:1;min-width:280px" id="ajLlTendencia"></div>
+          <div style="flex:1;min-width:280px" id="ajLlTendMov"></div>
+        </div>
         <div style="margin:0 16px 16px" id="ajLlTendTiempos"></div>
         <div style="margin:0 16px 12px" id="ajLlNoCumpl"></div>
         <div style="margin:0 16px 16px" id="ajLlNoCumplDetalle"></div>
@@ -433,17 +475,6 @@
           <div style="flex:1;min-width:220px"><div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">Estado operación</div><div id="ajLlEstados"></div></div>
           <div style="flex:1;min-width:220px"><div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">Motivos de fallo (todos)</div><div id="ajLlMotivos"></div></div>
           <div style="flex:1;min-width:220px"><div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">🔄 Motivos de reprogramación</div><div id="ajLlMotivosRepr"></div></div>
-        </div>
-        <div style="display:flex;gap:10px;padding:0 16px 10px;align-items:center;flex-wrap:wrap">
-          <select id="ajLlMes" style="padding:6px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink)">
-            <option value="">Todos los meses</option>
-          </select>
-          <input id="ajLlQ" type="text" placeholder="Buscar contenedor, placa, terminal..." style="padding:6px 12px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink);width:230px;outline:none"/>
-          <select id="ajLlFiltEst" style="padding:6px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--ink)">
-            <option value="">Todos</option><option value="EXITOSO">Exitoso</option><option value="FALLIDO">Fallido</option>
-          </select>
-          <button class="btn btn-light" id="ajLlClear">Limpiar</button>
-          <button class="btn btn-light" id="ajLlCSV" style="margin-left:auto">↓ CSV</button>
         </div>
         <div class="tbl-wrap" style="max-height:340px">
           <table style="width:100%;border-collapse:collapse;font-size:12px" id="ajLlTable">
@@ -1487,11 +1518,49 @@ function renderAjoverVacios(){
   $('ajVacHint').textContent=`${fN(va.total)} registros`;
 
   const tot=va.total||1, pctOk=((va.a_tiempo/tot)*100).toFixed(1);
+  const _gV=(pct,color,gid)=>{const R=38,C=+(2*Math.PI*R).toFixed(1);return `<svg width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="${R}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="9"/><circle cx="50" cy="50" r="${R}" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round" stroke-dasharray="0 ${C}" stroke-dashoffset="${+(C*.25).toFixed(1)}" id="${gid}" style="transition:stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1)"/><text x="50" y="46" text-anchor="middle" fill="${color}" font-size="16" font-weight="800" font-family="inherit">${pct}%</text><text x="50" y="58" text-anchor="middle" fill="rgba(255,255,255,.45)" font-size="8" font-family="inherit">cumplimiento</text></svg>`;};
+  const _cV=(v,cid,col='#f1f5f9')=>`<span id="${cid}" data-target="${v}" style="font-size:36px;font-weight:900;color:${col};line-height:1;letter-spacing:-.03em">0</span>`;
+  const cV=+pctOk>=90?'#22c55e':+pctOk>=70?'#f59e0b':'#ef4444';
   $('ajVacKpis').innerHTML=`
-    <div class="kpi"><div class="kl">Total vaciós</div><div class="kv num">${fN(va.total)}</div><div class="ks">registros</div></div>
-    <div class="kpi k-pos"><div class="kl">✓ A tiempo</div><div class="kv num" style="color:var(--pos)">${fN(va.a_tiempo)}</div><div class="ks">${pctOk}% del total</div></div>
-    <div class="kpi kpi-alerta"><div class="kl">⚠ Tarde</div><div class="kv num" style="color:var(--neg)">${fN(va.tarde)}</div><div class="ks">${((va.tarde/tot)*100).toFixed(1)}% del total</div></div>
-    <div class="kpi"><div class="kl">Sin fecha registrada</div><div class="kv num" style="color:var(--ink-2)">${fN(va.sin_fecha)}</div><div class="ks">sin datos de atención</div></div>`;
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
+      <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeUp .45s ease both">
+        <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Total vaciós</div>
+        ${_cV(va.total,'cnt_vac_tot')}
+        <div style="font-size:12px;color:#475569;margin-top:4px">registros</div>
+        <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+          <span style="font-size:10px;background:rgba(34,197,94,.15);color:#4ade80;padding:2px 8px;border-radius:20px">${fN(va.a_tiempo)} a tiempo</span>
+          <span style="font-size:10px;background:rgba(239,68,68,.15);color:#f87171;padding:2px 8px;border-radius:20px">${fN(va.tarde)} tarde</span>
+        </div>
+      </div>
+      <div style="background:linear-gradient(135deg,#0f2720,#052e16);border:1px solid rgba(34,197,94,.15);border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeUp .45s ease both;animation-delay:.08s;display:flex;flex-direction:column;align-items:center">
+        <div style="font-size:10px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">A tiempo</div>
+        ${_gV(pctOk,cV,'gv_vac')}
+        <div style="text-align:center;margin-top:-2px">
+          <span style="font-size:12px;color:#86efac">${fN(va.a_tiempo)} ok</span>
+          <span style="font-size:12px;color:#475569;margin:0 5px">/</span>
+          <span style="font-size:12px;color:#f87171">${fN(va.tarde)} tarde</span>
+        </div>
+      </div>
+      <div style="background:linear-gradient(135deg,#1c0a0a,#2d1010);border:1px solid rgba(239,68,68,.15);border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeUp .45s ease both;animation-delay:.16s">
+        <div style="font-size:10px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">Alertas</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:12px;color:#94a3b8">Tarde</span>
+            <span style="font-size:26px;font-weight:800;color:#ef4444">${fN(va.tarde)}</span>
+          </div>
+          <div style="height:1px;background:rgba(255,255,255,.05)"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:12px;color:#94a3b8">Sin fecha</span>
+            <span style="font-size:26px;font-weight:800;color:#94a3b8">${fN(va.sin_fecha)}</span>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  setTimeout(()=>{
+    const arcV=2*Math.PI*38*(+pctOk/100);const totC=2*Math.PI*38;
+    const eg=document.getElementById('gv_vac');if(eg)eg.style.strokeDasharray=`${arcV.toFixed(1)} ${(totC-arcV).toFixed(1)}`;
+    const ec=document.getElementById('cnt_vac_tot');if(ec){const target=+ec.dataset.target;let v=0;const s=performance.now();const tick=t=>{const p=Math.min(1,(t-s)/900);v=Math.round(p*target);ec.textContent=fN(v);if(p<1)requestAnimationFrame(tick);};requestAnimationFrame(tick);}
+  },50);
 
   _ajBarras(va.patios||{},'ajVacPatios');
   _ajBarras(va.lineas||{},'ajVacLineas');
@@ -1585,14 +1654,67 @@ function renderAjoverLlenos(){
   const fFallidos=filtRows.filter(r=>r.estado==='FALLIDO').length;
   const pctCumpl=((fCumpl/fConFecha)*100).toFixed(1);
   const pctEx=fTot?((fExitosos/fTot)*100).toFixed(1):'0';
+  const _gL=(pct,color,gid)=>{const R=38,C=+(2*Math.PI*R).toFixed(1);return `<svg width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="${R}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="9"/><circle cx="50" cy="50" r="${R}" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round" stroke-dasharray="0 ${C}" stroke-dashoffset="${+(C*.25).toFixed(1)}" id="${gid}" style="transition:stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1)"/><text x="50" y="46" text-anchor="middle" fill="${color}" font-size="16" font-weight="800" font-family="inherit">${pct}%</text><text x="50" y="58" text-anchor="middle" fill="rgba(255,255,255,.45)" font-size="8" font-family="inherit">cumplimiento</text></svg>`;};
+  const _cL=(v,cid,col='#f1f5f9')=>`<span id="${cid}" data-target="${v}" style="font-size:36px;font-weight:900;color:${col};line-height:1;letter-spacing:-.03em">0</span>`;
+  const cCumpl=+pctCumpl>=90?'#22c55e':+pctCumpl>=70?'#f59e0b':'#ef4444';
+  const cEx=+pctEx>=90?'#22c55e':+pctEx>=70?'#f59e0b':'#ef4444';
   $('ajLlKpis').innerHTML=`
-    <div class="kpi"><div class="kl">Total llenos</div><div class="kv num">${fN(fTot)}</div><div class="ks">registros</div></div>
-    <div class="kpi k-pos"><div class="kl">✓ Cumplen cita</div><div class="kv num" style="color:var(--pos)">${pctCumpl}%</div><div class="ks">${fN(fCumpl)} de ${fN(fConFecha)} (ventana 1h)</div></div>
-    <div class="kpi kpi-alerta"><div class="kl">✗ No cumplen cita</div><div class="kv num" style="color:var(--neg)">${fN(fNoCumpl)}</div><div class="ks">${((fNoCumpl/fConFecha)*100).toFixed(1)}% — causa interna</div></div>
-    <div class="kpi"><div class="kl">🔄 Reprog. Ajover</div><div class="kv num" style="color:var(--ink-2)">${fN(fReprogAjover)}</div><div class="ks">cita reprogramada por Ajover</div></div>
-    <div class="kpi"><div class="kl">🌍 Externos ok</div><div class="kv num" style="color:var(--ink-2)">${fN(fExterno)}</div><div class="ks">tarde pero causa ajena</div></div>
-    <div class="kpi k-pos"><div class="kl">✓ Exitosos op.</div><div class="kv num" style="color:var(--pos)">${fN(fExitosos)}</div><div class="ks">${pctEx}% del total</div></div>
-    <div class="kpi kpi-alerta"><div class="kl">✗ Fallidos op.</div><div class="kv num" style="color:var(--neg)">${fN(fFallidos)}</div><div class="ks">${fTot?((fFallidos/fTot)*100).toFixed(1):'0'}% del total</div></div>`;
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
+      <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeUp .45s ease both">
+        <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Total llenos</div>
+        ${_cL(fTot,'cnt_ll_tot')}
+        <div style="font-size:12px;color:#475569;margin-top:4px">registros</div>
+        <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+          <span style="font-size:10px;background:rgba(34,197,94,.15);color:#4ade80;padding:2px 8px;border-radius:20px">${fN(fExitosos)} exitosos</span>
+          <span style="font-size:10px;background:rgba(239,68,68,.15);color:#f87171;padding:2px 8px;border-radius:20px">${fN(fFallidos)} fallidos</span>
+        </div>
+      </div>
+      <div style="background:linear-gradient(135deg,#0f2720,#052e16);border:1px solid rgba(34,197,94,.15);border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeUp .45s ease both;animation-delay:.08s;display:flex;flex-direction:column;align-items:center">
+        <div style="font-size:10px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Cumplen cita</div>
+        ${_gL(pctCumpl,cCumpl,'gl_cita')}
+        <div style="text-align:center;margin-top:-2px">
+          <span style="font-size:11px;color:#86efac">${fN(fCumpl)} ok</span>
+          <span style="font-size:11px;color:#475569;margin:0 4px">/</span>
+          <span style="font-size:11px;color:#f87171">${fN(fNoCumpl)} no cumple</span>
+        </div>
+        <div style="font-size:10px;color:#475569;margin-top:2px">ventana de 1 hora</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#0a1628,#0c1a3a);border:1px solid rgba(52,211,153,.15);border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeUp .45s ease both;animation-delay:.16s;display:flex;flex-direction:column;align-items:center">
+        <div style="font-size:10px;font-weight:700;color:#34d399;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Exitosos op.</div>
+        ${_gL(pctEx,cEx,'gl_exit')}
+        <div style="text-align:center;margin-top:-2px">
+          <span style="font-size:11px;color:#6ee7b7">${fN(fExitosos)} exitosos</span>
+          <span style="font-size:11px;color:#475569;margin:0 4px">/</span>
+          <span style="font-size:11px;color:#f87171">${fN(fFallidos)} fallidos</span>
+        </div>
+      </div>
+      <div style="background:linear-gradient(135deg,#1c0a0a,#2d1010);border:1px solid rgba(239,68,68,.15);border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeUp .45s ease both;animation-delay:.24s">
+        <div style="font-size:10px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">Alertas</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:11px;color:#94a3b8">No cumplen cita</span>
+            <span style="font-size:24px;font-weight:800;color:#ef4444">${fN(fNoCumpl)}</span>
+          </div>
+          <div style="height:1px;background:rgba(255,255,255,.05)"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:11px;color:#94a3b8">Reprog. Ajover</span>
+            <span style="font-size:24px;font-weight:800;color:#f59e0b">${fN(fReprogAjover)}</span>
+          </div>
+          <div style="height:1px;background:rgba(255,255,255,.05)"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:11px;color:#94a3b8">Externos ok</span>
+            <span style="font-size:24px;font-weight:800;color:#60a5fa">${fN(fExterno)}</span>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  setTimeout(()=>{
+    [[+pctCumpl,'gl_cita'],[+pctEx,'gl_exit']].forEach(([pct,gid])=>{
+      const arcL=2*Math.PI*38*(pct/100);const totC=2*Math.PI*38;
+      const eg=document.getElementById(gid);if(eg)eg.style.strokeDasharray=`${arcL.toFixed(1)} ${(totC-arcL).toFixed(1)}`;
+    });
+    const ec=document.getElementById('cnt_ll_tot');if(ec){const target=+ec.dataset.target;let v=0;const s=performance.now();const tick=t=>{const p=Math.min(1,(t-s)/900);v=Math.round(p*target);ec.textContent=fN(v);if(p<1)requestAnimationFrame(tick);};requestAnimationFrame(tick);}
+  },50);
 
   // ── tiempos promedio (calculados desde filas filtradas) ──────────────────
   const _avg=arr=>arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:null;
