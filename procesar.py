@@ -188,14 +188,15 @@ def leer_ajover_comex(stats):
             c_destino   = _col("destino descargue")
             c_tipo_dev  = _col("tipo de devolucion")
             c_bodegaje  = _col("fecha de bodegaje", "bodegajes", "bodegaje")
-            c_max_dev   = _col("fecha maxima de devolucion de unidad vacia (demoras)")
-            c_cita_ret  = _col("fecha y hora de cita de retiro del contenedor", "cita")
+            c_max_dev   = _col("fecha maxima de devolucion de unidad vacia (demoras)", "demoras")
+            c_cita_ret  = _col("fecha y hora de cita de retiro del contenedor", "cita", "cita retiro")
             c_cita_ret_repr = _col("fecha y hora de cita reprogramada de retiro del contenedor")
             c_llegada_ret   = _col("fecha y hora de llegada a retiro del contenedor")
             c_salida_puer   = _col("fecha y hora de salida de puerto")
             c_llegada_desc  = _col("fecha y hora de llegada a descargue")
             c_cita_dev      = _col("fecha y hora de cita de devolucion unidad vacia")
-            c_llegada_dev   = _col("fecha y hora de llegada a devolucion unidad vacia")
+            c_llegada_dev   = _col("fecha y hora de llegada a devolucion unidad vacia",
+                                   "fecha devolucion vacio", "devolucion vacio", "devolucion")
             c_lugar_dev     = _col("lugar devolucion unidad vacia", "sitio devolucion")
             c_cierre        = _col("cierre de pedido")
             c_fecrecib      = _col("fecha de recibido del pedido", "fecha recibido del pedido", "fecha recibido", "recibido pedido")
@@ -351,9 +352,17 @@ def leer_ajover_comex(stats):
                         estado_cont = "SIN SALIDA DE PUERTO"
                     else:
                         estado_cont = "SIN LLEGADA DE RETIRO"
+                elif fuente == "CV":
+                    # CV: solo llenan cita retiro y devolucion vacio
+                    # no registran pasos intermedios → lógica simplificada
+                    if not pd.isna(llegdv):
+                        estado_cont = "FINALIZADO - DEVOLUCION"
+                    elif not pd.isna(cita_r):
+                        estado_cont = "DESCARGADO"
+                    else:
+                        estado_cont = "SIN LLEGADA DE RETIRO DEL CONTENEDOR"
                 else:
-                    # Contenedor: verificar del estado más avanzado hacia atrás
-                    # para que fechas intermedias faltantes no bloqueen el estado real
+                    # AJOVER: verificar del estado más avanzado hacia atrás
                     if not pd.isna(llegdv):
                         estado_cont = "FINALIZADO - DEVOLUCION"
                     elif not pd.isna(salp2):
