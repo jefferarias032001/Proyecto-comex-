@@ -707,9 +707,9 @@ const S={rows:[],ob:new Map(),
 
 const OB_COLW=[226,150,60,150,170,150,128,134,92,118,132,142,122,78,70];
 const DET_COLW=[88,110,78,180,118,132,168,168,84,118,116,110,110,80];
-function makeResizable(table,defs){
+function makeResizable(table,defs,extStore){
   if(!table||!table.tHead||!table.tHead.rows[0])return;
-  const id=table.id,store=S.colW[id]||(S.colW[id]={});
+  const id=table.id,store=extStore||(S.colW[id]||(S.colW[id]={}));
   const ths=[...table.tHead.rows[0].cells];
   let cg=table.querySelector('colgroup');
   if(!cg||cg.children.length!==ths.length){if(cg)cg.remove();cg=document.createElement('colgroup');ths.forEach(()=>cg.appendChild(document.createElement('col')));table.insertBefore(cg,table.firstChild);}
@@ -1411,41 +1411,41 @@ function init(){
 /* ============================================================
    AJOVER — vaciós y llenos
    ============================================================ */
-const SAJ={vac:{q:'',cumpl:'',mes:'',pg:1,colOrder:null},ll:{q:'',est:'',mes:'',pg:1,colOrder:null}};
+const SAJ={vac:{q:'',cumpl:'',mes:'',pg:1,colOrder:null,sortCol:'',sortDir:1,colW:{}},ll:{q:'',est:'',mes:'',pg:1,colOrder:null,sortCol:'',sortDir:1,colW:{}}};
 const VAC_COLS=[
-  {k:'mes',     l:'Mes',              cell:(r,s)=>`<td style="${s}">${esc(r.mes)}</td>`},
-  {k:'fprog',   l:'Fecha programada', cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fprog)}</td>`},
-  {k:'faten',   l:'Fecha atención',   cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.faten)}</td>`},
-  {k:'fllpatio',l:'Llegada patio',    cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fllpatio)}</td>`},
-  {k:'fslpatio',l:'Salida patio',     cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fslpatio)}</td>`},
-  {k:'fplanta', l:'Llegada planta',   cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fplanta)}</td>`},
-  {k:'patio',   l:'Patio',            cell:(r,s)=>`<td style="${s}">${esc(r.patio)}</td>`},
-  {k:'linea',   l:'Línea',            cell:(r,s)=>`<td style="${s}">${esc(r.linea)}</td>`},
-  {k:'cont',    l:'Contenedor',       cell:(r,s)=>`<td style="${s};font-family:monospace">${esc(r.cont)}</td>`},
-  {k:'man',     l:'Manifiesto',       cell:(r,s)=>`<td style="${s};font-family:monospace">${esc(r.man)}</td>`},
-  {k:'cumpl',   l:'Cumplimiento',     cell:(r,s)=>`<td style="${s}">${_pillCumpl(r.cumpl)}</td>`},
-  {k:'dt1',     l:'P→A',              cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt1)}</td>`},
-  {k:'dt2',     l:'A→Patio',          cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt2)}</td>`},
-  {k:'dt3',     l:'En patio',         cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt3)}</td>`},
-  {k:'dt4',     l:'Patio→Planta',     cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt4)}</td>`},
+  {k:'mes',     t:'s',l:'Mes',              cell:(r,s)=>`<td style="${s}">${esc(r.mes)}</td>`},
+  {k:'fprog',   t:'s',l:'Fecha programada', cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fprog)}</td>`},
+  {k:'faten',   t:'s',l:'Fecha atención',   cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.faten)}</td>`},
+  {k:'fllpatio',t:'s',l:'Llegada patio',    cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fllpatio)}</td>`},
+  {k:'fslpatio',t:'s',l:'Salida patio',     cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fslpatio)}</td>`},
+  {k:'fplanta', t:'s',l:'Llegada planta',   cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fplanta)}</td>`},
+  {k:'patio',   t:'s',l:'Patio',            cell:(r,s)=>`<td style="${s}">${esc(r.patio)}</td>`},
+  {k:'linea',   t:'s',l:'Línea',            cell:(r,s)=>`<td style="${s}">${esc(r.linea)}</td>`},
+  {k:'cont',    t:'s',l:'Contenedor',       cell:(r,s)=>`<td style="${s};font-family:monospace">${esc(r.cont)}</td>`},
+  {k:'man',     t:'s',l:'Manifiesto',       cell:(r,s)=>`<td style="${s};font-family:monospace">${esc(r.man)}</td>`},
+  {k:'cumpl',   t:'s',l:'Cumplimiento',     cell:(r,s)=>`<td style="${s}">${_pillCumpl(r.cumpl)}</td>`},
+  {k:'dt1',     t:'n',l:'P→A',              cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt1)}</td>`},
+  {k:'dt2',     t:'n',l:'A→Patio',          cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt2)}</td>`},
+  {k:'dt3',     t:'n',l:'En patio',         cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt3)}</td>`},
+  {k:'dt4',     t:'n',l:'Patio→Planta',     cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt4)}</td>`},
 ];
 const LL_COLS=[
-  {k:'fecha',       l:'Fecha aten.',     cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fecha)}</td>`},
-  {k:'cont',        l:'Contenedor',      cell:(r,s)=>`<td style="${s};font-family:monospace">${esc(r.cont)}</td>`},
-  {k:'terminal',    l:'Terminal',        cell:(r,s)=>`<td style="${s}">${esc(r.terminal)}</td>`},
-  {k:'placa',       l:'Placa',           cell:(r,s)=>`<td style="${s}">${esc(r.placa)}</td>`},
-  {k:'estado',      l:'Estado',          cell:(r,s)=>`<td style="${s}">${r.estado==='EXITOSO'?'<span style="background:#d4edda;color:#155724;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">✓ Exitoso</span>':r.estado?`<span style="background:#f8d7da;color:#721c24;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">✗ ${esc(r.estado)}</span>`:'—'}</td>`},
-  {k:'fcita',       l:'Cita puerto',     cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fcita)}</td>`},
-  {k:'fcita_repr',  l:'Cita reprog.',    cell:(r,s)=>`<td style="${s};white-space:nowrap;color:var(--warn)">${esc(r.fcita_repr)||'—'}</td>`},
-  {k:'resp_repr',   l:'Resp. reprog.',   cell:(r,s)=>`<td style="${s}">${esc(r.resp_repr)||'—'}</td>`},
-  {k:'motivo_repr', l:'Motivo reprog.',  cell:(r,s)=>`<td style="${s}">${esc(r.motivo_repr)||'—'}</td>`},
-  {k:'fllpuerto',   l:'Llegada puerto',  cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fllpuerto)}</td>`},
-  {k:'cumpl_cita',  l:'Cumpl. cita',     cell:(r,s)=>`<td style="${s}">${_pillCumpl(r.cumpl_cita)}</td>`},
-  {k:'clasif',      l:'Causa',           cell:(r,s,_,pc)=>`<td style="${s}">${pc(r.clasif)}</td>`},
-  {k:'motivo',      l:'Motivo',          cell:(r,s)=>`<td style="${s};font-size:10px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(r.motivo)}">${esc(r.motivo)||'—'}</td>`},
-  {k:'obs',         l:'Observaciones',   cell:(r,s)=>`<td style="${s};color:var(--ink-2);font-size:10px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(r.obs)}">${esc(r.obs)||'—'}</td>`},
-  {k:'dt2',         l:'⏱ Cargue',        cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt2)}</td>`},
-  {k:'dt3',         l:'⏱ Tránsito',      cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt3)}</td>`},
+  {k:'fecha',       t:'s',l:'Fecha aten.',     cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fecha)}</td>`},
+  {k:'cont',        t:'s',l:'Contenedor',      cell:(r,s)=>`<td style="${s};font-family:monospace">${esc(r.cont)}</td>`},
+  {k:'terminal',    t:'s',l:'Terminal',        cell:(r,s)=>`<td style="${s}">${esc(r.terminal)}</td>`},
+  {k:'placa',       t:'s',l:'Placa',           cell:(r,s)=>`<td style="${s}">${esc(r.placa)}</td>`},
+  {k:'estado',      t:'s',l:'Estado',          cell:(r,s)=>`<td style="${s}">${r.estado==='EXITOSO'?'<span style="background:#d4edda;color:#155724;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">✓ Exitoso</span>':r.estado?`<span style="background:#f8d7da;color:#721c24;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">✗ ${esc(r.estado)}</span>`:'—'}</td>`},
+  {k:'fcita',       t:'s',l:'Cita puerto',     cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fcita)}</td>`},
+  {k:'fcita_repr',  t:'s',l:'Cita reprog.',    cell:(r,s)=>`<td style="${s};white-space:nowrap;color:var(--warn)">${esc(r.fcita_repr)||'—'}</td>`},
+  {k:'resp_repr',   t:'s',l:'Resp. reprog.',   cell:(r,s)=>`<td style="${s}">${esc(r.resp_repr)||'—'}</td>`},
+  {k:'motivo_repr', t:'s',l:'Motivo reprog.',  cell:(r,s)=>`<td style="${s}">${esc(r.motivo_repr)||'—'}</td>`},
+  {k:'fllpuerto',   t:'s',l:'Llegada puerto',  cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fllpuerto)}</td>`},
+  {k:'cumpl_cita',  t:'s',l:'Cumpl. cita',     cell:(r,s)=>`<td style="${s}">${_pillCumpl(r.cumpl_cita)}</td>`},
+  {k:'clasif',      t:'s',l:'Causa',           cell:(r,s,_,pc)=>`<td style="${s}">${pc(r.clasif)}</td>`},
+  {k:'motivo',      t:'s',l:'Motivo',          cell:(r,s)=>`<td style="${s};font-size:10px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(r.motivo)}">${esc(r.motivo)||'—'}</td>`},
+  {k:'obs',         t:'s',l:'Observaciones',   cell:(r,s)=>`<td style="${s};color:var(--ink-2);font-size:10px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(r.obs)}">${esc(r.obs)||'—'}</td>`},
+  {k:'dt2',         t:'n',l:'⏱ Cargue',        cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt2)}</td>`},
+  {k:'dt3',         t:'n',l:'⏱ Tránsito',      cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt3)}</td>`},
 ];
 const PER_AJ=100;
 
@@ -1595,13 +1595,16 @@ function renderAjoverVacios(){
       </div>
     </div>`;
 
-  // tabla con columnas reordenables
+  // tabla con columnas ordenables + redimensionables + reordenables
   if(!SAJ.vac.colOrder)SAJ.vac.colOrder=VAC_COLS.map((_,i)=>i);
   const vacOrd=SAJ.vac.colOrder;
   const vacCols=vacOrd.map(i=>VAC_COLS[i]);
-  const thS='padding:7px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface-2);white-space:nowrap;cursor:grab';
-  const vacThead=$('ajVacHead').closest('thead')||$('ajVacHead').parentElement;
-  $('ajVacHead').innerHTML=vacCols.map(c=>`<th style="${thS}" title="Arrastra para reordenar">${c.l}</th>`).join('');
+  const thS='padding:7px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface-2);white-space:nowrap;cursor:pointer;user-select:none';
+  const {sortCol:svCol,sortDir:svDir}=SAJ.vac;
+  $('ajVacHead').innerHTML=vacCols.map(c=>{
+    const on=svCol===c.k;const arr=on?(svDir===1?'▲':'▼'):'⇅';
+    return `<th style="${thS};${on?'background:rgba(59,130,246,.08);color:#3b82f6;':''}" onclick="SAJ.vac.sortDir=SAJ.vac.sortCol==='${c.k}'&&SAJ.vac.sortDir===1?-1:1;SAJ.vac.sortCol='${c.k}';SAJ.vac.pg=1;renderAjoverVacios()" title="Clic ordenar · arrastra mover">${c.l} <span style="font-size:9px;opacity:${on?1:.35}">${arr}</span></th>`;
+  }).join('');
 
   const q=SAJ.vac.q.toLowerCase(), fc=SAJ.vac.cumpl, fm=SAJ.vac.mes;
   let rows=(va.rows||[]).filter(r=>{
@@ -1610,6 +1613,7 @@ function renderAjoverVacios(){
     if(fc&&!r.cumpl.startsWith(fc))return false;
     return true;
   });
+  if(svCol){const cDef=VAC_COLS.find(c=>c.k===svCol),t=cDef?.t||'s';rows.sort((a,b)=>{let va2=a[svCol],vb=b[svCol];if(t==='n'){va2=va2??-Infinity;vb=vb??-Infinity;return svDir*(va2-vb);}va2=String(va2??'');vb=String(vb??'');return svDir*va2.localeCompare(vb,'es',{numeric:true});});}
   const pg=SAJ.vac.pg,pages=Math.max(1,Math.ceil(rows.length/PER_AJ));
   if(pg>pages)SAJ.vac.pg=pages;
   const sl=rows.slice((SAJ.vac.pg-1)*PER_AJ,SAJ.vac.pg*PER_AJ);
@@ -1620,6 +1624,7 @@ function renderAjoverVacios(){
   $('ajVacFoot').innerHTML=`<span><b>${fN(rows.length)}</b> registros</span><div class="pager"><button class="pgbtn" id="ajVacPrev" ${SAJ.vac.pg<=1?'disabled':''}>‹</button><span class="num">Pág. ${SAJ.vac.pg}/${pages}</span><button class="pgbtn" id="ajVacNext" ${SAJ.vac.pg>=pages?'disabled':''}>›</button></div>`;
   $('ajVacPrev')&&($('ajVacPrev').onclick=()=>{SAJ.vac.pg--;renderAjoverVacios();});
   $('ajVacNext')&&($('ajVacNext').onclick=()=>{SAJ.vac.pg++;renderAjoverVacios();});
+  makeResizable($('ajVacTable'),[80,130,130,130,130,130,100,100,120,120,110,80,80,80,80],SAJ.vac.colW);
   _dragCols($('ajVacHead').parentElement,vacOrd,()=>renderAjoverVacios());
 }
 
@@ -1891,12 +1896,16 @@ function renderAjoverLlenos(){
   _ajBarras(fMotivos,'ajLlMotivos');
   _ajBarras(fMotivosRepr,'ajLlMotivosRepr');
 
-  // ── tabla principal ──────────────────────────────────────────────────────
+  // ── tabla principal (ordenable + redimensionable + reordenable) ────────────
   if(!SAJ.ll.colOrder)SAJ.ll.colOrder=LL_COLS.map((_,i)=>i);
   const llOrd=SAJ.ll.colOrder;
   const llCols=llOrd.map(i=>LL_COLS[i]);
-  const thS2='padding:7px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface-2);white-space:nowrap;cursor:grab';
-  $('ajLlHead').innerHTML=llCols.map(c=>`<th style="${thS2}" title="Arrastra para reordenar">${c.l}</th>`).join('');
+  const thS2='padding:7px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface-2);white-space:nowrap;cursor:pointer;user-select:none';
+  const {sortCol:slCol,sortDir:slDir}=SAJ.ll;
+  $('ajLlHead').innerHTML=llCols.map(c=>{
+    const on=slCol===c.k;const arr=on?(slDir===1?'▲':'▼'):'⇅';
+    return `<th style="${thS2};${on?'background:rgba(59,130,246,.08);color:#3b82f6;':''}" onclick="SAJ.ll.sortDir=SAJ.ll.sortCol==='${c.k}'&&SAJ.ll.sortDir===1?-1:1;SAJ.ll.sortCol='${c.k}';SAJ.ll.pg=1;renderAjoverLlenos()" title="Clic ordenar · arrastra mover">${c.l} <span style="font-size:9px;opacity:${on?1:.35}">${arr}</span></th>`;
+  }).join('');
 
   const q2=SAJ.ll.q.toLowerCase(), fe=SAJ.ll.est;
   let rows2=filtRows.filter(r=>{
@@ -1904,6 +1913,7 @@ function renderAjoverLlenos(){
     if(fe&&r.estado!==fe)return false;
     return true;
   });
+  if(slCol){const cDef=LL_COLS.find(c=>c.k===slCol),t=cDef?.t||'s';rows2.sort((a,b)=>{let va=a[slCol],vb=b[slCol];if(t==='n'){va=va??-Infinity;vb=vb??-Infinity;return slDir*(va-vb);}va=String(va??'');vb=String(vb??'');return slDir*va.localeCompare(vb,'es',{numeric:true});});}
   const pg=SAJ.ll.pg,pages=Math.max(1,Math.ceil(rows2.length/PER_AJ));
   if(pg>pages)SAJ.ll.pg=pages;
   const sl=rows2.slice((SAJ.ll.pg-1)*PER_AJ,SAJ.ll.pg*PER_AJ);
@@ -1915,11 +1925,12 @@ function renderAjoverLlenos(){
   $('ajLlFoot').innerHTML=`<span><b>${fN(rows2.length)}</b> registros</span><div class="pager"><button class="pgbtn" id="ajLlPrev" ${SAJ.ll.pg<=1?'disabled':''}>‹</button><span class="num">Pág. ${SAJ.ll.pg}/${pages}</span><button class="pgbtn" id="ajLlNext" ${SAJ.ll.pg>=pages?'disabled':''}>›</button></div>`;
   $('ajLlPrev')&&($('ajLlPrev').onclick=()=>{SAJ.ll.pg--;renderAjoverLlenos();});
   $('ajLlNext')&&($('ajLlNext').onclick=()=>{SAJ.ll.pg++;renderAjoverLlenos();});
+  makeResizable($('ajLlTable'),[120,130,120,90,90,130,130,130,150,130,120,90,180,180,90,90],SAJ.ll.colW);
   _dragCols($('ajLlHead').parentElement,llOrd,()=>renderAjoverLlenos());
 }
 
 // ═══════════════════════════ AJOVER COMEX ═══════════════════════════
-const SAC={q:'',qob:'',fuente:'',filtRet:'',filtDev:'',filtEst:'',filtTipo:'',mes:'',pg:1,PER:50,sortCol:'',sortDir:1};
+const SAC={q:'',qob:'',fuente:'',filtRet:'',filtDev:'',filtEst:'',filtTipo:'',mes:'',pg:1,PER:50,sortCol:'',sortDir:1,colW:{}};
 function _pillRet(v){
   if(!v||v==='Sin fecha'||v==='Sin fecha bodegaje'||v==='Sin cita')return `<span style="color:var(--ink-3);font-size:10px">${v||'—'}</span>`;
   if(v==='A tiempo')return '<span style="background:#d4edda;color:#155724;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700">✓ A tiempo</span>';
@@ -2302,6 +2313,7 @@ function renderAjoverComex(){
   });
   html+='</tbody>';
   $('ajcxTabla').innerHTML=html;
+  makeResizable($('ajcxTabla'),[],SAC.colW);
 
   // Paginación
   const pages=Math.ceil(filtRows.length/per)||1;
