@@ -440,6 +440,14 @@
         <div style="background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);border-radius:12px;padding:12px 16px;margin:0 16px 14px;box-shadow:0 4px 20px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.06)">
           <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
             <div>
+              <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px">Modo cumplimiento</div>
+              <div id="ajLlChipsModo" style="display:flex;gap:4px">
+                <button data-modo="real"      style="padding:5px 12px;border:none;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all .18s">Real</button>
+                <button data-modo="eficiente" style="padding:5px 12px;border:none;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all .18s">Eficiente</button>
+              </div>
+            </div>
+            <div style="width:1px;background:rgba(255,255,255,.1);align-self:stretch;margin:0 2px"></div>
+            <div>
               <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Mes</div>
               <select id="ajLlMes" style="padding:5px 10px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;background:rgba(255,255,255,.07);color:#e2e8f0;outline:none">
                 <option value="" style="background:#1e293b">Todos los meses</option>
@@ -1411,7 +1419,7 @@ function init(){
 /* ============================================================
    AJOVER — vaciós y llenos
    ============================================================ */
-const SAJ={vac:{q:'',cumpl:'',mes:'',pg:1,colOrder:null,sortCol:'',sortDir:1,colW:{}},ll:{q:'',est:'',mes:'',pg:1,colOrder:null,sortCol:'',sortDir:1,colW:{}}};
+const SAJ={vac:{q:'',cumpl:'',mes:'',pg:1,colOrder:null,sortCol:'',sortDir:1,colW:{}},ll:{q:'',est:'',mes:'',pg:1,colOrder:null,sortCol:'',sortDir:1,colW:{},modo:'real'}};
 const VAC_COLS=[
   {k:'mes',     t:'s',l:'Mes',              cell:(r,s)=>`<td style="${s}">${esc(r.mes)}</td>`},
   {k:'fprog',   t:'s',l:'Fecha programada', cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fprog)}</td>`},
@@ -1440,7 +1448,21 @@ const LL_COLS=[
   {k:'resp_repr',   t:'s',l:'Resp. reprog.',   cell:(r,s)=>`<td style="${s}">${esc(r.resp_repr)||'—'}</td>`},
   {k:'motivo_repr', t:'s',l:'Motivo reprog.',  cell:(r,s)=>`<td style="${s}">${esc(r.motivo_repr)||'—'}</td>`},
   {k:'fllpuerto',   t:'s',l:'Llegada puerto',  cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fllpuerto)}</td>`},
-  {k:'cumpl_cita',  t:'s',l:'Cumpl. cita',     cell:(r,s)=>`<td style="${s}">${_pillCumpl(r.cumpl_cita)}</td>`},
+  {k:'cumpl_cita',  t:'s',l:'Cumpl. cita',     cell:(r,s)=>{
+    if(SAJ.ll.modo==='eficiente'){
+      if(r.delta_min==null)return `<td style="${s}"><span style="color:var(--ink-3);font-size:10px">Sin fecha</span></td>`;
+      const v=r.delta_min<=30?'A tiempo':`Tarde +${Math.round(r.delta_min-30)}min`;
+      return `<td style="${s}">${_pillCumpl(v)}</td>`;
+    }
+    return `<td style="${s}">${_pillCumpl(r.cumpl_cita)}</td>`;
+  }},
+  {k:'exceso_margen',t:'n',l:'Exceso margen', cell:(r,s)=>{
+    const w=SAJ.ll.modo==='eficiente'?30:60;
+    if(r.delta_min==null)return `<td style="${s}"><span style="color:var(--ink-3)">—</span></td>`;
+    const ex=Math.round(r.delta_min-w);
+    if(ex<=0)return `<td style="${s}"><span style="font-size:10px;color:var(--pos)">✓ en margen</span></td>`;
+    return `<td style="${s}"><span style="background:#fde8e8;color:#991b1b;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:600">+${ex}min</span></td>`;
+  }},
   {k:'clasif',      t:'s',l:'Causa',           cell:(r,s,_,pc)=>`<td style="${s}">${pc(r.clasif)}</td>`},
   {k:'motivo',      t:'s',l:'Motivo',          cell:(r,s)=>`<td style="${s};font-size:10px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(r.motivo)}">${esc(r.motivo)||'—'}</td>`},
   {k:'obs',         t:'s',l:'Observaciones',   cell:(r,s)=>`<td style="${s};color:var(--ink-2);font-size:10px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(r.obs)}">${esc(r.obs)||'—'}</td>`},
@@ -1647,11 +1669,17 @@ function renderAjoverLlenos(){
   $('ajLlHint').textContent=`${fN(fTot)} registros`;
 
   // ── KPIs calculados desde filas filtradas ────────────────────────────────
-  const _isNoCumpl=r=>r.cumpl_cita&&r.cumpl_cita.startsWith('Tarde')&&!r.cumpl_cita.includes('externo')&&!r.cumpl_cita.includes('reprog');
+  const _win=SAJ.ll.modo==='eficiente'?30:60;
   const _isExterno=r=>r.cumpl_cita&&r.cumpl_cita.includes('externo');
   const _isReprogAjover=r=>r.cumpl_cita&&r.cumpl_cita.includes('reprog Ajover');
-  const fConFecha=filtRows.filter(r=>r.cumpl_cita&&r.cumpl_cita!=='Sin fecha').length||1;
-  const fCumpl=filtRows.filter(r=>r.cumpl_cita==='A tiempo'||_isExterno(r)||_isReprogAjover(r)).length;
+  const _isNoCumpl=r=>SAJ.ll.modo==='eficiente'
+    ?(r.delta_min!=null&&r.delta_min>_win&&!_isExterno(r)&&!_isReprogAjover(r))
+    :(r.cumpl_cita&&r.cumpl_cita.startsWith('Tarde')&&!r.cumpl_cita.includes('externo')&&!r.cumpl_cita.includes('reprog'));
+  const _isCumpl=r=>SAJ.ll.modo==='eficiente'
+    ?((r.delta_min!=null&&r.delta_min<=_win)||_isExterno(r)||_isReprogAjover(r))
+    :(r.cumpl_cita==='A tiempo'||_isExterno(r)||_isReprogAjover(r));
+  const fConFecha=filtRows.filter(r=>r.delta_min!=null||(r.cumpl_cita&&r.cumpl_cita!=='Sin fecha')).length||1;
+  const fCumpl=filtRows.filter(_isCumpl).length;
   const fNoCumpl=filtRows.filter(_isNoCumpl).length;
   const fExterno=filtRows.filter(_isExterno).length;
   const fReprogAjover=filtRows.filter(_isReprogAjover).length;
@@ -1682,7 +1710,7 @@ function renderAjoverLlenos(){
           <span style="font-size:11px;color:#475569;margin:0 4px">/</span>
           <span style="font-size:11px;color:#f87171">${fN(fNoCumpl)} no cumple</span>
         </div>
-        <div style="font-size:10px;color:#475569;margin-top:2px">ventana de 1 hora</div>
+        <div style="font-size:10px;color:#475569;margin-top:2px">ventana de ${SAJ.ll.modo==='eficiente'?'30 min':'1 hora'}</div>
       </div>
       <div style="background:linear-gradient(135deg,#0a1628,#0c1a3a);border:1px solid rgba(52,211,153,.15);border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeUp .45s ease both;animation-delay:.16s;display:flex;flex-direction:column;align-items:center">
         <div style="font-size:10px;font-weight:700;color:#34d399;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Exitosos op.</div>
@@ -1731,7 +1759,7 @@ function renderAjoverLlenos(){
     delta_cita:     _avg(filtRows.filter(r=>r.delta_min!=null).map(r=>r.delta_min)),
   };
   const pr2=fPr;
-  const deltaColor=pr2.delta_cita==null?'var(--ink-3)':pr2.delta_cita<=60?'var(--pos)':'var(--neg)';
+  const deltaColor=pr2.delta_cita==null?'var(--ink-3)':pr2.delta_cita<=_win?'var(--pos)':'var(--neg)';
   $('ajLlPromedios').innerHTML=`
     <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;margin:10px 0 4px">
       <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:140px">
@@ -1925,8 +1953,19 @@ function renderAjoverLlenos(){
   $('ajLlFoot').innerHTML=`<span><b>${fN(rows2.length)}</b> registros</span><div class="pager"><button class="pgbtn" id="ajLlPrev" ${SAJ.ll.pg<=1?'disabled':''}>‹</button><span class="num">Pág. ${SAJ.ll.pg}/${pages}</span><button class="pgbtn" id="ajLlNext" ${SAJ.ll.pg>=pages?'disabled':''}>›</button></div>`;
   $('ajLlPrev')&&($('ajLlPrev').onclick=()=>{SAJ.ll.pg--;renderAjoverLlenos();});
   $('ajLlNext')&&($('ajLlNext').onclick=()=>{SAJ.ll.pg++;renderAjoverLlenos();});
-  makeResizable($('ajLlTable'),[120,130,120,90,90,130,130,130,150,130,120,90,180,180,90,90],SAJ.ll.colW);
+  makeResizable($('ajLlTable'),[120,130,120,90,90,130,130,130,150,130,120,90,90,180,180,90,90],SAJ.ll.colW);
   _dragCols($('ajLlHead').parentElement,llOrd,()=>renderAjoverLlenos());
+  // Chips modo cumplimiento
+  const chipsEl=$('ajLlChipsModo');
+  if(chipsEl){
+    chipsEl.querySelectorAll('button[data-modo]').forEach(btn=>{
+      const m=btn.dataset.modo;
+      const act=m===SAJ.ll.modo;
+      btn.style.background=act?'#3b82f6':'rgba(255,255,255,.06)';
+      btn.style.color=act?'#fff':'#94a3b8';
+      btn.onclick=()=>{SAJ.ll.modo=m;SAJ.ll.pg=1;renderAjoverLlenos();};
+    });
+  }
 }
 
 // ═══════════════════════════ AJOVER COMEX ═══════════════════════════
