@@ -1478,14 +1478,8 @@ const LL_COLS=[
     }
     return `<td style="${s}">${_pillCumpl(r.cumpl_cita)}</td>`;
   }},
-  {k:'exceso_margen',t:'n',l:'Exceso margen', cell:(r,s)=>{
-    const w=SAJ.ll.modo==='eficiente'?30:60;
-    if(r.delta_min==null)return `<td style="${s}"><span style="color:var(--ink-3)">—</span></td>`;
-    const ex=Math.round(r.delta_min-w);
-    if(ex<=0)return `<td style="${s}"><span style="font-size:10px;color:var(--pos)">✓ en margen</span></td>`;
-    return `<td style="${s}"><span style="background:#fde8e8;color:#991b1b;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:600">+${ex}min</span></td>`;
-  }},
-  {k:'clasif',      t:'s',l:'Causa',           cell:(r,s,_,pc)=>`<td style="${s}">${pc(r.clasif)}</td>`},
+  {k:'resp_opt',    t:'s',l:'Resp. óptimo',    hide:()=>SAJ.ll.modo!=='eficiente', cell:(r,s)=>`<td style="${s}">${esc(r.resp_opt)||'—'}</td>`},
+  {k:'motivo_opt',  t:'s',l:'Motivo óptimo',   hide:()=>SAJ.ll.modo!=='eficiente', cell:(r,s)=>`<td style="${s};font-size:10px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(r.motivo_opt)}">${esc(r.motivo_opt)||'—'}</td>`},
   {k:'motivo',      t:'s',l:'Motivo',          cell:(r,s)=>`<td style="${s};font-size:10px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(r.motivo)}">${esc(r.motivo)||'—'}</td>`},
   {k:'obs',         t:'s',l:'Observaciones',   cell:(r,s)=>`<td style="${s};color:var(--ink-2);font-size:10px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(r.obs)}">${esc(r.obs)||'—'}</td>`},
   {k:'dt2',         t:'n',l:'⏱ Cargue',        cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt2)}</td>`},
@@ -2293,7 +2287,7 @@ function renderAjoverLlenos(){
   // ── tabla principal (ordenable + redimensionable + reordenable) ────────────
   if(!SAJ.ll.colOrder)SAJ.ll.colOrder=LL_COLS.map((_,i)=>i);
   const llOrd=SAJ.ll.colOrder;
-  const llCols=llOrd.map(i=>LL_COLS[i]);
+  const llCols=llOrd.map(i=>LL_COLS[i]).filter(c=>!c.hide||!c.hide());
   const thS2='padding:7px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface-2);white-space:nowrap;cursor:pointer;user-select:none';
   const {sortCol:slCol,sortDir:slDir}=SAJ.ll;
   $('ajLlHead').innerHTML=llCols.map(c=>{

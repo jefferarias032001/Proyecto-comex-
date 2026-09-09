@@ -625,6 +625,8 @@ def leer_ajover_completo(stats):
         c_cita_repr = next((v for k, v in nm2.items() if "cita" in k and "puerto" in k and "reprog" in k), None)
         c_motivo_repr = next((v for k, v in nm2.items() if "motivo" in k and "reprog" in k), None)
         c_resp_repr   = next((v for k, v in nm2.items() if "responsable" in k and "reprog" in k), None)
+        c_resp_opt    = next((v for k, v in nm2.items() if "responsable" in k and "optim" in k), None)
+        c_motivo_opt  = next((v for k, v in nm2.items() if "motivo" in k and "optim" in k), None)
         c_llegpuer= next((v for k, v in nm2.items() if "llegada" in k and "puerto" in k), None)
         c_cont2   = next((v for k, v in nm2.items() if "contenedor" in k), None)
         c_term    = next((v for k, v in nm2.items() if "terminal" in k), None)
@@ -685,6 +687,10 @@ def leer_ajover_completo(stats):
             if obs    in ("nan","None","NAN","NONE",""): obs = ""
             if motivo_repr in ("nan","None","NAN","NONE",""): motivo_repr = ""
             if resp_repr   in ("nan","None","NAN","NONE",""): resp_repr = ""
+            resp_opt   = str(ll[c_resp_opt].iloc[i]   if c_resp_opt   else "").strip()
+            motivo_opt = str(ll[c_motivo_opt].iloc[i] if c_motivo_opt else "").strip()
+            if resp_opt   in ("nan","None","NAN","NONE",""): resp_opt = ""
+            if motivo_opt in ("nan","None","NAN","NONE",""): motivo_opt = ""
             if estado == "EXITOSO": exitosos += 1
             elif estado:
                 fallidos += 1
@@ -778,6 +784,8 @@ def leer_ajover_completo(stats):
                 "fcita_repr":   ct_repr.strftime("%d-%m-%Y %H:%M") if not pd.isna(ct_repr) else "",
                 "motivo_repr":  motivo_repr,
                 "resp_repr":    resp_repr,
+                "resp_opt":     resp_opt,
+                "motivo_opt":   motivo_opt,
                 "fllpuerto":    lp.strftime("%d-%m-%Y %H:%M")  if not pd.isna(lp)  else "",
                 "fplanta_plan": pl.strftime("%d-%m-%Y %H:%M")  if not pd.isna(pl)  else "",
                 "fplanta_real": llp.strftime("%d-%m-%Y %H:%M") if not pd.isna(llp) else "",
