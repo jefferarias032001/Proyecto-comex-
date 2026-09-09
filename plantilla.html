@@ -410,6 +410,10 @@
                 <option value="" style="background:#1e293b">Todos</option><option value="A tiempo" style="background:#1e293b">A tiempo</option><option value="Tarde" style="background:#1e293b">Tarde</option><option value="Sin fecha" style="background:#1e293b">Sin fecha</option>
               </select>
             </div>
+            <div>
+              <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Período</div>
+              <button id="ajVacAyer" style="padding:5px 14px;border:none;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all .18s;background:rgba(255,255,255,.06);color:#94a3b8">Ayer</button>
+            </div>
             <div style="margin-left:auto;display:flex;gap:8px">
               <button class="btn btn-light" id="ajVacClear">Limpiar</button>
               <button class="btn btn-light" id="ajVacCSV">↓ CSV</button>
@@ -417,6 +421,7 @@
           </div>
         </div>
         <div id="ajVacTrend" style="margin:0 16px 14px"></div>
+        <div id="ajVacDaily" style="margin:0 16px 14px"></div>
         <div id="ajVacKpis" style="margin:0 16px 14px"></div>
         <div style="margin:0 16px 12px" id="ajVacPromedios"></div>
         <div style="display:flex;gap:16px;margin:0 16px 12px;flex-wrap:wrap">
@@ -464,12 +469,17 @@
                 <option value="" style="background:#1e293b">Todos</option><option value="EXITOSO" style="background:#1e293b">Exitoso</option><option value="FALLIDO" style="background:#1e293b">Fallido</option>
               </select>
             </div>
+            <div>
+              <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Período</div>
+              <button id="ajLlAyer" style="padding:5px 14px;border:none;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all .18s;background:rgba(255,255,255,.06);color:#94a3b8">Ayer</button>
+            </div>
             <div style="margin-left:auto;display:flex;gap:8px">
               <button class="btn btn-light" id="ajLlClear">Limpiar</button>
               <button class="btn btn-light" id="ajLlCSV">↓ CSV</button>
             </div>
           </div>
         </div>
+        <div id="ajLlDaily" style="margin:0 16px 14px"></div>
         <div id="ajLlKpis" style="margin:0 16px 14px"></div>
         <div style="margin:0 16px 12px" id="ajLlPromedios"></div>
         <!-- Tendencias lado a lado -->
@@ -1422,7 +1432,7 @@ function init(){
 /* ============================================================
    AJOVER — vaciós y llenos
    ============================================================ */
-const SAJ={vac:{q:'',cumpl:'',mes:'',pg:1,colOrder:null,sortCol:'',sortDir:1,colW:{}},ll:{q:'',est:'',mes:'',pg:1,colOrder:null,sortCol:'',sortDir:1,colW:{},modo:'real'}};
+const SAJ={vac:{q:'',cumpl:'',mes:'',dia:'',pg:1,colOrder:null,sortCol:'',sortDir:1,colW:{}},ll:{q:'',est:'',mes:'',dia:'',pg:1,colOrder:null,sortCol:'',sortDir:1,colW:{},modo:'real'}};
 const VAC_COLS=[
   {k:'mes',     t:'s',l:'Mes',              cell:(r,s)=>`<td style="${s}">${esc(r.mes)}</td>`},
   {k:'fprog',   t:'s',l:'Fecha programada', cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fprog)}</td>`},
@@ -1474,6 +1484,54 @@ const LL_COLS=[
 ];
 const PER_AJ=100;
 
+function _dayKey(s){
+  if(!s)return null;
+  const iso=s.match(/^(\d{4}-\d{2}-\d{2})/);if(iso)return iso[1];
+  const dmy=s.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);if(dmy)return `${dmy[3]}-${dmy[2]}-${dmy[1]}`;
+  return null;
+}
+function _ayerKey(){const d=new Date();d.setDate(d.getDate()-1);return d.toISOString().slice(0,10);}
+function _chartDiario(allRows,dateField,cumplFn,containerId,entityLabel){
+  const byDia={};
+  allRows.forEach(r=>{
+    const d=_dayKey(r[dateField]);if(!d)return;
+    if(!byDia[d])byDia[d]={ok:0,tot:0};
+    byDia[d].tot++;if(cumplFn(r))byDia[d].ok++;
+  });
+  const dias=Object.keys(byDia).sort().slice(-31);
+  if(dias.length<2){$(containerId).innerHTML='';return;}
+  const BW=Math.max(18,Math.min(40,Math.floor((600-40)/(dias.length+1)))),GAP=Math.max(4,Math.floor(BW*.2));
+  const LP=34,RP=8,TP=26,BP=46,PH=90;
+  const N=dias.length,PW=LP+N*(BW+GAP)-GAP+RP,SVH=TP+PH+BP;
+  // chart 1: cumpl %
+  const pcts=dias.map(d=>{const v=byDia[d];return v.tot?+(v.ok/v.tot*100).toFixed(1):0;});
+  const pts1=dias.map((d,i)=>{const x=(LP+i*(BW+GAP)+BW/2).toFixed(1),y=(TP+PH-(pcts[i]/100)*PH).toFixed(1);return {x,y,col:pcts[i]>=90?'#22c55e':pcts[i]>=70?'#f59e0b':'#ef4444'};});
+  const grid1=[0,25,50,75,100].map(p=>{const y=(TP+PH-p/100*PH).toFixed(1);return `<line x1="${LP}" y1="${y}" x2="${PW-RP}" y2="${y}" stroke="rgba(255,255,255,.04)" stroke-width="1"/><text x="${LP-4}" y="${(+y+3).toFixed(0)}" text-anchor="end" fill="#334155" font-size="8" font-family="inherit">${p}%</text>`;}).join('');
+  const bars1=dias.map((d,i)=>{const p=pcts[i],x=LP+i*(BW+GAP),bh=Math.max(2,Math.round(p/100*PH)),y=TP+PH-bh,col=pts1[i].col,bg=p>=90?'rgba(34,197,94,.13)':p>=70?'rgba(245,158,11,.13)':'rgba(239,68,68,.13)';return `<rect x="${x}" y="${y}" width="${BW}" height="${bh}" fill="${bg}" rx="3"/><text x="${x+BW/2}" y="${y-4}" text-anchor="middle" fill="${col}" font-size="9" font-weight="700" font-family="inherit">${p}%</text>`;}).join('');
+  const line1=`<polyline points="${pts1.map(p=>p.x+','+p.y).join(' ')}" fill="none" stroke="rgba(34,197,94,.5)" stroke-width="1.5" stroke-linejoin="round"/>`;
+  const dots1=pts1.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="3" fill="${p.col}" stroke="#0f172a" stroke-width="1.5"/>`).join('');
+  const xlabs=dias.map((d,i)=>{const x=(LP+i*(BW+GAP)+BW/2).toFixed(1),p=d.split('-');return `<text x="${x}" y="${TP+PH+14}" text-anchor="middle" fill="#64748b" font-size="8" font-family="inherit">${p[2]}/${p[1]}</text><text x="${x}" y="${TP+PH+26}" text-anchor="middle" fill="#475569" font-size="7" font-family="inherit">${fN(byDia[d].tot)}</text>`;}).join('');
+  const svg1=`<svg width="100%" viewBox="0 0 ${PW} ${SVH}" style="min-width:${PW}px;overflow:visible">${grid1}${bars1}${line1}${dots1}${xlabs}</svg>`;
+  // chart 2: volumen
+  const tots=dias.map(d=>byDia[d].tot),maxT=Math.max(...tots)||1;
+  const pts2=dias.map((d,i)=>{const x=(LP+i*(BW+GAP)+BW/2).toFixed(1),y=(TP+PH-(tots[i]/maxT)*PH).toFixed(1);return {x,y};});
+  const grid2=[0,.25,.5,.75,1].map(f=>{const y=(TP+PH-f*PH).toFixed(1);return `<line x1="${LP}" y1="${y}" x2="${PW-RP}" y2="${y}" stroke="rgba(255,255,255,.04)" stroke-width="1"/><text x="${LP-4}" y="${(+y+3).toFixed(0)}" text-anchor="end" fill="#334155" font-size="8" font-family="inherit">${fN(Math.round(f*maxT))}</text>`;}).join('');
+  const bars2=dias.map((d,i)=>{const t=tots[i],x=LP+i*(BW+GAP),bh=Math.max(2,Math.round(t/maxT*PH)),y=TP+PH-bh;return `<rect x="${x}" y="${y}" width="${BW}" height="${bh}" fill="rgba(148,163,184,.12)" rx="3"/><text x="${x+BW/2}" y="${y-4}" text-anchor="middle" fill="#94a3b8" font-size="9" font-weight="700" font-family="inherit">${fN(t)}</text>`;}).join('');
+  const line2=`<polyline points="${pts2.map(p=>p.x+','+p.y).join(' ')}" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-linejoin="round"/>`;
+  const dots2=pts2.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="3" fill="#60a5fa" stroke="#0f172a" stroke-width="1.5"/>`).join('');
+  const svg2=`<svg width="100%" viewBox="0 0 ${PW} ${SVH}" style="min-width:${PW}px;overflow:visible">${grid2}${bars2}${line2}${dots2}${xlabs}</svg>`;
+  const card=`background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px 18px;flex:1;min-width:0`;
+  $(containerId).innerHTML=`<div style="display:flex;gap:14px;flex-wrap:wrap">
+    <div style="${card}">
+      <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">Cumplimiento de cita — día a día (últimos 31 días)</div>
+      <div style="overflow-x:auto">${svg1}</div>
+    </div>
+    <div style="${card}">
+      <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">${entityLabel} atendidos — día a día</div>
+      <div style="overflow-x:auto">${svg2}</div>
+    </div>
+  </div>`;
+}
 function _ajPie(slices,title){
   // slices = [{l,v,c}]; handles single-slice (full circle) edge case
   const total=slices.reduce((s,x)=>s+x.v,0)||1;
@@ -1650,15 +1708,23 @@ function renderAjoverVacios(){
     </div>`;
   })();
 
-  // ── Filas filtradas por mes ───────────────────────────────────────────────
-  const fm=SAJ.vac.mes;
-  const filtVac=allVacRows.filter(r=>!fm||r.mes===fm);
+  // ── Gráfico diario (todas las filas, sin filtros) ────────────────────────
+  _chartDiario(allVacRows,'faten',r=>r.cumpl==='A tiempo','ajVacDaily','Vaciós');
+
+  // ── Filas filtradas por mes y/o día ──────────────────────────────────────
+  const fm=SAJ.vac.mes, fd=SAJ.vac.dia==='ayer'?_ayerKey():null;
+  const filtVac=allVacRows.filter(r=>{
+    if(fm&&r.mes!==fm)return false;
+    if(fd&&_dayKey(r.faten)!==fd)return false;
+    return true;
+  });
   const fTotV=filtVac.length||1;
   const fOkV=filtVac.filter(r=>r.cumpl==='A tiempo').length;
   const fTardV=filtVac.filter(r=>r.cumpl&&r.cumpl.startsWith('Tarde')).length;
   const fSinFV=filtVac.filter(r=>!r.cumpl||r.cumpl==='Sin fecha').length;
   const pctOk=fTotV>0?((fOkV/fTotV)*100).toFixed(1):'0';
-  $('ajVacHint').textContent=`${fN(filtVac.length)} registros${fm?' · '+fm:''}`;
+  $('ajVacHint').textContent=`${fN(filtVac.length)} registros${fd?' · ayer ('+fd+')':fm?' · '+fm:''}`;
+  const ayerVacBtn=$('ajVacAyer');if(ayerVacBtn){const on=SAJ.vac.dia==='ayer';ayerVacBtn.style.background=on?'#3b82f6':'rgba(255,255,255,.06)';ayerVacBtn.style.color=on?'#fff':'#94a3b8';}
 
   const _gV=(pct,color,gid)=>{const R=38,C=+(2*Math.PI*R).toFixed(1);return `<svg width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="${R}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="9"/><circle cx="50" cy="50" r="${R}" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round" stroke-dasharray="0 ${C}" stroke-dashoffset="${+(C*.25).toFixed(1)}" id="${gid}" style="transition:stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1)"/><text x="50" y="46" text-anchor="middle" fill="${color}" font-size="16" font-weight="800" font-family="inherit">${pct}%</text><text x="50" y="58" text-anchor="middle" fill="rgba(255,255,255,.45)" font-size="8" font-family="inherit">cumplimiento</text></svg>`;};
   const _cV=(v,cid,col='#f1f5f9')=>`<span id="${cid}" data-target="${v}" style="font-size:36px;font-weight:900;color:${col};line-height:1;letter-spacing:-.03em">0</span>`;
@@ -1790,11 +1856,21 @@ function renderAjoverLlenos(){
     meses.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;llMesEl.appendChild(o);});
   }
 
-  // ── filas filtradas por mes ──────────────────────────────────────────────
+  // ── Gráfico diario (todas las filas, sin filtros) ────────────────────────
   const allRows=ll.rows||[];
-  const filtRows=allRows.filter(r=>!SAJ.ll.mes||r.mes_iso===SAJ.ll.mes);
+  _chartDiario(allRows,'fecha',r=>r.cumpl_cita==='A tiempo','ajLlDaily','Llenos');
+
+  // ── filas filtradas por mes y/o día ──────────────────────────────────────
+  const _llFd=SAJ.ll.dia==='ayer'?_ayerKey():null;
+  const filtRows=allRows.filter(r=>{
+    if(SAJ.ll.mes&&r.mes_iso!==SAJ.ll.mes)return false;
+    if(_llFd&&_dayKey(r.fecha)!==_llFd)return false;
+    return true;
+  });
   const fTot=filtRows.length;
-  $('ajLlHint').textContent=`${fN(fTot)} registros`;
+  const _llFdLabel=_llFd?' · ayer ('+_llFd+')':SAJ.ll.mes?' · '+SAJ.ll.mes:'';
+  $('ajLlHint').textContent=`${fN(fTot)} registros${_llFdLabel}`;
+  const ayerLlBtn=$('ajLlAyer');if(ayerLlBtn){const on=SAJ.ll.dia==='ayer';ayerLlBtn.style.background=on?'#3b82f6':'rgba(255,255,255,.06)';ayerLlBtn.style.color=on?'#fff':'#94a3b8';}
 
   // ── KPIs calculados desde filas filtradas ────────────────────────────────
   const _win=SAJ.ll.modo==='eficiente'?30:60;
@@ -2574,11 +2650,13 @@ function renderAjover(){
   $('ajVacMes').onchange=e=>{SAJ.vac.mes=e.target.value;SAJ.vac.pg=1;renderAjoverVacios()};
   $('ajVacQ').oninput=e=>{SAJ.vac.q=e.target.value.trim();SAJ.vac.pg=1;renderAjoverVacios()};
   $('ajVacFiltCumpl').onchange=e=>{SAJ.vac.cumpl=e.target.value;SAJ.vac.pg=1;renderAjoverVacios()};
-  $('ajVacClear').onclick=()=>{SAJ.vac.q='';SAJ.vac.cumpl='';SAJ.vac.mes='';SAJ.vac.pg=1;$('ajVacQ').value='';$('ajVacFiltCumpl').value='';$('ajVacMes').value='';renderAjoverVacios()};
+  $('ajVacAyer').onclick=()=>{SAJ.vac.dia=SAJ.vac.dia==='ayer'?'':'ayer';SAJ.vac.mes='';SAJ.vac.pg=1;$('ajVacMes').value='';renderAjoverVacios();};
+  $('ajVacClear').onclick=()=>{SAJ.vac.q='';SAJ.vac.cumpl='';SAJ.vac.mes='';SAJ.vac.dia='';SAJ.vac.pg=1;$('ajVacQ').value='';$('ajVacFiltCumpl').value='';$('ajVacMes').value='';renderAjoverVacios()};
   $('ajLlMes').onchange=e=>{SAJ.ll.mes=e.target.value;SAJ.ll.pg=1;renderAjoverLlenos()};
   $('ajLlQ').oninput=e=>{SAJ.ll.q=e.target.value.trim();SAJ.ll.pg=1;renderAjoverLlenos()};
   $('ajLlFiltEst').onchange=e=>{SAJ.ll.est=e.target.value;SAJ.ll.pg=1;renderAjoverLlenos()};
-  $('ajLlClear').onclick=()=>{SAJ.ll.q='';SAJ.ll.est='';SAJ.ll.mes='';SAJ.ll.pg=1;$('ajLlQ').value='';$('ajLlFiltEst').value='';$('ajLlMes').value='';renderAjoverLlenos()};
+  $('ajLlAyer').onclick=()=>{SAJ.ll.dia=SAJ.ll.dia==='ayer'?'':'ayer';SAJ.ll.mes='';SAJ.ll.pg=1;$('ajLlMes').value='';renderAjoverLlenos();};
+  $('ajLlClear').onclick=()=>{SAJ.ll.q='';SAJ.ll.est='';SAJ.ll.mes='';SAJ.ll.dia='';SAJ.ll.pg=1;$('ajLlQ').value='';$('ajLlFiltEst').value='';$('ajLlMes').value='';renderAjoverLlenos()};
   const csvDl=(rows,cols,fname)=>{const q=v=>{v=v==null?'':String(v);return /[;\n"]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};const out=[cols.map(c=>c[1]).join(';')].concat(rows.map(r=>cols.map(c=>q(r[c[0]])).join(';'))).join('\r\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(out);a.download=fname;a.click();};
   $('ajVacCSV').onclick=()=>{const va=(window.AJOVER||{}).vacios;if(!va)return;csvDl(va.rows,[['mes','Mes'],['fprog','Fecha programada'],['faten','Fecha atención'],['fplanta','Llegada planta'],['patio','Patio'],['linea','Línea'],['cont','Contenedor'],['man','Manifiesto'],['cumpl','Cumplimiento']],'ajover_vacios.csv');};
   $('ajLlCSV').onclick=()=>{const ll=(window.AJOVER||{}).llenos;if(!ll)return;csvDl(ll.rows,[['fecha','Fecha'],['cont','Contenedor'],['terminal','Terminal'],['placa','Placa'],['estado','Estado'],['cumpl_planta','Cumpl.planta'],['cumpl_puerto','Cumpl.puerto'],['motivo','Motivo fallo'],['obs','Observaciones']],'ajover_llenos.csv');};
