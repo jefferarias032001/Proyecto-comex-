@@ -2231,7 +2231,7 @@ function renderAjoverLlenos(){
   } else { $('ajLlTendMov').innerHTML=''; }
 
   // ── Gráfico diario — todos los días del mes seleccionado ────────────────
-  _chartDiario(allRows,'fecha',r=>r.cumpl_cita==='A tiempo','ajLlDaily','Llenos',SAJ.ll.mes||null);
+  _chartDiario(allRows,'fecha',r=>r.cumpl_cita==='A tiempo'||_isExterno(r)||_isReprogAjover(r),'ajLlDaily','Llenos',SAJ.ll.mes||null);
 
   // ── tabla de tiempos promedio mes a mes ─────────────────────────────────
   if(tend.length){
