@@ -1458,11 +1458,13 @@ const LL_COLS=[
   {k:'terminal',    t:'s',l:'Terminal',        cell:(r,s)=>`<td style="${s}">${esc(r.terminal)}</td>`},
   {k:'placa',       t:'s',l:'Placa',           cell:(r,s)=>`<td style="${s}">${esc(r.placa)}</td>`},
   {k:'estado',      t:'s',l:'Estado',          cell:(r,s)=>`<td style="${s}">${r.estado==='EXITOSO'?'<span style="background:#d4edda;color:#155724;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">✓ Exitoso</span>':r.estado?`<span style="background:#f8d7da;color:#721c24;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">✗ ${esc(r.estado)}</span>`:'—'}</td>`},
-  {k:'fcita',       t:'s',l:'Cita puerto',     cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fcita)}</td>`},
-  {k:'fcita_repr',  t:'s',l:'Cita reprog.',    cell:(r,s)=>`<td style="${s};white-space:nowrap;color:var(--warn)">${esc(r.fcita_repr)||'—'}</td>`},
-  {k:'resp_repr',   t:'s',l:'Resp. reprog.',   cell:(r,s)=>`<td style="${s}">${esc(r.resp_repr)||'—'}</td>`},
-  {k:'motivo_repr', t:'s',l:'Motivo reprog.',  cell:(r,s)=>`<td style="${s}">${esc(r.motivo_repr)||'—'}</td>`},
-  {k:'fllpuerto',   t:'s',l:'Llegada puerto',  cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fllpuerto)}</td>`},
+  {k:'fplanta_real', t:'s',l:'Llegada planta',  cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fplanta_real)||'—'}</td>`},
+  {k:'fcita',        t:'s',l:'Cita puerto',    cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fcita)}</td>`},
+  {k:'fcita_repr',   t:'s',l:'Cita reprog.',   cell:(r,s)=>`<td style="${s};white-space:nowrap;color:var(--warn)">${esc(r.fcita_repr)||'—'}</td>`},
+  {k:'resp_repr',    t:'s',l:'Resp. reprog.',  cell:(r,s)=>`<td style="${s}">${esc(r.resp_repr)||'—'}</td>`},
+  {k:'motivo_repr',  t:'s',l:'Motivo reprog.', cell:(r,s)=>`<td style="${s}">${esc(r.motivo_repr)||'—'}</td>`},
+  {k:'fsalida',      t:'s',l:'Salida planta',  cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fsalida)||'—'}</td>`},
+  {k:'fllpuerto',    t:'s',l:'Llegada puerto', cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fllpuerto)}</td>`},
   {k:'cumpl_cita',  t:'s',l:'Cumpl. cita',     cell:(r,s)=>{
     if(SAJ.ll.modo==='eficiente'){
       if(r.delta_min==null)return `<td style="${s}"><span style="color:var(--ink-3);font-size:10px">Sin fecha</span></td>`;
@@ -2081,7 +2083,7 @@ function renderAjoverLlenos(){
         <span style="font-weight:400;font-size:10px"> — ${fN(nImputables)} imputable${nImputables!==1?'s':''} a Tractocar · ${fN(nTotal-nImputables)} no imputable${nTotal-nImputables!==1?'s':''}</span>
         <span style="font-size:10px;color:var(--ink-3);font-weight:400;margin-left:4px">· modo ${SAJ.ll.modo==='eficiente'?'Eficiente':'Real'}</span>
       </div>
-      <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;max-width:680px">
+      <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;max-width:680px;margin:0 auto">
         <div style="flex-shrink:0">
           <svg viewBox="0 0 ${W} ${H}" style="width:${W}px;height:${H}px;display:block">
             ${innerSvg}${outerSvg}${labelSvg}
