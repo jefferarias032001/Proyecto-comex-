@@ -1827,8 +1827,7 @@ function renderAjoverVacios(){
     </div>`;
   })();
 
-  // ── Gráfico diario (todas las filas, sin filtros) ────────────────────────
-  _chartDiario(allVacRows,'faten',r=>r.cumpl==='A tiempo','ajVacDaily','Vaciós',SAJ.vac.mes||null);
+  $('ajVacDaily').innerHTML='';
 
   // ── Filas filtradas por mes y/o día ──────────────────────────────────────
   const fm=SAJ.vac.mes, fd=SAJ.vac.dia==='ayer'?_ayerKey():null;
@@ -1845,47 +1844,23 @@ function renderAjoverVacios(){
   $('ajVacHint').textContent=`${fN(filtVac.length)} registros${fd?' · ayer ('+fd+')':fm?' · '+fm:''}`;
   const ayerVacBtn=$('ajVacAyer');if(ayerVacBtn){const on=SAJ.vac.dia==='ayer';ayerVacBtn.style.background=on?'#3b82f6':'rgba(255,255,255,.06)';ayerVacBtn.style.color=on?'#fff':'#94a3b8';}
 
-  const _gV=(pct,color,gid)=>{const R=38,C=+(2*Math.PI*R).toFixed(1);return `<svg width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="${R}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="9"/><circle cx="50" cy="50" r="${R}" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round" stroke-dasharray="0 ${C}" stroke-dashoffset="${+(C*.25).toFixed(1)}" id="${gid}" style="transition:stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1)"/><text x="50" y="46" text-anchor="middle" fill="${color}" font-size="16" font-weight="800" font-family="inherit">${pct}%</text><text x="50" y="58" text-anchor="middle" fill="rgba(255,255,255,.45)" font-size="8" font-family="inherit">cumplimiento</text></svg>`;};
   const _cV=(v,cid,col='#f1f5f9')=>`<span id="${cid}" data-target="${v}" style="font-size:36px;font-weight:900;color:${col};line-height:1;letter-spacing:-.03em">0</span>`;
-  const cV=+pctOk>=90?'#22c55e':+pctOk>=70?'#f59e0b':'#ef4444';
   $('ajVacKpis').innerHTML=`
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
       <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeUp .45s ease both">
         <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Total vaciós</div>
         ${_cV(filtVac.length,'cnt_vac_tot')}
         <div style="font-size:12px;color:#475569;margin-top:4px">registros</div>
-        <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
-          <span style="font-size:10px;background:rgba(34,197,94,.15);color:#4ade80;padding:2px 8px;border-radius:20px">${fN(fOkV)} a tiempo</span>
-          <span style="font-size:10px;background:rgba(239,68,68,.15);color:#f87171;padding:2px 8px;border-radius:20px">${fN(fTardV)} tarde</span>
-        </div>
       </div>
-      <div style="background:linear-gradient(135deg,#0f2720,#052e16);border:1px solid rgba(34,197,94,.15);border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeUp .45s ease both;animation-delay:.08s;display:flex;flex-direction:column;align-items:center">
-        <div style="font-size:10px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">A tiempo</div>
-        ${_gV(pctOk,cV,'gv_vac')}
-        <div style="text-align:center;margin-top:-2px">
-          <span style="font-size:12px;color:#86efac">${fN(fOkV)} ok</span>
-          <span style="font-size:12px;color:#475569;margin:0 5px">/</span>
-          <span style="font-size:12px;color:#f87171">${fN(fTardV)} tarde</span>
-        </div>
-      </div>
-      <div style="background:linear-gradient(135deg,#1c0a0a,#2d1010);border:1px solid rgba(239,68,68,.15);border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeUp .45s ease both;animation-delay:.16s">
-        <div style="font-size:10px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">Alertas</div>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <div style="display:flex;align-items:center;justify-content:space-between">
-            <span style="font-size:12px;color:#94a3b8">Tarde</span>
-            <span style="font-size:26px;font-weight:800;color:#ef4444">${fN(fTardV)}</span>
-          </div>
-          <div style="height:1px;background:rgba(255,255,255,.05)"></div>
-          <div style="display:flex;align-items:center;justify-content:space-between">
-            <span style="font-size:12px;color:#94a3b8">Sin fecha</span>
-            <span style="font-size:26px;font-weight:800;color:#94a3b8">${fN(fSinFV)}</span>
-          </div>
+      <div style="background:linear-gradient(135deg,#1c0a0a,#2d1010);border:1px solid rgba(239,68,68,.15);border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeUp .45s ease both;animation-delay:.08s">
+        <div style="font-size:10px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">Sin fecha</div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:12px;color:#94a3b8">Registros incompletos</span>
+          <span style="font-size:26px;font-weight:800;color:#94a3b8">${fN(fSinFV)}</span>
         </div>
       </div>
     </div>`;
   setTimeout(()=>{
-    const arcV=2*Math.PI*38*(+pctOk/100);const totC=2*Math.PI*38;
-    const eg=document.getElementById('gv_vac');if(eg)eg.style.strokeDasharray=`${arcV.toFixed(1)} ${(totC-arcV).toFixed(1)}`;
     const ec=document.getElementById('cnt_vac_tot');if(ec){const target=+ec.dataset.target;let v=0;const s=performance.now();const tick=t=>{const p=Math.min(1,(t-s)/900);v=Math.round(p*target);ec.textContent=fN(v);if(p<1)requestAnimationFrame(tick);};requestAnimationFrame(tick);}
   },50);
   _renderAlertas(filtVac,'vacios','ajVacAlertas');
