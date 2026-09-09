@@ -1756,7 +1756,8 @@ function renderAjoverVacios(){
 
   // ── Tendencia mensual (usa TODAS las filas, sin filtro de mes) ───────────
   const allVacRows=va.rows||[];
-  const mesesAll=[...new Set(allVacRows.map(r=>r.mes).filter(Boolean))].sort();
+  const _mesOrd=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+  const mesesAll=[...new Set(allVacRows.map(r=>r.mes).filter(Boolean))].sort((a,b)=>(_mesOrd.indexOf(a.split(' ')[0])+12*(+(a.split(' ')[1]||0)))-(_mesOrd.indexOf(b.split(' ')[0])+12*(+(b.split(' ')[1]||0))));
   (function(){
     if(mesesAll.length<2){$('ajVacTrend').innerHTML='';return;}
     const byMes={};
