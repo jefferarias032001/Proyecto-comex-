@@ -420,10 +420,10 @@
             </div>
           </div>
         </div>
-        <div id="ajVacTrend" style="margin:0 16px 14px"></div>
         <div id="ajVacDaily" style="margin:0 16px 14px"></div>
         <div id="ajVacKpis" style="margin:0 16px 14px"></div>
         <div id="ajVacAlertas" style="margin:0 16px 12px"></div>
+        <div id="ajVacTrend" style="margin:0 16px 14px"></div>
         <div style="margin:0 16px 12px" id="ajVacPromedios"></div>
         <div style="display:flex;gap:16px;margin:0 16px 12px;flex-wrap:wrap">
           <div style="flex:1;min-width:200px"><div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">Por Patio</div><div id="ajVacPatios"></div></div>
@@ -1761,7 +1761,7 @@ function renderAjoverVacios(){
     if(mesesAll.length<2){$('ajVacTrend').innerHTML='';return;}
     const byMes={};
     allVacRows.forEach(r=>{if(!r.mes)return;if(!byMes[r.mes])byMes[r.mes]={tot:0};byMes[r.mes].tot++;});
-    const BW=46,GAP=14,LP=34,RP=8,TP=26,BP=44,PH=100;
+    const BW=36,GAP=10,LP=30,RP=8,TP=20,BP=38,PH=60;
     const N=mesesAll.length,PW=LP+N*(BW+GAP)-GAP+RP,SVH=TP+PH+BP;
     const tots=mesesAll.map(m=>byMes[m].tot);
     const maxTot=Math.max(...tots)||1;
