@@ -682,6 +682,11 @@ function _applyAuth(){
     $('userLabel').textContent=s.name||s.email;
     $('userAvatar').textContent=(s.name||s.email).charAt(0).toUpperCase();
   }
+  // Ocultar filtros y KPIs financieros para usuarios sin acceso total
+  if(s.tabs!=='all'){
+    const fbEl=$('filterbar');if(fbEl)fbEl.style.display='none';
+    const kpEl=$('kpis');if(kpEl)kpEl.style.display='none';
+  }
   // Filtrar tabs
   if(s.tabs!=='all'){
     document.querySelectorAll('.tab[data-tab]').forEach(btn=>{
