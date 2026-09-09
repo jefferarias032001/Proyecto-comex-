@@ -479,7 +479,6 @@
             </div>
           </div>
         </div>
-        <div id="ajLlDaily" style="margin:0 16px 14px"></div>
         <div id="ajLlKpis" style="margin:0 16px 14px"></div>
         <div style="margin:0 16px 12px" id="ajLlPromedios"></div>
         <!-- Tendencias lado a lado -->
@@ -487,6 +486,7 @@
           <div style="flex:1;min-width:280px" id="ajLlTendencia"></div>
           <div style="flex:1;min-width:280px" id="ajLlTendMov"></div>
         </div>
+        <div id="ajLlDaily" style="margin:0 16px 14px"></div>
         <div style="margin:0 16px 16px" id="ajLlTendTiempos"></div>
         <div style="margin:0 16px 12px" id="ajLlNoCumpl"></div>
         <div style="margin:0 16px 16px" id="ajLlNoCumplDetalle"></div>
@@ -1491,43 +1491,66 @@ function _dayKey(s){
   return null;
 }
 function _ayerKey(){const d=new Date();d.setDate(d.getDate()-1);return d.toISOString().slice(0,10);}
-function _chartDiario(allRows,dateField,cumplFn,containerId,entityLabel){
+function _chartDiario(allRows,dateField,cumplFn,containerId,entityLabel,mesFilter){
   const byDia={};
   allRows.forEach(r=>{
     const d=_dayKey(r[dateField]);if(!d)return;
     if(!byDia[d])byDia[d]={ok:0,tot:0};
     byDia[d].tot++;if(cumplFn(r))byDia[d].ok++;
   });
-  const dias=Object.keys(byDia).sort().slice(-31);
-  if(dias.length<2){$(containerId).innerHTML='';return;}
-  const BW=Math.max(18,Math.min(40,Math.floor((600-40)/(dias.length+1)))),GAP=Math.max(4,Math.floor(BW*.2));
-  const LP=34,RP=8,TP=26,BP=46,PH=90;
-  const N=dias.length,PW=LP+N*(BW+GAP)-GAP+RP,SVH=TP+PH+BP;
-  // chart 1: cumpl %
-  const pcts=dias.map(d=>{const v=byDia[d];return v.tot?+(v.ok/v.tot*100).toFixed(1):0;});
-  const pts1=dias.map((d,i)=>{const x=(LP+i*(BW+GAP)+BW/2).toFixed(1),y=(TP+PH-(pcts[i]/100)*PH).toFixed(1);return {x,y,col:pcts[i]>=90?'#22c55e':pcts[i]>=70?'#f59e0b':'#ef4444'};});
+  // Determinar qué mes mostrar
+  let mes=mesFilter;
+  if(!mes){
+    const allKeys=Object.keys(byDia).sort();
+    if(!allKeys.length){$(containerId).innerHTML='';return;}
+    mes=allKeys[allKeys.length-1].slice(0,7);
+  }
+  // Generar todos los días del mes
+  const [yy,mm]=mes.split('-').map(Number);
+  const daysInMes=new Date(yy,mm,0).getDate();
+  const dias=[];
+  for(let d=1;d<=daysInMes;d++)dias.push(`${mes}-${String(d).padStart(2,'0')}`);
+  // Verificar que hay datos en el mes
+  if(!dias.some(d=>byDia[d]&&byDia[d].tot>0)){$(containerId).innerHTML='';return;}
+  const msNom=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][mm-1]+' '+yy;
+  const N=dias.length;
+  const BW=Math.max(13,Math.min(32,Math.floor((600-40)/(N+1))));
+  const GAP=Math.max(2,Math.floor(BW*.12));
+  const LP=34,RP=8,TP=26,BP=34,PH=90;
+  const PW=LP+N*(BW+GAP)-GAP+RP,SVH=TP+PH+BP;
+  // labels del eje X: número de día, solo par si >20 días
+  const xlabs=dias.map((d,i)=>{
+    const x=(LP+i*(BW+GAP)+BW/2).toFixed(1),day=+d.split('-')[2];
+    const tot=(byDia[d]||{tot:0}).tot;
+    if(N>20&&day%2===0)return '';
+    return `<text x="${x}" y="${TP+PH+13}" text-anchor="middle" fill="#64748b" font-size="8" font-family="inherit">${day}</text>`+(tot>0?`<text x="${x}" y="${TP+PH+23}" text-anchor="middle" fill="#475569" font-size="7" font-family="inherit">${fN(tot)}</text>`:'');
+  }).join('');
+  // Chart 1: cumpl %
+  const pcts=dias.map(d=>{const v=byDia[d];return v&&v.tot?+(v.ok/v.tot*100).toFixed(1):null;});
+  const pts1=dias.map((d,i)=>{const p=pcts[i];if(p===null)return null;const x=(LP+i*(BW+GAP)+BW/2).toFixed(1),y=(TP+PH-(p/100)*PH).toFixed(1),col=p>=90?'#22c55e':p>=70?'#f59e0b':'#ef4444';return {x,y,col};});
   const grid1=[0,25,50,75,100].map(p=>{const y=(TP+PH-p/100*PH).toFixed(1);return `<line x1="${LP}" y1="${y}" x2="${PW-RP}" y2="${y}" stroke="rgba(255,255,255,.04)" stroke-width="1"/><text x="${LP-4}" y="${(+y+3).toFixed(0)}" text-anchor="end" fill="#334155" font-size="8" font-family="inherit">${p}%</text>`;}).join('');
-  const bars1=dias.map((d,i)=>{const p=pcts[i],x=LP+i*(BW+GAP),bh=Math.max(2,Math.round(p/100*PH)),y=TP+PH-bh,col=pts1[i].col,bg=p>=90?'rgba(34,197,94,.13)':p>=70?'rgba(245,158,11,.13)':'rgba(239,68,68,.13)';return `<rect x="${x}" y="${y}" width="${BW}" height="${bh}" fill="${bg}" rx="3"/><text x="${x+BW/2}" y="${y-4}" text-anchor="middle" fill="${col}" font-size="9" font-weight="700" font-family="inherit">${p}%</text>`;}).join('');
-  const line1=`<polyline points="${pts1.map(p=>p.x+','+p.y).join(' ')}" fill="none" stroke="rgba(34,197,94,.5)" stroke-width="1.5" stroke-linejoin="round"/>`;
-  const dots1=pts1.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="3" fill="${p.col}" stroke="#0f172a" stroke-width="1.5"/>`).join('');
-  const xlabs=dias.map((d,i)=>{const x=(LP+i*(BW+GAP)+BW/2).toFixed(1),p=d.split('-');return `<text x="${x}" y="${TP+PH+14}" text-anchor="middle" fill="#64748b" font-size="8" font-family="inherit">${p[2]}/${p[1]}</text><text x="${x}" y="${TP+PH+26}" text-anchor="middle" fill="#475569" font-size="7" font-family="inherit">${fN(byDia[d].tot)}</text>`;}).join('');
+  const bars1=dias.map((d,i)=>{const p=pcts[i],x=LP+i*(BW+GAP);if(p===null)return `<rect x="${x}" y="${TP}" width="${BW}" height="${PH}" fill="rgba(255,255,255,.015)" rx="2"/>`;const bh=Math.max(2,Math.round(p/100*PH)),y=TP+PH-bh,col=pts1[i].col,bg=p>=90?'rgba(34,197,94,.13)':p>=70?'rgba(245,158,11,.13)':'rgba(239,68,68,.13)';return `<rect x="${x}" y="${y}" width="${BW}" height="${bh}" fill="${bg}" rx="2"/><text x="${x+BW/2}" y="${y-3}" text-anchor="middle" fill="${col}" font-size="8" font-weight="700" font-family="inherit">${p}%</text>`;}).join('');
+  const vp1=pts1.filter(Boolean);
+  const line1=vp1.length>1?`<polyline points="${vp1.map(p=>p.x+','+p.y).join(' ')}" fill="none" stroke="rgba(34,197,94,.5)" stroke-width="1.5" stroke-linejoin="round"/>`:'';
+  const dots1=vp1.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="3" fill="${p.col}" stroke="#0f172a" stroke-width="1.5"/>`).join('');
   const svg1=`<svg width="100%" viewBox="0 0 ${PW} ${SVH}" style="min-width:${PW}px;overflow:visible">${grid1}${bars1}${line1}${dots1}${xlabs}</svg>`;
-  // chart 2: volumen
-  const tots=dias.map(d=>byDia[d].tot),maxT=Math.max(...tots)||1;
-  const pts2=dias.map((d,i)=>{const x=(LP+i*(BW+GAP)+BW/2).toFixed(1),y=(TP+PH-(tots[i]/maxT)*PH).toFixed(1);return {x,y};});
+  // Chart 2: volumen
+  const tots=dias.map(d=>(byDia[d]||{tot:0}).tot),maxT=Math.max(...tots)||1;
+  const pts2=dias.map((d,i)=>{const t=tots[i];if(!t)return null;const x=(LP+i*(BW+GAP)+BW/2).toFixed(1),y=(TP+PH-(t/maxT)*PH).toFixed(1);return {x,y};});
   const grid2=[0,.25,.5,.75,1].map(f=>{const y=(TP+PH-f*PH).toFixed(1);return `<line x1="${LP}" y1="${y}" x2="${PW-RP}" y2="${y}" stroke="rgba(255,255,255,.04)" stroke-width="1"/><text x="${LP-4}" y="${(+y+3).toFixed(0)}" text-anchor="end" fill="#334155" font-size="8" font-family="inherit">${fN(Math.round(f*maxT))}</text>`;}).join('');
-  const bars2=dias.map((d,i)=>{const t=tots[i],x=LP+i*(BW+GAP),bh=Math.max(2,Math.round(t/maxT*PH)),y=TP+PH-bh;return `<rect x="${x}" y="${y}" width="${BW}" height="${bh}" fill="rgba(148,163,184,.12)" rx="3"/><text x="${x+BW/2}" y="${y-4}" text-anchor="middle" fill="#94a3b8" font-size="9" font-weight="700" font-family="inherit">${fN(t)}</text>`;}).join('');
-  const line2=`<polyline points="${pts2.map(p=>p.x+','+p.y).join(' ')}" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-linejoin="round"/>`;
-  const dots2=pts2.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="3" fill="#60a5fa" stroke="#0f172a" stroke-width="1.5"/>`).join('');
+  const bars2=dias.map((d,i)=>{const t=tots[i],x=LP+i*(BW+GAP);if(!t)return `<rect x="${x}" y="${TP}" width="${BW}" height="${PH}" fill="rgba(255,255,255,.015)" rx="2"/>`;const bh=Math.max(2,Math.round(t/maxT*PH)),y=TP+PH-bh;return `<rect x="${x}" y="${y}" width="${BW}" height="${bh}" fill="rgba(148,163,184,.12)" rx="2"/><text x="${x+BW/2}" y="${y-3}" text-anchor="middle" fill="#94a3b8" font-size="8" font-weight="700" font-family="inherit">${fN(t)}</text>`;}).join('');
+  const vp2=pts2.filter(Boolean);
+  const line2=vp2.length>1?`<polyline points="${vp2.map(p=>p.x+','+p.y).join(' ')}" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-linejoin="round"/>`:'';
+  const dots2=vp2.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="3" fill="#60a5fa" stroke="#0f172a" stroke-width="1.5"/>`).join('');
   const svg2=`<svg width="100%" viewBox="0 0 ${PW} ${SVH}" style="min-width:${PW}px;overflow:visible">${grid2}${bars2}${line2}${dots2}${xlabs}</svg>`;
   const card=`background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px 18px;flex:1;min-width:0`;
   $(containerId).innerHTML=`<div style="display:flex;gap:14px;flex-wrap:wrap">
     <div style="${card}">
-      <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">Cumplimiento de cita — día a día (últimos 31 días)</div>
+      <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">Cumpl. cita — ${msNom} (día a día)</div>
       <div style="overflow-x:auto">${svg1}</div>
     </div>
     <div style="${card}">
-      <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">${entityLabel} atendidos — día a día</div>
+      <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">${entityLabel} atendidos — ${msNom}</div>
       <div style="overflow-x:auto">${svg2}</div>
     </div>
   </div>`;
@@ -1709,7 +1732,7 @@ function renderAjoverVacios(){
   })();
 
   // ── Gráfico diario (todas las filas, sin filtros) ────────────────────────
-  _chartDiario(allVacRows,'faten',r=>r.cumpl==='A tiempo','ajVacDaily','Vaciós');
+  _chartDiario(allVacRows,'faten',r=>r.cumpl==='A tiempo','ajVacDaily','Vaciós',SAJ.vac.mes||null);
 
   // ── Filas filtradas por mes y/o día ──────────────────────────────────────
   const fm=SAJ.vac.mes, fd=SAJ.vac.dia==='ayer'?_ayerKey():null;
@@ -1856,9 +1879,7 @@ function renderAjoverLlenos(){
     meses.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;llMesEl.appendChild(o);});
   }
 
-  // ── Gráfico diario (todas las filas, sin filtros) ────────────────────────
   const allRows=ll.rows||[];
-  _chartDiario(allRows,'fecha',r=>r.cumpl_cita==='A tiempo','ajLlDaily','Llenos');
 
   // ── filas filtradas por mes y/o día ──────────────────────────────────────
   const _llFd=SAJ.ll.dia==='ayer'?_ayerKey():null;
@@ -2041,48 +2062,34 @@ function renderAjoverLlenos(){
     });
   } else { $('ajLlTendMov').innerHTML=''; }
 
-  // ── gráfico 3: tiempos de operación mes a mes ────────────────────────────
+  // ── Gráfico diario — todos los días del mes seleccionado ────────────────
+  _chartDiario(allRows,'fecha',r=>r.cumpl_cita==='A tiempo','ajLlDaily','Llenos',SAJ.ll.mes||null);
+
+  // ── tabla de tiempos promedio mes a mes ─────────────────────────────────
   if(tend.length){
     const tendT=tend.filter(t=>t.dt1_avg!=null||t.dt2_avg!=null||t.dt3_avg!=null);
     if(tendT.length){
-      const _fmtMin=m=>{if(m==null)return'—';const h=Math.floor(m/60),mn=Math.round(m%60);return h>0?`${h}h ${mn}m`:`${mn}m`;};
+      const _fmtMin=m=>{if(m==null||isNaN(m))return'—';const h=Math.floor(m/60),mn=Math.round(m%60);return h>0?`${h}h ${mn}m`:`${mn}m`;};
       const _mnLbl=s=>{const p=s.split('-');const ms=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];return (ms[parseInt(p[1])-1]||p[1])+"'"+p[0].slice(2);};
-      const W=640,H=280,PL=52,PR=12,PT=32,PB=50;
-      const pw=W-PL-PR,ph=H-PT-PB;
-      const SERIES=[
-        {key:'dt1_avg',label:'Retraso llegada a planta',color:'#c82333'},
-        {key:'dt2_avg',label:'Cargue en planta',color:'#d48000'},
-        {key:'dt3_avg',label:'Tránsito a puerto',color:'#0C4A5A'},
-      ];
-      const allV=SERIES.flatMap(s=>tendT.map(t=>t[s.key]||0));
-      const maxV=Math.max(...allV,1);
-      const cW=pw/tendT.length;
-      const bW=Math.min(18,cW*0.22);
-      const gap=2;
-      const groupW=SERIES.length*(bW+gap)-gap;
-      const yS=v=>PT+ph*(1-(v/maxV));
-      let svg='';
-      [0,0.25,0.5,0.75,1].forEach(f=>{
-        const v=maxV*f,y=yS(v);
-        svg+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="var(--line-2)" stroke-width="${f===0?1.5:0.7}"/>`;
-        svg+=`<text x="${PL-4}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--ink-3)">${_fmtMin(v)}</text>`;
-      });
-      tendT.forEach((t,i)=>{
-        const cx=PL+i*cW+cW/2;
-        SERIES.forEach((s,j)=>{
-          const v=t[s.key];if(v==null)return;
-          const bx=cx-groupW/2+j*(bW+gap);
-          const by=yS(v),bh=Math.max(0,H-PB-by);
-          svg+=`<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bW}" height="${bh.toFixed(1)}" fill="${s.color}" rx="2" opacity="0.85"><title>${s.label}: ${_fmtMin(v)}</title></rect>`;
-          svg+=`<text x="${(bx+bW/2).toFixed(1)}" y="${(by-4).toFixed(1)}" text-anchor="middle" font-size="8" fill="${s.color}" font-weight="700">${_fmtMin(v)}</text>`;
-        });
-        svg+=`<text x="${cx.toFixed(1)}" y="${H-PB+14}" text-anchor="middle" font-size="10" fill="var(--ink-3)">${_mnLbl(t.mes)}</text>`;
-      });
-      const leg=SERIES.map(s=>`<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--ink-2)"><span style="width:12px;height:10px;background:${s.color};display:inline-block;border-radius:2px;opacity:0.85"></span>${s.label}</span>`).join('');
+      const filas=tendT.map((t,i)=>`<tr style="border-bottom:1px solid var(--line-2);background:${i%2===0?'rgba(255,255,255,.02)':'transparent'}">
+        <td style="padding:6px 14px;font-size:12px;color:var(--ink-2);font-weight:600;white-space:nowrap">${_mnLbl(t.mes)}</td>
+        <td style="padding:6px 14px;font-size:12px;color:var(--ink-1);text-align:center">${_fmtMin(t.dt1_avg)}</td>
+        <td style="padding:6px 14px;font-size:12px;color:var(--ink-1);text-align:center">${_fmtMin(t.dt2_avg)}</td>
+        <td style="padding:6px 14px;font-size:12px;color:var(--ink-1);text-align:center">${_fmtMin(t.dt3_avg)}</td>
+      </tr>`).join('');
       $('ajLlTendTiempos').innerHTML=`
-        <div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">Tiempos de operación mes a mes</div>
-        <div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" style="width:100%;min-width:${Math.max(360,tendT.length*72)}px;height:${H}px;display:block">${svg}</svg></div>
-        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;padding-left:${PL}px">${leg}</div>`;
+        <div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:8px">Tiempos promedio de operación mes a mes</div>
+        <div style="overflow-x:auto">
+          <table style="border-collapse:collapse;width:100%;min-width:360px">
+            <thead><tr style="border-bottom:2px solid var(--line-2)">
+              <th style="padding:6px 14px;font-size:10px;color:var(--ink-3);font-weight:700;text-align:left;text-transform:uppercase">Mes</th>
+              <th style="padding:6px 14px;font-size:10px;color:#c82333;font-weight:700;text-align:center">⏱ Retraso llegada</th>
+              <th style="padding:6px 14px;font-size:10px;color:#d48000;font-weight:700;text-align:center">⏱ Cargue en planta</th>
+              <th style="padding:6px 14px;font-size:10px;color:#0C4A5A;font-weight:700;text-align:center">⏱ Tránsito a puerto</th>
+            </tr></thead>
+            <tbody>${filas}</tbody>
+          </table>
+        </div>`;
     } else { $('ajLlTendTiempos').innerHTML=''; }
   } else { $('ajLlTendTiempos').innerHTML=''; }
 
