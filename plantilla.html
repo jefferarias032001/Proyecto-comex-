@@ -2003,26 +2003,42 @@ function renderAjoverLlenos(){
   const fExterno=filtRows.filter(_isExterno).length;
   const fReprogAjover=filtRows.filter(_isReprogAjover).length;
   // ── Pie charts de incumplimiento ────────────────────────────────────────
+  // noCumplRows = solo imputables a Tractocar (para KPI)
   const noCumplRows=filtRows.filter(_isNoCumpl);
+  // allTardeRows = TODOS los tarde sin importar responsable
+  const allTardeRows=filtRows.filter(r=>SAJ.ll.modo==='eficiente'
+    ?(r.delta_min!=null&&r.delta_min>_win)
+    :(r.cumpl_cita&&r.cumpl_cita.startsWith('Tarde')));
   const _PC=['#60a5fa','#f87171','#34d399','#fbbf24','#a78bfa','#fb923c','#f472b6','#94a3b8'];
   const _grp=(rows,key,alias)=>{const m={};rows.forEach(r=>{const k=r[key]||alias;m[k]=(m[k]||0)+1;});return m;};
-  // by clasif
-  const byCl=_grp(noCumplRows,'clasif','Sin clasificar');
+  // Por causa (clasif) — todos los tarde
+  const byCl=_grp(allTardeRows,'clasif','Sin clasificar');
   const clSlices=Object.entries(byCl).sort((a,b)=>b[1]-a[1]).map(([l,v],i)=>({l,v,c:_PC[i%_PC.length]}));
-  // by motivo (top 6 + otros)
-  const byMot=_grp(noCumplRows,'motivo','Sin motivo');
+  // Por motivo (top 6 + otros) — todos los tarde
+  const byMot=_grp(allTardeRows,'motivo','Sin motivo');
   const motSrt=Object.entries(byMot).sort((a,b)=>b[1]-a[1]);
   const top6=motSrt.slice(0,6),otros=motSrt.slice(6).reduce((s,[,v])=>s+v,0);
   const motSlices=[...top6.map(([l,v],i)=>({l,v,c:_PC[i%_PC.length]})),...(otros>0?[{l:'Otros',v:otros,c:'#475569'}]:[])];
-  // by resp_repr
-  const byResp=_grp(noCumplRows,'resp_repr','Sin responsable');
+  // Por responsable — derivado de cumpl_cita (Externo / Ajover / Tractocar)
+  const byResp={};
+  allTardeRows.forEach(r=>{
+    const resp=_isExterno(r)?'Externo':_isReprogAjover(r)?'Ajover':(r.resp_repr||'Tractocar');
+    byResp[resp]=(byResp[resp]||0)+1;
+  });
   const respSlices=Object.entries(byResp).sort((a,b)=>b[1]-a[1]).map(([l,v],i)=>({l,v,c:_PC[i%_PC.length]}));
-  $('ajLlPies').innerHTML=noCumplRows.length===0
-    ?'<div style="font-size:11px;color:var(--pos);padding:6px 0">✓ Sin incumplimientos en el período seleccionado</div>'
-    :`<div style="font-size:11px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Análisis de incumplimientos · ${fN(noCumplRows.length)} casos (modo ${SAJ.ll.modo==='eficiente'?'Eficiente':'Real'})</div>
+  const nImputables=noCumplRows.length,nTotal=allTardeRows.length;
+  $('ajLlPies').innerHTML=allTardeRows.length===0
+    ?'<div style="font-size:11px;color:var(--pos);padding:6px 0">✓ Sin citas no cumplidas en el período seleccionado</div>'
+    :`<div style="font-size:11px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">
+        Análisis citas no cumplidas · ${fN(nTotal)} total
+        <span style="font-weight:400;color:#f87171;font-size:10px">
+          (${fN(nImputables)} imputable${nImputables!==1?'s':''} a Tractocar · ${fN(nTotal-nImputables)} no imputable${nTotal-nImputables!==1?'s':''})
+        </span>
+        <span style="font-size:10px;color:#94a3b8;font-weight:400;margin-left:6px">modo ${SAJ.ll.modo==='eficiente'?'Eficiente':'Real'}</span>
+      </div>
       <div style="display:flex;gap:12px;flex-wrap:wrap">
         ${clSlices.length?_ajPie(clSlices,'Por causa'):''}
-        ${motSlices.length?_ajPie(motSlices,'Por motivo'):''}
+        ${motSlices.length?_ajPie(motSlices,'Por motivo reprogramación'):''}
         ${respSlices.length?_ajPie(respSlices,'Por responsable'):''}
       </div>`;
   const fExitosos=filtRows.filter(r=>r.estado==='EXITOSO').length;
@@ -2188,36 +2204,38 @@ function renderAjoverLlenos(){
     } else { $('ajLlTendTiempos').innerHTML=''; }
   } else { $('ajLlTendTiempos').innerHTML=''; }
 
-  // ── motivos de incumplimiento (desde filas filtradas) ────────────────────
-  const ncRows=filtRows.filter(_isNoCumpl);
+  // ── motivos de incumplimiento — todos los tarde (incluyendo externo y reprog) ──
+  const ncRows=allTardeRows;
   const ncmFilt={};
   ncRows.forEach(r=>{const m=r.motivo||'(sin motivo)';ncmFilt[m]=(ncmFilt[m]||0)+1;});
   if(ncRows.length){
     $('ajLlNoCumpl').innerHTML=`<div style="padding:12px;background:var(--surface-2);border-radius:8px;border-left:3px solid var(--neg)">
-      <div style="font-size:11px;font-weight:700;color:var(--neg);text-transform:uppercase;margin-bottom:8px">⚠ Causas de incumplimiento — ${fN(ncRows.length)} registros</div>
+      <div style="font-size:11px;font-weight:700;color:var(--neg);text-transform:uppercase;margin-bottom:4px">⚠ Motivos de incumplimiento — ${fN(ncRows.length)} citas no cumplidas</div>
+      <div style="font-size:10px;color:var(--ink-3);margin-bottom:8px">${fN(noCumplRows.length)} imputable${noCumplRows.length!==1?'s':''} a Tractocar · ${fN(ncRows.length-noCumplRows.length)} no imputable${ncRows.length-noCumplRows.length!==1?'s':''} (Externo / Ajover)</div>
       <div id="ajLlNoCumplBars"></div></div>`;
     _ajBarras(ncmFilt,'ajLlNoCumplBars');
   } else { $('ajLlNoCumpl').innerHTML=''; }
 
-  // ── detalle de los que NO cumplen cita ───────────────────────────────────
+  // ── detalle de todos los que no cumplieron cita ──────────────────────────
   if(ncRows.length){
     const thD='padding:6px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:2px solid var(--line);white-space:nowrap;background:var(--surface-2)';
     const tdD='padding:5px 10px;border-bottom:1px solid var(--line-2);font-size:11px';
     const sorted=[...ncRows].sort((a,b)=>{
-      const pa=a.cumpl_cita?parseInt(a.cumpl_cita.match(/\d+/)||0):0;
-      const pb=b.cumpl_cita?parseInt(b.cumpl_cita.match(/\d+/)||0):0;
+      const pa=a.delta_min??( a.cumpl_cita?parseInt(a.cumpl_cita.match(/\d+/)||0):0);
+      const pb=b.delta_min??( b.cumpl_cita?parseInt(b.cumpl_cita.match(/\d+/)||0):0);
       return pb-pa;
     });
     $('ajLlNoCumplDetalle').innerHTML=`
       <details open style="background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden">
         <summary style="padding:10px 16px;cursor:pointer;font-size:12px;font-weight:700;color:var(--neg);list-style:none;display:flex;align-items:center;gap:8px;background:var(--surface-2)">
-          <span>▾</span> Detalle: ${fN(ncRows.length)} contenedores que no cumplieron cita (ordenados por mayor retraso)
+          <span>▾</span> Detalle: ${fN(ncRows.length)} citas no cumplidas — ${fN(noCumplRows.length)} imputables a Tractocar · ${fN(ncRows.length-noCumplRows.length)} no imputables (ordenadas por mayor retraso)
         </summary>
         <div style="overflow-x:auto;max-height:320px;overflow-y:auto">
           <table style="width:100%;border-collapse:collapse;font-size:11px">
             <thead><tr>
               <th style="${thD}">Fecha atención</th>
               <th style="${thD}">Contenedor</th>
+              <th style="${thD}">Responsable</th>
               <th style="${thD}">Cita puerto</th>
               <th style="${thD}">Llegada puerto</th>
               <th style="${thD}">Retraso</th>
@@ -2226,17 +2244,22 @@ function renderAjoverLlenos(){
               <th style="${thD}">Motivo</th>
               <th style="${thD}">Observaciones</th>
             </tr></thead>
-            <tbody>${sorted.map(r=>`<tr>
+            <tbody>${sorted.map(r=>{
+              const resp=_isExterno(r)?'Externo':_isReprogAjover(r)?'Ajover':(r.resp_repr||'Tractocar');
+              const respCol=_isExterno(r)?'#0c5460':_isReprogAjover(r)?'#5b2d8e':'#721c24';
+              const respBg=_isExterno(r)?'#d1ecf1':_isReprogAjover(r)?'#e8d5f5':'#f8d7da';
+              return `<tr>
               <td style="${tdD};white-space:nowrap">${esc(r.fecha)}</td>
               <td style="${tdD};font-family:monospace">${esc(r.cont)}</td>
+              <td style="${tdD}"><span style="background:${respBg};color:${respCol};padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700">${esc(resp)}</span></td>
               <td style="${tdD};white-space:nowrap">${esc(r.fcita)}</td>
               <td style="${tdD};white-space:nowrap">${esc(r.fllpuerto)}</td>
-              <td style="${tdD};font-weight:700;color:var(--neg)">${esc(r.cumpl_cita)}</td>
+              <td style="${tdD}">${_pillCumpl(r.cumpl_cita)}</td>
               <td style="${tdD}">${esc(r.terminal)}</td>
               <td style="${tdD}">${esc(r.placa)}</td>
               <td style="${tdD};max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(r.motivo)}">${esc(r.motivo)||'—'}</td>
               <td style="${tdD};max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink-2)" title="${esc(r.obs)}">${esc(r.obs)||'—'}</td>
-            </tr>`).join('')}</tbody>
+            </tr>`;}).join('')}</tbody>
           </table>
         </div>
       </details>`;
