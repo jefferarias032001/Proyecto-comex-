@@ -2004,44 +2004,100 @@ function renderAjoverLlenos(){
   const fNoCumpl=filtRows.filter(_isNoCumpl).length;
   const fExterno=filtRows.filter(_isExterno).length;
   const fReprogAjover=filtRows.filter(_isReprogAjover).length;
-  // ── Pie charts de incumplimiento ────────────────────────────────────────
-  // noCumplRows = solo imputables a Tractocar (para KPI)
+  // ── Sunburst: anillo interior = responsable, anillo exterior = motivos ──
   const noCumplRows=filtRows.filter(_isNoCumpl);
-  // allTardeRows = TODOS los tarde sin importar responsable
   const allTardeRows=filtRows.filter(r=>SAJ.ll.modo==='eficiente'
     ?(r.delta_min!=null&&r.delta_min>_win)
     :(r.cumpl_cita&&r.cumpl_cita.startsWith('Tarde')));
-  const _PC=['#60a5fa','#f87171','#34d399','#fbbf24','#a78bfa','#fb923c','#f472b6','#94a3b8'];
-  const _grp=(rows,key,alias)=>{const m={};rows.forEach(r=>{const k=r[key]||alias;m[k]=(m[k]||0)+1;});return m;};
-  // Separar tarde por responsable
-  const tardeTractocar=allTardeRows.filter(r=>!_isExterno(r)&&!_isReprogAjover(r));
-  const tardeAjover=allTardeRows.filter(r=>_isReprogAjover(r));
-  const tardeExterno=allTardeRows.filter(r=>_isExterno(r));
-  // Por responsable — resumen global
-  const byResp={};
-  allTardeRows.forEach(r=>{
-    const resp=_isExterno(r)?'Externo':_isReprogAjover(r)?'Ajover':(r.resp_repr||'Tractocar');
-    byResp[resp]=(byResp[resp]||0)+1;
-  });
-  const respSlices=Object.entries(byResp).sort((a,b)=>b[1]-a[1]).map(([l,v],i)=>({l,v,c:_PC[i%_PC.length]}));
-  // Motivos por grupo
-  const _motSlices=rows=>{const byM=_grp(rows,'motivo','Sin motivo');const srt=Object.entries(byM).sort((a,b)=>b[1]-a[1]);const top=srt.slice(0,6),ot=srt.slice(6).reduce((s,[,v])=>s+v,0);return [...top.map(([l,v],i)=>({l,v,c:_PC[i%_PC.length]})),...(ot>0?[{l:'Otros',v:ot,c:'#475569'}]:[])];};
   const nImputables=noCumplRows.length,nTotal=allTardeRows.length;
-  $('ajLlPies').innerHTML=allTardeRows.length===0
-    ?'<div style="font-size:11px;color:var(--pos);padding:6px 0">✓ Sin citas no cumplidas en el período seleccionado</div>'
-    :`<div style="font-size:11px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">
-        Análisis citas no cumplidas · ${fN(nTotal)} total
-        <span style="font-weight:400;color:#f87171;font-size:10px">
-          (${fN(nImputables)} imputable${nImputables!==1?'s':''} a Tractocar · ${fN(nTotal-nImputables)} no imputable${nTotal-nImputables!==1?'s':''})
-        </span>
-        <span style="font-size:10px;color:#94a3b8;font-weight:400;margin-left:6px">modo ${SAJ.ll.modo==='eficiente'?'Eficiente':'Real'}</span>
-      </div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap">
-        ${respSlices.length?_ajPie(respSlices,'Por responsable'):''}
-        ${tardeTractocar.length?_ajPie(_motSlices(tardeTractocar),`Motivos Tractocar (${fN(tardeTractocar.length)})`):''}
-        ${tardeAjover.length?_ajPie(_motSlices(tardeAjover),`Motivos Ajover (${fN(tardeAjover.length)})`):''}
-        ${tardeExterno.length?_ajPie(_motSlices(tardeExterno),`Motivos Externos (${fN(tardeExterno.length)})`):''}
+  const _grp=(rows,key,alias)=>{const m={};rows.forEach(r=>{const k=r[key]||alias;m[k]=(m[k]||0)+1;});return m;};
+  if(!nTotal){
+    $('ajLlPies').innerHTML='<div style="font-size:11px;color:var(--pos);padding:6px 0">✓ Sin citas no cumplidas en el período seleccionado</div>';
+  } else {
+    // Color families: Tractocar=blue, Ajover=red, Externo=green
+    const RFAM={
+      Tractocar:['#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe'],
+      Ajover:   ['#dc2626','#ef4444','#f87171','#fca5a5','#fecaca'],
+      Externo:  ['#059669','#10b981','#34d399','#6ee7b7','#a7f3d0']
+    };
+    // Build groups: {responsable: {motivo: count}}
+    const grp={};
+    allTardeRows.forEach(r=>{
+      const resp=_isExterno(r)?'Externo':_isReprogAjover(r)?'Ajover':(r.resp_repr||'Tractocar');
+      const mot=r.motivo||'Sin motivo';
+      if(!grp[resp])grp[resp]={};
+      grp[resp][mot]=(grp[resp][mot]||0)+1;
+    });
+    const respList=['Tractocar','Ajover','Externo'].filter(r=>grp[r]);
+    // SVG config
+    const W=300,H=300,cx=150,cy=150,R1i=52,R1o=86,R2i=92,R2o=136;
+    // Helper: donut arc path
+    const _darc=(ri,ro,a0,a1,fill,sw=2)=>{
+      const full=Math.abs(a1-a0)>=2*Math.PI*0.9999;
+      if(full)return `<circle cx="${cx}" cy="${cy}" r="${ro}" fill="${fill}" stroke="var(--surface-2)" stroke-width="${sw}"/><circle cx="${cx}" cy="${cy}" r="${ri}" fill="var(--surface-2)"/>`;
+      const lf=(a1-a0)>Math.PI?1:0;
+      const p=(a,r)=>`${(cx+r*Math.cos(a)).toFixed(2)},${(cy+r*Math.sin(a)).toFixed(2)}`;
+      return `<path d="M${p(a0,ro)} A${ro},${ro} 0 ${lf},1 ${p(a1,ro)} L${p(a1,ri)} A${ri},${ri} 0 ${lf},0 ${p(a0,ri)} Z" fill="${fill}" stroke="var(--surface-2)" stroke-width="${sw}"/>`;
+    };
+    // Helper: text at midpoint of arc
+    const _atxt=(a0,a1,r,txt,fs,fw)=>{const a=(a0+a1)/2,x=(cx+r*Math.cos(a)).toFixed(1),y=(cy+r*Math.sin(a)).toFixed(1);return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="${fs}" font-weight="${fw}" font-family="inherit">${txt}</text>`;};
+    let innerSvg='',outerSvg='',labelSvg='';
+    let ga=-Math.PI/2;
+    const legend=respList.map(resp=>{
+      const mots=Object.entries(grp[resp]).sort((a,b)=>b[1]-a[1]);
+      const rCnt=mots.reduce((s,[,v])=>s+v,0);
+      const rAngle=(rCnt/nTotal)*2*Math.PI;
+      const fam=RFAM[resp]||['#64748b'];
+      // Inner arc
+      innerSvg+=_darc(R1i,R1o,ga,ga+rAngle,fam[0]);
+      if(rAngle>0.35)labelSvg+=_atxt(ga,ga+rAngle,(R1i+R1o)/2,rCnt,11,800);
+      // Outer arcs (motivos)
+      let ma=ga;
+      mots.forEach(([mot,cnt],mi)=>{
+        const sw=(cnt/nTotal)*2*Math.PI;
+        outerSvg+=_darc(R2i,R2o,ma,ma+sw,fam[Math.min(mi+1,fam.length-1)]);
+        if(sw>0.18)labelSvg+=_atxt(ma,ma+sw,(R2i+R2o)/2,cnt,9,700);
+        ma+=sw;
+      });
+      ga+=rAngle;
+      // Legend block
+      const pct=((rCnt/nTotal)*100).toFixed(0);
+      return `<div style="margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
+          <div style="width:14px;height:14px;border-radius:50%;background:${fam[0]};flex-shrink:0"></div>
+          <span style="font-size:13px;font-weight:700;color:var(--ink)">${resp}</span>
+          <span style="font-size:11px;color:var(--ink-3);margin-left:auto;white-space:nowrap">${rCnt} caso${rCnt!==1?'s':''} — ${pct}%</span>
+        </div>
+        ${mots.map(([mot,cnt],mi)=>`<div style="display:flex;align-items:center;gap:5px;padding-left:21px;margin-bottom:3px">
+          <div style="width:9px;height:9px;border-radius:2px;background:${fam[Math.min(mi+1,fam.length-1)]};flex-shrink:0"></div>
+          <span style="font-size:11px;color:var(--ink-2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(mot)}">${esc(mot)}</span>
+          <span style="font-size:10px;color:var(--ink-3);white-space:nowrap;margin-left:8px">${cnt} · ${((cnt/nTotal)*100).toFixed(0)}%</span>
+        </div>`).join('')}
       </div>`;
+    }).join('');
+    $('ajLlPies').innerHTML=`
+      <div style="font-size:11px;font-weight:700;color:var(--neg);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px">
+        Análisis citas no cumplidas · ${fN(nTotal)} total
+        <span style="font-weight:400;font-size:10px"> — ${fN(nImputables)} imputable${nImputables!==1?'s':''} a Tractocar · ${fN(nTotal-nImputables)} no imputable${nTotal-nImputables!==1?'s':''}</span>
+        <span style="font-size:10px;color:var(--ink-3);font-weight:400;margin-left:4px">· modo ${SAJ.ll.modo==='eficiente'?'Eficiente':'Real'}</span>
+      </div>
+      <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap">
+        <div style="flex-shrink:0">
+          <svg viewBox="0 0 ${W} ${H}" style="width:${W}px;height:${H}px;display:block">
+            ${innerSvg}${outerSvg}${labelSvg}
+            <circle cx="${cx}" cy="${cy}" r="${R1i-3}" fill="var(--surface-2)"/>
+            <text x="${cx}" y="${cy-9}" text-anchor="middle" dominant-baseline="middle" fill="var(--ink)" font-size="26" font-weight="900" font-family="inherit">${nTotal}</text>
+            <text x="${cx}" y="${cy+12}" text-anchor="middle" dominant-baseline="middle" fill="var(--ink-3)" font-size="10" font-family="inherit">citas</text>
+            <text x="${cx}" y="${cy+24}" text-anchor="middle" dominant-baseline="middle" fill="var(--ink-3)" font-size="10" font-family="inherit">no cumplidas</text>
+          </svg>
+          <div style="display:flex;justify-content:center;gap:10px;margin-top:8px;flex-wrap:wrap">
+            ${respList.map(r=>`<div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--ink-3)"><div style="width:10px;height:10px;border-radius:50%;background:${RFAM[r]?.[0]||'#64748b'}"></div>${r}</div>`).join('')}
+            <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--ink-3);margin-left:4px">▪ anillo ext. = motivo</div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:200px;padding-top:6px">${legend}</div>
+      </div>`;
+  }
   const fExitosos=filtRows.filter(r=>r.estado==='EXITOSO').length;
   const fFallidos=filtRows.filter(r=>r.estado==='FALLIDO').length;
   const pctCumpl=((fCumpl/fConFecha)*100).toFixed(1);
