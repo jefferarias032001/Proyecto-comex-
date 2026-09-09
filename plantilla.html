@@ -416,6 +416,7 @@
             </div>
           </div>
         </div>
+        <div id="ajVacTrend" style="margin:0 16px 14px"></div>
         <div id="ajVacKpis" style="margin:0 16px 14px"></div>
         <div style="margin:0 16px 12px" id="ajVacPromedios"></div>
         <div style="display:flex;gap:16px;margin:0 16px 12px;flex-wrap:wrap">
@@ -1576,9 +1577,52 @@ function renderAjoverVacios(){
     meses.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;vacMesEl.appendChild(o);});
   }
 
-  $('ajVacHint').textContent=`${fN(va.total)} registros`;
+  // ── Tendencia mensual (usa TODAS las filas, sin filtro de mes) ───────────
+  const allVacRows=va.rows||[];
+  const mesesAll=[...new Set(allVacRows.map(r=>r.mes).filter(Boolean))].sort();
+  if(mesesAll.length>1){
+    const byMesOk={},byMesTarde={};
+    allVacRows.forEach(r=>{
+      if(!r.mes)return;
+      byMesOk[r.mes]=(byMesOk[r.mes]||0)+(r.cumpl==='A tiempo'?1:0);
+      byMesTarde[r.mes]=(byMesTarde[r.mes]||0)+(r.cumpl&&r.cumpl.startsWith('Tarde')?1:0);
+    });
+    const maxV=Math.max(...mesesAll.map(m=>(byMesOk[m]||0)+(byMesTarde[m]||0)))||1;
+    const BW=52,GAP=8,PH=90,PW=mesesAll.length*(BW+GAP),SVH=PH+42;
+    const bars=mesesAll.map((m,i)=>{
+      const ok=byMesOk[m]||0,tard=byMesTarde[m]||0,tot=ok+tard;
+      const x=i*(BW+GAP),hOk=Math.round((ok/maxV)*PH),hTard=Math.round((tard/maxV)*PH);
+      const label=m.length>7?m.slice(0,7):m;
+      return `<g>
+        <rect x="${x}" y="${PH-hOk-hTard}" width="${BW}" height="${hTard}" fill="#f87171" rx="3"/>
+        <rect x="${x}" y="${PH-hOk}" width="${BW}" height="${hOk}" fill="#34d399" rx="3"/>
+        <text x="${x+BW/2}" y="${PH+12}" text-anchor="middle" fill="#64748b" font-size="9" font-family="inherit">${esc(label)}</text>
+        <text x="${x+BW/2}" y="${PH-hOk-hTard-4}" text-anchor="middle" fill="#e2e8f0" font-size="9" font-family="inherit" font-weight="700">${fN(tot)}</text>
+      </g>`;
+    }).join('');
+    $('ajVacTrend').innerHTML=`
+      <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px 18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+          <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em">Tendencia mensual · vaciós atendidos</div>
+          <div style="display:flex;gap:12px">
+            <span style="font-size:10px;color:#34d399">▌ A tiempo</span>
+            <span style="font-size:10px;color:#f87171">▌ Tarde</span>
+          </div>
+        </div>
+        <div style="overflow-x:auto"><svg width="${PW}" height="${SVH}" viewBox="0 0 ${PW} ${SVH}">${bars}</svg></div>
+      </div>`;
+  } else { $('ajVacTrend').innerHTML=''; }
 
-  const tot=va.total||1, pctOk=((va.a_tiempo/tot)*100).toFixed(1);
+  // ── Filas filtradas por mes ───────────────────────────────────────────────
+  const fm=SAJ.vac.mes;
+  const filtVac=allVacRows.filter(r=>!fm||r.mes===fm);
+  const fTotV=filtVac.length||1;
+  const fOkV=filtVac.filter(r=>r.cumpl==='A tiempo').length;
+  const fTardV=filtVac.filter(r=>r.cumpl&&r.cumpl.startsWith('Tarde')).length;
+  const fSinFV=filtVac.filter(r=>!r.cumpl||r.cumpl==='Sin fecha').length;
+  const pctOk=fTotV>0?((fOkV/fTotV)*100).toFixed(1):'0';
+  $('ajVacHint').textContent=`${fN(filtVac.length)} registros${fm?' · '+fm:''}`;
+
   const _gV=(pct,color,gid)=>{const R=38,C=+(2*Math.PI*R).toFixed(1);return `<svg width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="${R}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="9"/><circle cx="50" cy="50" r="${R}" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round" stroke-dasharray="0 ${C}" stroke-dashoffset="${+(C*.25).toFixed(1)}" id="${gid}" style="transition:stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1)"/><text x="50" y="46" text-anchor="middle" fill="${color}" font-size="16" font-weight="800" font-family="inherit">${pct}%</text><text x="50" y="58" text-anchor="middle" fill="rgba(255,255,255,.45)" font-size="8" font-family="inherit">cumplimiento</text></svg>`;};
   const _cV=(v,cid,col='#f1f5f9')=>`<span id="${cid}" data-target="${v}" style="font-size:36px;font-weight:900;color:${col};line-height:1;letter-spacing:-.03em">0</span>`;
   const cV=+pctOk>=90?'#22c55e':+pctOk>=70?'#f59e0b':'#ef4444';
@@ -1586,20 +1630,20 @@ function renderAjoverVacios(){
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
       <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeUp .45s ease both">
         <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Total vaciós</div>
-        ${_cV(va.total,'cnt_vac_tot')}
+        ${_cV(filtVac.length,'cnt_vac_tot')}
         <div style="font-size:12px;color:#475569;margin-top:4px">registros</div>
         <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
-          <span style="font-size:10px;background:rgba(34,197,94,.15);color:#4ade80;padding:2px 8px;border-radius:20px">${fN(va.a_tiempo)} a tiempo</span>
-          <span style="font-size:10px;background:rgba(239,68,68,.15);color:#f87171;padding:2px 8px;border-radius:20px">${fN(va.tarde)} tarde</span>
+          <span style="font-size:10px;background:rgba(34,197,94,.15);color:#4ade80;padding:2px 8px;border-radius:20px">${fN(fOkV)} a tiempo</span>
+          <span style="font-size:10px;background:rgba(239,68,68,.15);color:#f87171;padding:2px 8px;border-radius:20px">${fN(fTardV)} tarde</span>
         </div>
       </div>
       <div style="background:linear-gradient(135deg,#0f2720,#052e16);border:1px solid rgba(34,197,94,.15);border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeUp .45s ease both;animation-delay:.08s;display:flex;flex-direction:column;align-items:center">
         <div style="font-size:10px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">A tiempo</div>
         ${_gV(pctOk,cV,'gv_vac')}
         <div style="text-align:center;margin-top:-2px">
-          <span style="font-size:12px;color:#86efac">${fN(va.a_tiempo)} ok</span>
+          <span style="font-size:12px;color:#86efac">${fN(fOkV)} ok</span>
           <span style="font-size:12px;color:#475569;margin:0 5px">/</span>
-          <span style="font-size:12px;color:#f87171">${fN(va.tarde)} tarde</span>
+          <span style="font-size:12px;color:#f87171">${fN(fTardV)} tarde</span>
         </div>
       </div>
       <div style="background:linear-gradient(135deg,#1c0a0a,#2d1010);border:1px solid rgba(239,68,68,.15);border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeUp .45s ease both;animation-delay:.16s">
@@ -1607,12 +1651,12 @@ function renderAjoverVacios(){
         <div style="display:flex;flex-direction:column;gap:8px">
           <div style="display:flex;align-items:center;justify-content:space-between">
             <span style="font-size:12px;color:#94a3b8">Tarde</span>
-            <span style="font-size:26px;font-weight:800;color:#ef4444">${fN(va.tarde)}</span>
+            <span style="font-size:26px;font-weight:800;color:#ef4444">${fN(fTardV)}</span>
           </div>
           <div style="height:1px;background:rgba(255,255,255,.05)"></div>
           <div style="display:flex;align-items:center;justify-content:space-between">
             <span style="font-size:12px;color:#94a3b8">Sin fecha</span>
-            <span style="font-size:26px;font-weight:800;color:#94a3b8">${fN(va.sin_fecha)}</span>
+            <span style="font-size:26px;font-weight:800;color:#94a3b8">${fN(fSinFV)}</span>
           </div>
         </div>
       </div>
@@ -1623,35 +1667,44 @@ function renderAjoverVacios(){
     const ec=document.getElementById('cnt_vac_tot');if(ec){const target=+ec.dataset.target;let v=0;const s=performance.now();const tick=t=>{const p=Math.min(1,(t-s)/900);v=Math.round(p*target);ec.textContent=fN(v);if(p<1)requestAnimationFrame(tick);};requestAnimationFrame(tick);}
   },50);
 
-  _ajBarras(va.patios||{},'ajVacPatios');
-  _ajBarras(va.lineas||{},'ajVacLineas');
+  // Barras filtradas
+  const fPatios={},fLineas={};
+  filtVac.forEach(r=>{if(r.patio)fPatios[r.patio]=(fPatios[r.patio]||0)+1;if(r.linea)fLineas[r.linea]=(fLineas[r.linea]||0)+1;});
+  _ajBarras(fPatios,'ajVacPatios');
+  _ajBarras(fLineas,'ajVacLineas');
 
-  // tiempos promedio
-  const pr=va.prom||{};
+  // tiempos promedio (desde filas filtradas)
+  const _avg=arr=>arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:null;
   const _fmin=m=>{if(m==null)return '<span style="color:var(--ink-3)">—</span>';const h=Math.floor(m/60),mn=Math.round(m%60);return h>0?`<b>${h}h ${mn}min</b>`:`<b>${mn}min</b>`;};
+  const prF={
+    prog_aten:    _avg(filtVac.map(r=>r.dt1).filter(v=>v!=null)),
+    aten_llpatio: _avg(filtVac.map(r=>r.dt2).filter(v=>v!=null)),
+    en_patio:     _avg(filtVac.map(r=>r.dt3).filter(v=>v!=null)),
+    patio_planta: _avg(filtVac.map(r=>r.dt4).filter(v=>v!=null)),
+  };
   $('ajVacPromedios').innerHTML=`
     <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;margin:10px 0 4px">
       <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:130px">
         <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Programación → Atención</div>
-        <div style="font-size:16px">${_fmin(pr.prog_aten)}</div>
+        <div style="font-size:16px">${_fmin(prF.prog_aten)}</div>
         <div style="font-size:10px;color:var(--ink-3)">tiempo de respuesta</div>
       </div>
       <div style="font-size:18px;color:var(--ink-3);padding:0 6px">›</div>
       <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:130px">
         <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Atención → Llegada patio</div>
-        <div style="font-size:16px">${_fmin(pr.aten_llpatio)}</div>
+        <div style="font-size:16px">${_fmin(prF.aten_llpatio)}</div>
         <div style="font-size:10px;color:var(--ink-3)">transporte al patio</div>
       </div>
       <div style="font-size:18px;color:var(--ink-3);padding:0 6px">›</div>
       <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:130px">
         <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Tiempo en patio</div>
-        <div style="font-size:16px">${_fmin(pr.en_patio)}</div>
+        <div style="font-size:16px">${_fmin(prF.en_patio)}</div>
         <div style="font-size:10px;color:var(--ink-3)">llegada → salida patio</div>
       </div>
       <div style="font-size:18px;color:var(--ink-3);padding:0 6px">›</div>
       <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:130px">
         <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Salida patio → Planta</div>
-        <div style="font-size:16px">${_fmin(pr.patio_planta)}</div>
+        <div style="font-size:16px">${_fmin(prF.patio_planta)}</div>
         <div style="font-size:10px;color:var(--ink-3)">transporte a planta</div>
       </div>
     </div>`;
@@ -1667,9 +1720,8 @@ function renderAjoverVacios(){
     return `<th style="${thS};${on?'background:rgba(59,130,246,.08);color:#3b82f6;':''}" onclick="SAJ.vac.sortDir=SAJ.vac.sortCol==='${c.k}'&&SAJ.vac.sortDir===1?-1:1;SAJ.vac.sortCol='${c.k}';SAJ.vac.pg=1;renderAjoverVacios()" title="Clic ordenar · arrastra mover">${c.l} <span style="font-size:9px;opacity:${on?1:.35}">${arr}</span></th>`;
   }).join('');
 
-  const q=SAJ.vac.q.toLowerCase(), fc=SAJ.vac.cumpl, fm=SAJ.vac.mes;
-  let rows=(va.rows||[]).filter(r=>{
-    if(fm&&r.mes!==fm)return false;
+  const q=SAJ.vac.q.toLowerCase(), fc=SAJ.vac.cumpl;
+  let rows=filtVac.filter(r=>{
     if(q&&!`${r.patio}${r.linea}${r.cont}${r.man}`.toLowerCase().includes(q))return false;
     if(fc&&!r.cumpl.startsWith(fc))return false;
     return true;
