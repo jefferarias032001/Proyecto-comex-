@@ -2081,7 +2081,7 @@ function renderAjoverLlenos(){
         <span style="font-weight:400;font-size:10px"> — ${fN(nImputables)} imputable${nImputables!==1?'s':''} a Tractocar · ${fN(nTotal-nImputables)} no imputable${nTotal-nImputables!==1?'s':''}</span>
         <span style="font-size:10px;color:var(--ink-3);font-weight:400;margin-left:4px">· modo ${SAJ.ll.modo==='eficiente'?'Eficiente':'Real'}</span>
       </div>
-      <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap">
+      <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;max-width:680px">
         <div style="flex-shrink:0">
           <svg viewBox="0 0 ${W} ${H}" style="width:${W}px;height:${H}px;display:block">
             ${innerSvg}${outerSvg}${labelSvg}
@@ -2275,51 +2275,79 @@ function renderAjoverLlenos(){
 
   // ── detalle de todos los que no cumplieron cita ──────────────────────────
   if(ncRows.length){
-    const thD='padding:6px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:2px solid var(--line);white-space:nowrap;background:var(--surface-2)';
-    const tdD='padding:5px 10px;border-bottom:1px solid var(--line-2);font-size:11px';
-    const sorted=[...ncRows].sort((a,b)=>{
-      const pa=a.delta_min??( a.cumpl_cita?parseInt(a.cumpl_cita.match(/\d+/)||0):0);
-      const pb=b.delta_min??( b.cumpl_cita?parseInt(b.cumpl_cita.match(/\d+/)||0):0);
-      return pb-pa;
-    });
+    window._ncRows=ncRows;
+    window._ncSortCol='delta';
+    window._ncSortDir=-1;
+    window._ncRender=function(){
+      const col=window._ncSortCol,dir=window._ncSortDir;
+      const tdD='padding:5px 10px;border-bottom:1px solid var(--line-2);font-size:11px';
+      const _val=r=>({
+        fecha:r.fecha||'',cont:r.cont||'',
+        resp:_isExterno(r)?'Externo':_isReprogAjover(r)?'Ajover':(r.resp_repr||'Tractocar'),
+        fcita:r.fcita||'',fllpuerto:r.fllpuerto||'',
+        delta:r.delta_min!==undefined&&r.delta_min!==null?r.delta_min:(r.cumpl_cita?parseInt(r.cumpl_cita.match(/\d+/)||[0])-0:0),
+        terminal:r.terminal||'',placa:r.placa||'',motivo:r.motivo||'',obs:r.obs||''
+      })[col]??'';
+      const rows=[...window._ncRows].sort((a,b)=>{
+        const av=_val(a),bv=_val(b);
+        return (typeof av==='number'&&typeof bv==='number'?av-bv:String(av).localeCompare(String(bv)))*dir;
+      });
+      const tbody=document.getElementById('_ncTbody');
+      if(!tbody)return;
+      tbody.innerHTML=rows.map(r=>{
+        const resp=_isExterno(r)?'Externo':_isReprogAjover(r)?'Ajover':(r.resp_repr||'Tractocar');
+        const respCol=_isExterno(r)?'#0c5460':_isReprogAjover(r)?'#5b2d8e':'#721c24';
+        const respBg=_isExterno(r)?'#d1ecf1':_isReprogAjover(r)?'#e8d5f5':'#f8d7da';
+        return `<tr>
+          <td style="${tdD};white-space:nowrap">${esc(r.fecha)}</td>
+          <td style="${tdD};font-family:monospace">${esc(r.cont)}</td>
+          <td style="${tdD}"><span style="background:${respBg};color:${respCol};padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700">${esc(resp)}</span></td>
+          <td style="${tdD};white-space:nowrap">${esc(r.fcita)}</td>
+          <td style="${tdD};white-space:nowrap">${esc(r.fllpuerto)}</td>
+          <td style="${tdD}">${_pillCumpl(r.cumpl_cita)}</td>
+          <td style="${tdD}">${esc(r.terminal)}</td>
+          <td style="${tdD}">${esc(r.placa)}</td>
+          <td style="${tdD};max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(r.motivo)}">${esc(r.motivo)||'—'}</td>
+          <td style="${tdD};max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink-2)" title="${esc(r.obs)}">${esc(r.obs)||'—'}</td>
+        </tr>`;
+      }).join('');
+      // update header arrows
+      document.querySelectorAll('#_ncTable th[data-col]').forEach(th=>{
+        const arr=th.querySelector('span.arr');
+        if(arr)arr.textContent=th.dataset.col===col?(dir===-1?'▼':'▲'):'';
+      });
+    };
+    window._ncSort=function(col){
+      if(window._ncSortCol===col)window._ncSortDir*=-1;
+      else{window._ncSortCol=col;window._ncSortDir=col==='delta'?-1:1;}
+      window._ncRender();
+    };
+    const thD='padding:6px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);border-bottom:2px solid var(--line);white-space:nowrap;background:var(--surface-2);cursor:pointer;user-select:none';
+    const _th=(col,label)=>`<th data-col="${col}" onclick="_ncSort('${col}')" style="${thD}">${label} <span class="arr" style="color:var(--marine)">${col==='delta'?'▼':''}</span></th>`;
     $('ajLlNoCumplDetalle').innerHTML=`
       <details open style="background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden">
         <summary style="padding:10px 16px;cursor:pointer;font-size:12px;font-weight:700;color:var(--neg);list-style:none;display:flex;align-items:center;gap:8px;background:var(--surface-2)">
-          <span>▾</span> Detalle: ${fN(ncRows.length)} citas no cumplidas — ${fN(noCumplRows.length)} imputables a Tractocar · ${fN(ncRows.length-noCumplRows.length)} no imputables (ordenadas por mayor retraso)
+          <span>▾</span> Detalle: ${fN(ncRows.length)} citas no cumplidas — ${fN(noCumplRows.length)} imputables a Tractocar · ${fN(ncRows.length-noCumplRows.length)} no imputables
         </summary>
         <div style="overflow-x:auto;max-height:320px;overflow-y:auto">
-          <table style="width:100%;border-collapse:collapse;font-size:11px">
+          <table id="_ncTable" style="width:100%;border-collapse:collapse;font-size:11px">
             <thead><tr>
-              <th style="${thD}">Fecha atención</th>
-              <th style="${thD}">Contenedor</th>
-              <th style="${thD}">Responsable</th>
-              <th style="${thD}">Cita puerto</th>
-              <th style="${thD}">Llegada puerto</th>
-              <th style="${thD}">Retraso</th>
-              <th style="${thD}">Terminal</th>
-              <th style="${thD}">Placa</th>
-              <th style="${thD}">Motivo</th>
-              <th style="${thD}">Observaciones</th>
+              ${_th('fecha','Fecha atención')}
+              ${_th('cont','Contenedor')}
+              ${_th('resp','Responsable')}
+              ${_th('fcita','Cita puerto')}
+              ${_th('fllpuerto','Llegada puerto')}
+              ${_th('delta','Retraso')}
+              ${_th('terminal','Terminal')}
+              ${_th('placa','Placa')}
+              ${_th('motivo','Motivo')}
+              ${_th('obs','Observaciones')}
             </tr></thead>
-            <tbody>${sorted.map(r=>{
-              const resp=_isExterno(r)?'Externo':_isReprogAjover(r)?'Ajover':(r.resp_repr||'Tractocar');
-              const respCol=_isExterno(r)?'#0c5460':_isReprogAjover(r)?'#5b2d8e':'#721c24';
-              const respBg=_isExterno(r)?'#d1ecf1':_isReprogAjover(r)?'#e8d5f5':'#f8d7da';
-              return `<tr>
-              <td style="${tdD};white-space:nowrap">${esc(r.fecha)}</td>
-              <td style="${tdD};font-family:monospace">${esc(r.cont)}</td>
-              <td style="${tdD}"><span style="background:${respBg};color:${respCol};padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700">${esc(resp)}</span></td>
-              <td style="${tdD};white-space:nowrap">${esc(r.fcita)}</td>
-              <td style="${tdD};white-space:nowrap">${esc(r.fllpuerto)}</td>
-              <td style="${tdD}">${_pillCumpl(r.cumpl_cita)}</td>
-              <td style="${tdD}">${esc(r.terminal)}</td>
-              <td style="${tdD}">${esc(r.placa)}</td>
-              <td style="${tdD};max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(r.motivo)}">${esc(r.motivo)||'—'}</td>
-              <td style="${tdD};max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink-2)" title="${esc(r.obs)}">${esc(r.obs)||'—'}</td>
-            </tr>`;}).join('')}</tbody>
+            <tbody id="_ncTbody"></tbody>
           </table>
         </div>
       </details>`;
+    window._ncRender();
   } else { $('ajLlNoCumplDetalle').innerHTML=''; }
 
   // ── barras de estados, motivos y motivos de reprogramación (desde filas filtradas) ──
