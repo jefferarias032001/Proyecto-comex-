@@ -1749,6 +1749,7 @@ function renderAjoverVacios(){
   if(vacMesEl&&vacMesEl.options.length<=1){
     const meses=[...new Set((va.rows||[]).map(r=>r.mes).filter(Boolean))].sort();
     meses.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;vacMesEl.appendChild(o);});
+    if(!SAJ.vac.mes&&meses.length){SAJ.vac.mes=meses[meses.length-1];vacMesEl.value=SAJ.vac.mes;}
   }
 
   // ── Tendencia mensual (usa TODAS las filas, sin filtro de mes) ───────────
@@ -1971,6 +1972,7 @@ function renderAjoverLlenos(){
   if(llMesEl&&llMesEl.options.length<=1){
     const meses=[...new Set((ll.rows||[]).map(r=>r.mes_iso).filter(Boolean))].sort();
     meses.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;llMesEl.appendChild(o);});
+    if(!SAJ.ll.mes&&meses.length){SAJ.ll.mes=meses[meses.length-1];llMesEl.value=SAJ.ll.mes;}
   }
 
   const allRows=ll.rows||[];
