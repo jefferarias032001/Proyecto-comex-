@@ -1498,61 +1498,68 @@ function _chartDiario(allRows,dateField,cumplFn,containerId,entityLabel,mesFilte
     if(!byDia[d])byDia[d]={ok:0,tot:0};
     byDia[d].tot++;if(cumplFn(r))byDia[d].ok++;
   });
-  // Determinar qué mes mostrar
+  // Determinar mes a mostrar
   let mes=mesFilter;
   if(!mes){
     const allKeys=Object.keys(byDia).sort();
     if(!allKeys.length){$(containerId).innerHTML='';return;}
     mes=allKeys[allKeys.length-1].slice(0,7);
   }
-  // Generar todos los días del mes
+  // Días con datos en ese mes, de menor a mayor
+  const keysEnMes=Object.keys(byDia).filter(k=>k.startsWith(mes+'-')).sort();
+  if(!keysEnMes.length){$(containerId).innerHTML='';return;}
+  // Mostrar desde día 1 hasta el último día con datos (no días futuros vacíos)
   const [yy,mm]=mes.split('-').map(Number);
-  const daysInMes=new Date(yy,mm,0).getDate();
+  const lastDay=+keysEnMes[keysEnMes.length-1].split('-')[2];
   const dias=[];
-  for(let d=1;d<=daysInMes;d++)dias.push(`${mes}-${String(d).padStart(2,'0')}`);
-  // Verificar que hay datos en el mes
-  if(!dias.some(d=>byDia[d]&&byDia[d].tot>0)){$(containerId).innerHTML='';return;}
+  for(let d=1;d<=lastDay;d++)dias.push(`${mes}-${String(d).padStart(2,'0')}`);
   const msNom=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][mm-1]+' '+yy;
   const N=dias.length;
-  const BW=Math.max(13,Math.min(32,Math.floor((600-40)/(N+1))));
-  const GAP=Math.max(2,Math.floor(BW*.12));
-  const LP=34,RP=8,TP=26,BP=34,PH=90;
-  const PW=LP+N*(BW+GAP)-GAP+RP,SVH=TP+PH+BP;
-  // labels del eje X: número de día, solo par si >20 días
-  const xlabs=dias.map((d,i)=>{
-    const x=(LP+i*(BW+GAP)+BW/2).toFixed(1),day=+d.split('-')[2];
-    const tot=(byDia[d]||{tot:0}).tot;
-    if(N>20&&day%2===0)return '';
-    return `<text x="${x}" y="${TP+PH+13}" text-anchor="middle" fill="#64748b" font-size="8" font-family="inherit">${day}</text>`+(tot>0?`<text x="${x}" y="${TP+PH+23}" text-anchor="middle" fill="#475569" font-size="7" font-family="inherit">${fN(tot)}</text>`:'');
+  // Mismas dimensiones que _svgTend
+  const W=640,H=280,PL=44,PR=12,PT=32,PB=50;
+  const cW=(W-PL-PR)/N;
+  const bW=Math.min(36,cW*0.55);
+  const ttl=`font-size:12px;font-weight:800;color:var(--ink);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--line)`;
+  // Etiquetas eje X — número de día + conteo
+  const xlbls=dias.map((d,i)=>{
+    const x=(PL+i*cW+cW/2).toFixed(1),day=+d.split('-')[2],tot=(byDia[d]||{tot:0}).tot;
+    const show=N<=20||day%2!==0||i===N-1;
+    if(!show)return '';
+    return `<text x="${x}" y="${H-PB+14}" text-anchor="middle" font-size="10" fill="var(--ink-3)">${day}</text>`
+      +(tot>0?`<text x="${x}" y="${H-PB+27}" text-anchor="middle" font-size="9" font-weight="600" fill="var(--ink-2)">${fN(tot)}</text>`:'');
   }).join('');
-  // Chart 1: cumpl %
+  // Chart 1: cumplimiento %
   const pcts=dias.map(d=>{const v=byDia[d];return v&&v.tot?+(v.ok/v.tot*100).toFixed(1):null;});
-  const pts1=dias.map((d,i)=>{const p=pcts[i];if(p===null)return null;const x=(LP+i*(BW+GAP)+BW/2).toFixed(1),y=(TP+PH-(p/100)*PH).toFixed(1),col=p>=90?'#22c55e':p>=70?'#f59e0b':'#ef4444';return {x,y,col};});
-  const grid1=[0,25,50,75,100].map(p=>{const y=(TP+PH-p/100*PH).toFixed(1);return `<line x1="${LP}" y1="${y}" x2="${PW-RP}" y2="${y}" stroke="rgba(255,255,255,.04)" stroke-width="1"/><text x="${LP-4}" y="${(+y+3).toFixed(0)}" text-anchor="end" fill="#334155" font-size="8" font-family="inherit">${p}%</text>`;}).join('');
-  const bars1=dias.map((d,i)=>{const p=pcts[i],x=LP+i*(BW+GAP);if(p===null)return `<rect x="${x}" y="${TP}" width="${BW}" height="${PH}" fill="rgba(255,255,255,.015)" rx="2"/>`;const bh=Math.max(2,Math.round(p/100*PH)),y=TP+PH-bh,col=pts1[i].col,bg=p>=90?'rgba(34,197,94,.13)':p>=70?'rgba(245,158,11,.13)':'rgba(239,68,68,.13)';return `<rect x="${x}" y="${y}" width="${BW}" height="${bh}" fill="${bg}" rx="2"/><text x="${x+BW/2}" y="${y-3}" text-anchor="middle" fill="${col}" font-size="8" font-weight="700" font-family="inherit">${p}%</text>`;}).join('');
-  const vp1=pts1.filter(Boolean);
-  const line1=vp1.length>1?`<polyline points="${vp1.map(p=>p.x+','+p.y).join(' ')}" fill="none" stroke="rgba(34,197,94,.5)" stroke-width="1.5" stroke-linejoin="round"/>`:'';
-  const dots1=vp1.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="3" fill="${p.col}" stroke="#0f172a" stroke-width="1.5"/>`).join('');
-  const svg1=`<svg width="100%" viewBox="0 0 ${PW} ${SVH}" style="min-width:${PW}px;overflow:visible">${grid1}${bars1}${line1}${dots1}${xlabs}</svg>`;
+  let bars1='',path1='',dots1='',fp1=true;
+  dias.forEach((d,i)=>{
+    const p=pcts[i];if(p===null)return;
+    const x=(PL+i*cW+cW/2).toFixed(1),y=(PT+(H-PT-PB)*(1-p/100)).toFixed(1);
+    const col=p>=90?'var(--pos)':p>=70?'#f59e0b':'var(--neg)';
+    bars1+=`<rect x="${(PL+i*cW+cW/2-bW/2).toFixed(1)}" y="${y}" width="${bW}" height="${Math.max(0,H-PB-+y).toFixed(1)}" fill="${col}" opacity="0.18" rx="3"/>`;
+    path1+=(fp1?'M':'L')+`${x},${y}`;fp1=false;
+    dots1+=`<circle cx="${x}" cy="${y}" r="5" fill="${col}" stroke="var(--surface)" stroke-width="2"/>`;
+    dots1+=`<text x="${x}" y="${(+y-10).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="${col}">${p}%</text>`;
+  });
+  let grid1='';
+  [0,25,50,75,100].forEach(p=>{const y=(PT+(H-PT-PB)*(1-p/100)).toFixed(1);grid1+=`<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="var(--line-2)" stroke-width="${p===0?1.5:0.7}"/><text x="${PL-4}" y="${(+y+3).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--ink-3)">${p}%</text>`;});
+  const svg1=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;min-width:${Math.max(320,N*18)}px;height:${H}px;display:block">${grid1}${bars1}${path1?`<path d="${path1}" fill="none" stroke="var(--marine)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`:''}${dots1}${xlbls}</svg>`;
   // Chart 2: volumen
   const tots=dias.map(d=>(byDia[d]||{tot:0}).tot),maxT=Math.max(...tots)||1;
-  const pts2=dias.map((d,i)=>{const t=tots[i];if(!t)return null;const x=(LP+i*(BW+GAP)+BW/2).toFixed(1),y=(TP+PH-(t/maxT)*PH).toFixed(1);return {x,y};});
-  const grid2=[0,.25,.5,.75,1].map(f=>{const y=(TP+PH-f*PH).toFixed(1);return `<line x1="${LP}" y1="${y}" x2="${PW-RP}" y2="${y}" stroke="rgba(255,255,255,.04)" stroke-width="1"/><text x="${LP-4}" y="${(+y+3).toFixed(0)}" text-anchor="end" fill="#334155" font-size="8" font-family="inherit">${fN(Math.round(f*maxT))}</text>`;}).join('');
-  const bars2=dias.map((d,i)=>{const t=tots[i],x=LP+i*(BW+GAP);if(!t)return `<rect x="${x}" y="${TP}" width="${BW}" height="${PH}" fill="rgba(255,255,255,.015)" rx="2"/>`;const bh=Math.max(2,Math.round(t/maxT*PH)),y=TP+PH-bh;return `<rect x="${x}" y="${y}" width="${BW}" height="${bh}" fill="rgba(148,163,184,.12)" rx="2"/><text x="${x+BW/2}" y="${y-3}" text-anchor="middle" fill="#94a3b8" font-size="8" font-weight="700" font-family="inherit">${fN(t)}</text>`;}).join('');
-  const vp2=pts2.filter(Boolean);
-  const line2=vp2.length>1?`<polyline points="${vp2.map(p=>p.x+','+p.y).join(' ')}" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-linejoin="round"/>`:'';
-  const dots2=vp2.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="3" fill="#60a5fa" stroke="#0f172a" stroke-width="1.5"/>`).join('');
-  const svg2=`<svg width="100%" viewBox="0 0 ${PW} ${SVH}" style="min-width:${PW}px;overflow:visible">${grid2}${bars2}${line2}${dots2}${xlabs}</svg>`;
-  const card=`background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px 18px;flex:1;min-width:0`;
+  let bars2='',path2='',dots2='',fp2=true;
+  dias.forEach((d,i)=>{
+    const t=tots[i];if(!t)return;
+    const x=(PL+i*cW+cW/2).toFixed(1),y=(PT+(H-PT-PB)*(1-t/maxT)).toFixed(1);
+    bars2+=`<rect x="${(PL+i*cW+cW/2-bW/2).toFixed(1)}" y="${y}" width="${bW}" height="${Math.max(0,H-PB-+y).toFixed(1)}" fill="var(--marine)" opacity="0.18" rx="3"/>`;
+    path2+=(fp2?'M':'L')+`${x},${y}`;fp2=false;
+    dots2+=`<circle cx="${x}" cy="${y}" r="5" fill="var(--marine)" stroke="var(--surface)" stroke-width="2"/>`;
+    dots2+=`<text x="${x}" y="${(+y-10).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--marine)">${fN(t)}</text>`;
+  });
+  let grid2='';
+  [0,0.25,0.5,0.75,1].forEach(f=>{const y=(PT+(H-PT-PB)*(1-f)).toFixed(1);grid2+=`<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="var(--line-2)" stroke-width="${f===0?1.5:0.7}"/><text x="${PL-4}" y="${(+y+3).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--ink-3)">${fN(Math.round(f*maxT))}</text>`;});
+  const svg2=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;min-width:${Math.max(320,N*18)}px;height:${H}px;display:block">${grid2}${bars2}${path2?`<path d="${path2}" fill="none" stroke="var(--marine)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`:''}${dots2}${xlbls}</svg>`;
   $(containerId).innerHTML=`<div style="display:flex;gap:14px;flex-wrap:wrap">
-    <div style="${card}">
-      <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">Cumpl. cita — ${msNom} (día a día)</div>
-      <div style="overflow-x:auto">${svg1}</div>
-    </div>
-    <div style="${card}">
-      <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">${entityLabel} atendidos — ${msNom}</div>
-      <div style="overflow-x:auto">${svg2}</div>
-    </div>
+    <div style="flex:1;min-width:280px"><div style="${ttl}">Cumpl. cita — ${msNom} día a día</div><div style="overflow-x:auto">${svg1}</div></div>
+    <div style="flex:1;min-width:280px"><div style="${ttl}">${entityLabel} atendidos — ${msNom}</div><div style="overflow-x:auto">${svg2}</div></div>
   </div>`;
 }
 function _ajPie(slices,title){
