@@ -1760,21 +1760,16 @@ function renderAjoverVacios(){
   (function(){
     if(mesesAll.length<2){$('ajVacTrend').innerHTML='';return;}
     const byMes={};
-    allVacRows.forEach(r=>{if(!r.mes)return;if(!byMes[r.mes])byMes[r.mes]={tot:0};byMes[r.mes].tot++;});
-    const BW=36,GAP=10,LP=30,RP=8,TP=20,BP=38,PH=60;
-    const N=mesesAll.length,PW=LP+N*(BW+GAP)-GAP+RP,SVH=TP+PH+BP;
-    const tots=mesesAll.map(m=>byMes[m].tot);
-    const maxTot=Math.max(...tots)||1;
-    const glines=[0,.25,.5,.75,1].map(f=>`<line x1="${LP}" y1="${(TP+PH-f*PH).toFixed(1)}" x2="${PW-RP}" y2="${(TP+PH-f*PH).toFixed(1)}" stroke="rgba(255,255,255,.04)" stroke-width="1"/><text x="${LP-4}" y="${(TP+PH-f*PH+3).toFixed(1)}" text-anchor="end" fill="#334155" font-size="8" font-family="inherit">${fN(Math.round(f*maxTot))}</text>`).join('');
-    const bars=mesesAll.map((m,i)=>{const x=LP+i*(BW+GAP),tot=tots[i],bh=Math.max(2,Math.round((tot/maxTot)*PH)),y=TP+PH-bh;return `<rect x="${x}" y="${y}" width="${BW}" height="${bh}" fill="rgba(148,163,184,.12)" rx="4"/><text x="${(x+BW/2).toFixed(1)}" y="${y-5}" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="700" font-family="inherit">${fN(tot)}</text>`;}).join('');
-    const pts=mesesAll.map((m,i)=>({x:(LP+i*(BW+GAP)+BW/2).toFixed(1),y:(TP+PH-(tots[i]/maxTot)*PH).toFixed(1)}));
-    const line=`<polyline points="${pts.map(p=>p.x+','+p.y).join(' ')}" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-linejoin="round" opacity=".6"/>`;
-    const dots=pts.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="4" fill="#60a5fa" stroke="#0f172a" stroke-width="1.5"/>`).join('');
-    const xlabs=mesesAll.map((m,i)=>{const x=(LP+i*(BW+GAP)+BW/2).toFixed(1);return `<text x="${x}" y="${TP+PH+14}" text-anchor="middle" fill="#64748b" font-size="9" font-family="inherit">${esc(m)}</text><text x="${x}" y="${TP+PH+27}" text-anchor="middle" fill="#475569" font-size="8" font-family="inherit">${fN(byMes[m].tot)} vaciós</text>`;}).join('');
-    $('ajVacTrend').innerHTML=`<div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px 18px">
-      <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">Vaciós atendidos — mes a mes</div>
-      <div style="overflow-x:auto"><svg width="100%" viewBox="0 0 ${PW} ${SVH}" style="min-width:${PW}px;overflow:visible">${glines}${bars}${line}${dots}${xlabs}</svg></div>
-    </div>`;
+    allVacRows.forEach(r=>{if(!r.mes)return;if(!byMes[r.mes])byMes[r.mes]={mes:r.mes,tot:0};byMes[r.mes].tot++;});
+    const tendVac=mesesAll.map(m=>byMes[m]);
+    const maxTot=Math.max(...tendVac.map(t=>t.tot),1);
+    $('ajVacTrend').innerHTML=_svgTend(tendVac,{
+      key:'tot', pct:false, maxV:maxTot,
+      title:'Vaciós atendidos — mes a mes',
+      color:()=>'#0C4A5A',
+      label:(t,v)=>fN(v),
+      sub:(t)=>`${fN(t.tot)} vaciós`
+    });
   })();
 
   $('ajVacDaily').innerHTML='';
