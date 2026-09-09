@@ -2011,21 +2011,19 @@ function renderAjoverLlenos(){
     :(r.cumpl_cita&&r.cumpl_cita.startsWith('Tarde')));
   const _PC=['#60a5fa','#f87171','#34d399','#fbbf24','#a78bfa','#fb923c','#f472b6','#94a3b8'];
   const _grp=(rows,key,alias)=>{const m={};rows.forEach(r=>{const k=r[key]||alias;m[k]=(m[k]||0)+1;});return m;};
-  // Por causa (clasif) — todos los tarde
-  const byCl=_grp(allTardeRows,'clasif','Sin clasificar');
-  const clSlices=Object.entries(byCl).sort((a,b)=>b[1]-a[1]).map(([l,v],i)=>({l,v,c:_PC[i%_PC.length]}));
-  // Por motivo (top 6 + otros) — todos los tarde
-  const byMot=_grp(allTardeRows,'motivo','Sin motivo');
-  const motSrt=Object.entries(byMot).sort((a,b)=>b[1]-a[1]);
-  const top6=motSrt.slice(0,6),otros=motSrt.slice(6).reduce((s,[,v])=>s+v,0);
-  const motSlices=[...top6.map(([l,v],i)=>({l,v,c:_PC[i%_PC.length]})),...(otros>0?[{l:'Otros',v:otros,c:'#475569'}]:[])];
-  // Por responsable — derivado de cumpl_cita (Externo / Ajover / Tractocar)
+  // Separar tarde por responsable
+  const tardeTractocar=allTardeRows.filter(r=>!_isExterno(r)&&!_isReprogAjover(r));
+  const tardeAjover=allTardeRows.filter(r=>_isReprogAjover(r));
+  const tardeExterno=allTardeRows.filter(r=>_isExterno(r));
+  // Por responsable — resumen global
   const byResp={};
   allTardeRows.forEach(r=>{
     const resp=_isExterno(r)?'Externo':_isReprogAjover(r)?'Ajover':(r.resp_repr||'Tractocar');
     byResp[resp]=(byResp[resp]||0)+1;
   });
   const respSlices=Object.entries(byResp).sort((a,b)=>b[1]-a[1]).map(([l,v],i)=>({l,v,c:_PC[i%_PC.length]}));
+  // Motivos por grupo
+  const _motSlices=rows=>{const byM=_grp(rows,'motivo','Sin motivo');const srt=Object.entries(byM).sort((a,b)=>b[1]-a[1]);const top=srt.slice(0,6),ot=srt.slice(6).reduce((s,[,v])=>s+v,0);return [...top.map(([l,v],i)=>({l,v,c:_PC[i%_PC.length]})),...(ot>0?[{l:'Otros',v:ot,c:'#475569'}]:[])];};
   const nImputables=noCumplRows.length,nTotal=allTardeRows.length;
   $('ajLlPies').innerHTML=allTardeRows.length===0
     ?'<div style="font-size:11px;color:var(--pos);padding:6px 0">✓ Sin citas no cumplidas en el período seleccionado</div>'
@@ -2037,9 +2035,10 @@ function renderAjoverLlenos(){
         <span style="font-size:10px;color:#94a3b8;font-weight:400;margin-left:6px">modo ${SAJ.ll.modo==='eficiente'?'Eficiente':'Real'}</span>
       </div>
       <div style="display:flex;gap:12px;flex-wrap:wrap">
-        ${clSlices.length?_ajPie(clSlices,'Por causa'):''}
-        ${motSlices.length?_ajPie(motSlices,'Por motivo reprogramación'):''}
         ${respSlices.length?_ajPie(respSlices,'Por responsable'):''}
+        ${tardeTractocar.length?_ajPie(_motSlices(tardeTractocar),`Motivos Tractocar (${fN(tardeTractocar.length)})`):''}
+        ${tardeAjover.length?_ajPie(_motSlices(tardeAjover),`Motivos Ajover (${fN(tardeAjover.length)})`):''}
+        ${tardeExterno.length?_ajPie(_motSlices(tardeExterno),`Motivos Externos (${fN(tardeExterno.length)})`):''}
       </div>`;
   const fExitosos=filtRows.filter(r=>r.estado==='EXITOSO').length;
   const fFallidos=filtRows.filter(r=>r.estado==='FALLIDO').length;
