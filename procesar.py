@@ -733,9 +733,23 @@ def leer_ajover_completo(stats):
             if ob  in ("nan","None","NAN","NONE",""): ob  = ""
             if man in ("nan","None","NAN","NONE",""): man = ""
 
-            # Tendencia mes a mes (OB y manifiestos siempre; cumplimiento solo con fechas)
+            # Delta vs cita (en minutos, positivo = tarde, negativo = llegó antes)
+            delta_min = None
+            if not pd.isna(ct) and not pd.isna(lp):
+                delta_min = round((lp - ct).total_seconds() / 60, 1)
+                delta_citas.append(delta_min)
+
+            # Cumplimiento óptimo (dentro de 30 min después de la cita)
+            cumpl_opt = None  # None = sin fecha
+            if delta_min is not None:
+                cumpl_opt = 1 if delta_min <= 30 else 0
+            # Externos y reprog Ajover también cuentan como cumplidos en óptimo
+            if cumpl_opt == 0 and ("externo" in cumpl_c or "reprog Ajover" in cumpl_c):
+                cumpl_opt = 1
+
+            # Tendencia mes a mes
             if mes_iso:
-                t = tendencia_raw.setdefault(mes_iso, {"total": 0, "cumpl": 0, "no_cumpl": 0, "externo": 0, "obs_set": set(), "mans": 0, "rows_tot": 0})
+                t = tendencia_raw.setdefault(mes_iso, {"total": 0, "cumpl": 0, "no_cumpl": 0, "externo": 0, "cumpl_opt": 0, "no_cumpl_opt": 0, "obs_set": set(), "mans": 0, "rows_tot": 0})
                 t["rows_tot"] += 1
                 if ob:  t["obs_set"].add(ob)
                 if man: t["mans"] += 1
@@ -749,10 +763,11 @@ def leer_ajover_completo(stats):
                         t["cumpl"] += 1
                     else:
                         t["no_cumpl"] += 1
-
-            # Delta vs cita (en minutos, positivo = tarde)
-            if not pd.isna(ct) and not pd.isna(lp):
-                delta_citas.append(round((lp - ct).total_seconds() / 60, 1))
+                    # óptimo
+                    if cumpl_opt == 1:
+                        t["cumpl_opt"] += 1
+                    else:
+                        t["no_cumpl_opt"] += 1
 
             # Tiempos de operación
             d1 = _dmin(pl,  llp)   # planeada → llegada real a planta
@@ -786,6 +801,7 @@ def leer_ajover_completo(stats):
                 "resp_repr":    resp_repr,
                 "resp_opt":     resp_opt,
                 "motivo_opt":   motivo_opt,
+                "delta_min":    delta_min,
                 "fllpuerto":    lp.strftime("%d-%m-%Y %H:%M")  if not pd.isna(lp)  else "",
                 "fplanta_plan": pl.strftime("%d-%m-%Y %H:%M")  if not pd.isna(pl)  else "",
                 "fplanta_real": llp.strftime("%d-%m-%Y %H:%M") if not pd.isna(llp) else "",
@@ -801,17 +817,20 @@ def leer_ajover_completo(stats):
 
         tendencia = [
             {"mes": m,
-             "total":     v["total"],
-             "cumpl":     v["cumpl"],
-             "no_cumpl":  v["no_cumpl"],
-             "externo":   v["externo"],
-             "obs_dist":  len(v["obs_set"]),
-             "mans":      v["mans"],
-             "rows_tot":  v["rows_tot"],
-             "pct":       round(v["cumpl"] / v["total"] * 100, 1) if v["total"] else 0,
-             "dt1_avg":   round(sum(v["dt1s"])/len(v["dt1s"]),1) if v.get("dt1s") else None,
-             "dt2_avg":   round(sum(v["dt2s"])/len(v["dt2s"]),1) if v.get("dt2s") else None,
-             "dt3_avg":   round(sum(v["dt3s"])/len(v["dt3s"]),1) if v.get("dt3s") else None}
+             "total":        v["total"],
+             "cumpl":        v["cumpl"],
+             "no_cumpl":     v["no_cumpl"],
+             "externo":      v["externo"],
+             "cumpl_opt":    v.get("cumpl_opt", 0),
+             "no_cumpl_opt": v.get("no_cumpl_opt", 0),
+             "obs_dist":     len(v["obs_set"]),
+             "mans":         v["mans"],
+             "rows_tot":     v["rows_tot"],
+             "pct":          round(v["cumpl"] / v["total"] * 100, 1) if v["total"] else 0,
+             "pct_opt":      round(v.get("cumpl_opt",0) / v["total"] * 100, 1) if v["total"] else 0,
+             "dt1_avg":      round(sum(v["dt1s"])/len(v["dt1s"]),1) if v.get("dt1s") else None,
+             "dt2_avg":      round(sum(v["dt2s"])/len(v["dt2s"]),1) if v.get("dt2s") else None,
+             "dt3_avg":      round(sum(v["dt3s"])/len(v["dt3s"]),1) if v.get("dt3s") else None}
             for m, v in sorted(tendencia_raw.items())
         ]
 

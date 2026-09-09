@@ -493,6 +493,7 @@
         <div style="margin:0 16px 12px" id="ajLlNoCumpl"></div>
         <div style="margin:0 16px 16px" id="ajLlNoCumplDetalle"></div>
         <div id="ajLlPies" style="margin:0 16px 14px"></div>
+        <div id="ajLlPiesOpt" style="margin:0 16px 14px"></div>
         <div style="display:flex;gap:16px;margin:0 16px 12px;flex-wrap:wrap">
           <div style="flex:1;min-width:220px"><div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">Estado operación</div><div id="ajLlEstados"></div></div>
           <div style="flex:1;min-width:220px"><div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">Motivos de fallo (todos)</div><div id="ajLlMotivos"></div></div>
@@ -2129,10 +2130,11 @@ function renderAjoverLlenos(){
   // ── gráfico 1: % cumplimiento, subtítulo = OBs distintos ─────────────────
   const tend=(ll.tendencia||[]).filter(t=>!S.f.meses.size||S.f.meses.has(t.mes));
   if(tend.length){
+    const _esOpt=SAJ.ll.modo==='eficiente';
     $('ajLlTendencia').innerHTML=_svgTend(tend,{
-      key:'pct', pct:true, maxV:100,
-      title:'Cumplimiento de cita — mes a mes',
-      color:(t)=>t.pct>=90?'#1a8a34':t.pct>=70?'#d48000':'#c82333',
+      key:_esOpt?'pct_opt':'pct', pct:true, maxV:100,
+      title:_esOpt?'Cumplimiento óptimo (30 min) — mes a mes':'Cumplimiento de cita — mes a mes',
+      color:(t)=>{const v=_esOpt?t.pct_opt:t.pct;return v>=90?'#1a8a34':v>=70?'#d48000':'#c82333';},
       label:(t,v)=>v+'%',
       sub: (t)=>`${fN(t.rows_tot||0)} llenos`,
       sub2:(t)=>t.obs_dist?`${fN(t.obs_dist)} OBs distintos`:''
@@ -2272,6 +2274,84 @@ function renderAjoverLlenos(){
       </details>`;
     window._ncRender();
   } else { $('ajLlNoCumplDetalle').innerHTML=''; }
+
+  // ── Sunburst óptimo (solo en modo eficiente) ─────────────────────────────
+  if(SAJ.ll.modo==='eficiente'){
+    const optNoCumpl=filtRows.filter(r=>r.delta_min!=null&&r.delta_min>30&&!_isExterno(r)&&!_isReprogAjover(r));
+    const optTotal=filtRows.filter(r=>r.delta_min!=null).length;
+    const optCumpl=optTotal-filtRows.filter(r=>r.delta_min!=null&&r.delta_min>30).length;
+    if(!optNoCumpl.length){
+      $('ajLlPiesOpt').innerHTML='';
+    } else {
+      // Agrupar por resp_opt → motivo_opt
+      const grpOpt={};
+      optNoCumpl.forEach(r=>{
+        const resp=r.resp_opt||'Sin responsable';
+        const mot=r.motivo_opt||'Sin motivo';
+        if(!grpOpt[resp])grpOpt[resp]={};
+        grpOpt[resp][mot]=(grpOpt[resp][mot]||0)+1;
+      });
+      const respListOpt=Object.keys(grpOpt).sort((a,b)=>Object.values(grpOpt[b]).reduce((s,v)=>s+v,0)-Object.values(grpOpt[a]).reduce((s,v)=>s+v,0));
+      const RFAM_OPT=['#2563eb','#ef4444','#10b981','#f59e0b','#8b5cf6','#ec4899'];
+      const nOpt=optNoCumpl.length;
+      const W=300,H=300,cx=150,cy=150,R1i=52,R1o=86,R2i=92,R2o=136;
+      const _darc2=(ri,ro,a0,a1,fill)=>{
+        if(Math.abs(a1-a0)>=2*Math.PI*0.9999)return `<circle cx="${cx}" cy="${cy}" r="${ro}" fill="${fill}" stroke="var(--surface-2)" stroke-width="2"/><circle cx="${cx}" cy="${cy}" r="${ri}" fill="var(--surface-2)"/>`;
+        const lf=(a1-a0)>Math.PI?1:0;
+        const p=(a,r)=>`${(cx+r*Math.cos(a)).toFixed(2)},${(cy+r*Math.sin(a)).toFixed(2)}`;
+        return `<path d="M${p(a0,ro)} A${ro},${ro} 0 ${lf},1 ${p(a1,ro)} L${p(a1,ri)} A${ri},${ri} 0 ${lf},0 ${p(a0,ri)} Z" fill="${fill}" stroke="var(--surface-2)" stroke-width="2"/>`;
+      };
+      const _atxt2=(a0,a1,r,txt,fs,fw)=>{const a=(a0+a1)/2,x=(cx+r*Math.cos(a)).toFixed(1),y=(cy+r*Math.sin(a)).toFixed(1);return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="${fs}" font-weight="${fw}" font-family="inherit">${txt}</text>`;};
+      let inner='',outer='',lbls='';
+      let ga=-Math.PI/2;
+      const shades=(base,n)=>{const r=parseInt(base.slice(1,3),16),g=parseInt(base.slice(3,5),16),b=parseInt(base.slice(5,7),16);return Array.from({length:n},(_,i)=>{const f=0.7+i*0.12;const c=(v,m)=>Math.min(255,Math.round(v+(255-v)*m));return `rgb(${c(r,i*0.1)},${c(g,i*0.1)},${c(b,i*0.1)})`;});};
+      const legend=respListOpt.map((resp,ri)=>{
+        const mots=Object.entries(grpOpt[resp]).sort((a,b)=>b[1]-a[1]);
+        const rCnt=mots.reduce((s,[,v])=>s+v,0);
+        const rAngle=(rCnt/nOpt)*2*Math.PI;
+        const baseCol=RFAM_OPT[ri%RFAM_OPT.length];
+        const cols=shades(baseCol,mots.length+1);
+        inner+=_darc2(R1i,R1o,ga,ga+rAngle,baseCol);
+        if(rAngle>0.35)lbls+=_atxt2(ga,ga+rAngle,(R1i+R1o)/2,rCnt,11,800);
+        let ma=ga;
+        mots.forEach(([mot,cnt],mi)=>{
+          const sw=(cnt/nOpt)*2*Math.PI;
+          outer+=_darc2(R2i,R2o,ma,ma+sw,cols[mi+1]);
+          if(sw>0.18)lbls+=_atxt2(ma,ma+sw,(R2i+R2o)/2,cnt,9,700);
+          ma+=sw;
+        });
+        ga+=rAngle;
+        return `<div style="margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
+            <div style="width:14px;height:14px;border-radius:50%;background:${baseCol};flex-shrink:0"></div>
+            <span style="font-size:13px;font-weight:700;color:var(--ink)">${esc(resp)}</span>
+            <span style="font-size:11px;color:var(--ink-3);margin-left:auto;white-space:nowrap">${rCnt} caso${rCnt!==1?'s':''} — ${((rCnt/nOpt)*100).toFixed(0)}%</span>
+          </div>
+          ${mots.map(([mot,cnt],mi)=>`<div style="display:flex;align-items:center;gap:5px;padding-left:21px;margin-bottom:3px">
+            <div style="width:9px;height:9px;border-radius:2px;background:${cols[mi+1]};flex-shrink:0"></div>
+            <span style="font-size:11px;color:var(--ink-2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(mot)}">${esc(mot)}</span>
+            <span style="font-size:10px;color:var(--ink-3);white-space:nowrap;margin-left:8px">${cnt} · ${((cnt/nOpt)*100).toFixed(0)}%</span>
+          </div>`).join('')}
+        </div>`;
+      }).join('');
+      $('ajLlPiesOpt').innerHTML=`
+        <div style="font-size:11px;font-weight:700;color:var(--neg);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px">
+          Incumplimiento cita óptima (30 min) · ${fN(nOpt)} de ${fN(optTotal)} citas no cumplidas en ventana
+        </div>
+        <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;max-width:680px;margin:0 auto">
+          <div style="flex-shrink:0">
+            <svg viewBox="0 0 ${W} ${H}" style="width:${W}px;height:${H}px;display:block">
+              ${inner}${outer}${lbls}
+              <circle cx="${cx}" cy="${cy}" r="${R1i-3}" fill="var(--surface-2)"/>
+              <text x="${cx}" y="${cy-9}" text-anchor="middle" dominant-baseline="middle" fill="var(--ink)" font-size="26" font-weight="900" font-family="inherit">${nOpt}</text>
+              <text x="${cx}" y="${cy+12}" text-anchor="middle" dominant-baseline="middle" fill="var(--ink-3)" font-size="10" font-family="inherit">no cumplen</text>
+              <text x="${cx}" y="${cy+24}" text-anchor="middle" dominant-baseline="middle" fill="var(--ink-3)" font-size="10" font-family="inherit">cita óptima</text>
+            </svg>
+          </div>
+          <div style="flex:1;min-width:200px;padding-top:6px">${legend||'<span style="color:var(--ink-3);font-size:11px">Sin datos de responsable/motivo óptimo</span>'}</div>
+        </div>`;
+    }
+  } else { $('ajLlPiesOpt').innerHTML=''; }
 
   // ── barras de estados, motivos y motivos de reprogramación (desde filas filtradas) ──
   const fEstados={},fMotivos={},fMotivosRepr={};
