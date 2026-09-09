@@ -423,6 +423,7 @@
         <div id="ajVacTrend" style="margin:0 16px 14px"></div>
         <div id="ajVacDaily" style="margin:0 16px 14px"></div>
         <div id="ajVacKpis" style="margin:0 16px 14px"></div>
+        <div id="ajVacAlertas" style="margin:0 16px 12px"></div>
         <div style="margin:0 16px 12px" id="ajVacPromedios"></div>
         <div style="display:flex;gap:16px;margin:0 16px 12px;flex-wrap:wrap">
           <div style="flex:1;min-width:200px"><div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">Por Patio</div><div id="ajVacPatios"></div></div>
@@ -480,6 +481,7 @@
           </div>
         </div>
         <div id="ajLlKpis" style="margin:0 16px 14px"></div>
+        <div id="ajLlAlertas" style="margin:0 16px 12px"></div>
         <div style="margin:0 16px 12px" id="ajLlPromedios"></div>
         <!-- Tendencias lado a lado -->
         <div style="display:flex;gap:14px;margin:0 16px 16px;flex-wrap:wrap">
@@ -1653,6 +1655,90 @@ function _svgTend(data,cfg){
     </svg></div>`;
 }
 
+function _renderAlertas(rows,tipo,containerId){
+  const alertas=[];
+  if(tipo==='llenos'){
+    const sinCita=rows.filter(r=>!r.fcita);
+    if(sinCita.length)alertas.push({lvl:'error',icon:'📅',
+      titulo:`${fN(sinCita.length)} contenedor${sinCita.length>1?'es':''} sin fecha de cita puerto`,
+      desc:'Aparecen como "Sin fecha" en el indicador. No se puede calcular cumplimiento.',
+      items:sinCita.map(r=>r.cont).filter(Boolean)});
+    const sinLlegada=rows.filter(r=>r.fcita&&!r.fllpuerto);
+    if(sinLlegada.length)alertas.push({lvl:'error',icon:'⚓',
+      titulo:`${fN(sinLlegada.length)} contenedor${sinLlegada.length>1?'es':''} sin fecha de llegada a puerto`,
+      desc:'Tienen cita registrada pero sin llegada al puerto. El cumplimiento queda incalculable.',
+      items:sinLlegada.map(r=>r.cont).filter(Boolean)});
+    const reprIncomp=rows.filter(r=>r.fcita_repr&&(!r.resp_repr||!r.motivo_repr));
+    if(reprIncomp.length){
+      const sinResp=reprIncomp.filter(r=>!r.resp_repr).length,sinMot=reprIncomp.filter(r=>!r.motivo_repr).length;
+      alertas.push({lvl:'warn',icon:'🔄',
+        titulo:`${fN(reprIncomp.length)} reprogramación${reprIncomp.length>1?'es':''} con datos incompletos`,
+        desc:`Faltan: ${sinResp} responsable${sinResp!==1?'s':''} y ${sinMot} motivo${sinMot!==1?'s':''}. Sin esto el control de reprogramación queda incompleto.`,
+        items:reprIncomp.map(r=>r.cont).filter(Boolean)});
+    }
+    const sinPlaca=rows.filter(r=>!r.placa);
+    if(sinPlaca.length)alertas.push({lvl:'info',icon:'🚛',
+      titulo:`${fN(sinPlaca.length)} contenedor${sinPlaca.length>1?'es':''} sin placa de tracto`,
+      desc:'No se puede identificar el vehículo transportador.',
+      items:sinPlaca.map(r=>r.cont).filter(Boolean)});
+  }
+  if(tipo==='vacios'){
+    const sinFprog=rows.filter(r=>!r.fprog);
+    if(sinFprog.length)alertas.push({lvl:'error',icon:'📅',
+      titulo:`${fN(sinFprog.length)} vacío${sinFprog.length>1?'s':''} sin fecha programada`,
+      desc:'Sin fecha de programación no se puede medir el cumplimiento de cita.',
+      items:sinFprog.map(r=>r.cont).filter(Boolean)});
+    const sinFaten=rows.filter(r=>!r.faten);
+    if(sinFaten.length)alertas.push({lvl:'error',icon:'⏱',
+      titulo:`${fN(sinFaten.length)} vacío${sinFaten.length>1?'s':''} sin fecha de atención`,
+      desc:'Sin fecha de atención el registro está incompleto y no entra al cálculo de cumplimiento.',
+      items:sinFaten.map(r=>r.cont).filter(Boolean)});
+    const sinPatio=rows.filter(r=>!r.fllpatio);
+    if(sinPatio.length)alertas.push({lvl:'warn',icon:'🏭',
+      titulo:`${fN(sinPatio.length)} vacío${sinPatio.length>1?'s':''} sin fecha de llegada a patio`,
+      desc:'No se puede calcular el tiempo de estadía en patio (dt2/dt3).',
+      items:sinPatio.map(r=>r.cont).filter(Boolean)});
+    const sinPlanta=rows.filter(r=>!r.fplanta);
+    if(sinPlanta.length)alertas.push({lvl:'warn',icon:'🏗',
+      titulo:`${fN(sinPlanta.length)} vacío${sinPlanta.length>1?'s':''} sin fecha de llegada a planta`,
+      desc:'No se puede calcular el tiempo de tránsito patio → planta (dt4).',
+      items:sinPlanta.map(r=>r.cont).filter(Boolean)});
+    const sinMan=rows.filter(r=>!r.man);
+    if(sinMan.length)alertas.push({lvl:'info',icon:'📋',
+      titulo:`${fN(sinMan.length)} vacío${sinMan.length>1?'s':''} sin número de manifiesto`,
+      desc:'Sin manifiesto no se puede cruzar con el documento de importación.',
+      items:sinMan.map(r=>r.cont).filter(Boolean)});
+  }
+  if(!alertas.length){
+    $(containerId).innerHTML=`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:10px">
+      <span style="font-size:18px">✅</span>
+      <div style="font-size:12px;font-weight:700;color:var(--pos)">Sin alertas — todos los datos del período están completos</div>
+    </div>`;
+    return;
+  }
+  const nErr=alertas.filter(a=>a.lvl==='error').length,nWarn=alertas.filter(a=>a.lvl==='warn').length;
+  const borderCol=nErr?'#ef4444':nWarn?'#f59e0b':'#60a5fa';
+  const resumen=[nErr&&`${nErr} error${nErr>1?'es':''}`,nWarn&&`${nWarn} advertencia${nWarn>1?'s':''}`].filter(Boolean).join(', ');
+  const cards=alertas.map(a=>{
+    const {col,bg}=a.lvl==='error'?{col:'#ef4444',bg:'rgba(239,68,68,.07)'}:a.lvl==='warn'?{col:'#f59e0b',bg:'rgba(245,158,11,.07)'}:{col:'#60a5fa',bg:'rgba(96,165,250,.07)'};
+    const itemsStr=a.items.slice(0,12).join('  ·  ')+(a.items.length>12?`  · +${a.items.length-12} más`:'');
+    return `<div style="padding:10px 14px;border-radius:8px;background:${bg};border-left:3px solid ${col}">
+      <div style="display:flex;align-items:flex-start;gap:8px">
+        <span style="font-size:16px;line-height:1.4">${a.icon}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:700;color:${col};margin-bottom:2px">${a.titulo}</div>
+          <div style="font-size:11px;color:var(--ink-3)">${a.desc}</div>
+          ${a.items.length?`<div style="font-size:10px;color:var(--ink-2);margin-top:5px;font-family:monospace;word-break:break-all">${esc(itemsStr)}</div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  $(containerId).innerHTML=`<div style="background:var(--surface-2);border-radius:12px;padding:14px 16px;border-left:4px solid ${borderCol}">
+    <div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">⚡ Alertas operativas${resumen?' — '+resumen:''}</div>
+    <div style="display:flex;flex-direction:column;gap:7px">${cards}</div>
+  </div>`;
+}
+
 function renderAjoverVacios(){
   const AJ=window.AJOVER||{};
   const va=AJ.vacios;
@@ -1799,6 +1885,7 @@ function renderAjoverVacios(){
     const eg=document.getElementById('gv_vac');if(eg)eg.style.strokeDasharray=`${arcV.toFixed(1)} ${(totC-arcV).toFixed(1)}`;
     const ec=document.getElementById('cnt_vac_tot');if(ec){const target=+ec.dataset.target;let v=0;const s=performance.now();const tick=t=>{const p=Math.min(1,(t-s)/900);v=Math.round(p*target);ec.textContent=fN(v);if(p<1)requestAnimationFrame(tick);};requestAnimationFrame(tick);}
   },50);
+  _renderAlertas(filtVac,'vacios','ajVacAlertas');
 
   // Barras filtradas
   const fPatios={},fLineas={};
@@ -2003,6 +2090,7 @@ function renderAjoverLlenos(){
     });
     const ec=document.getElementById('cnt_ll_tot');if(ec){const target=+ec.dataset.target;let v=0;const s=performance.now();const tick=t=>{const p=Math.min(1,(t-s)/900);v=Math.round(p*target);ec.textContent=fN(v);if(p<1)requestAnimationFrame(tick);};requestAnimationFrame(tick);}
   },50);
+  _renderAlertas(filtRows,'llenos','ajLlAlertas');
 
   // ── tiempos promedio (calculados desde filas filtradas) ──────────────────
   const _avg=arr=>arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:null;
