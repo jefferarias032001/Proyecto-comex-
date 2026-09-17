@@ -1460,6 +1460,7 @@ const VAC_COLS=[
 ];
 const LL_COLS=[
   {k:'fecha',       t:'s',l:'Fecha aten.',     cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fecha)}</td>`},
+  {k:'ob',          t:'s',l:'Pedido (OB)',     cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.ob)||'—'}</td>`},
   {k:'cont',        t:'s',l:'Contenedor',      cell:(r,s)=>`<td style="${s};font-family:monospace">${esc(r.cont)}</td>`},
   {k:'terminal',    t:'s',l:'Terminal',        cell:(r,s)=>`<td style="${s}">${esc(r.terminal)}</td>`},
   {k:'placa',       t:'s',l:'Placa',           cell:(r,s)=>`<td style="${s}">${esc(r.placa)}</td>`},
