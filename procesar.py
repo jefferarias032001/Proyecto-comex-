@@ -632,7 +632,7 @@ def leer_ajover_completo(stats):
         c_term    = next((v for k, v in nm2.items() if "terminal" in k), None)
         c_placa2  = _col(nm2, "placa")
         c_obs     = next((v for k, v in nm2.items() if "observacion" in k), None)
-        c_ob2     = next((v for k, v in nm2.items() if "pedido" in k), None) \
+        c_ob2     = next((v for k, v in nm2.items() if "pedido" in k and "lleno" in k), None) \
                     or next((v for k, v in nm2.items() if "orden" in k and "base" in k), None) \
                     or next((v for k, v in nm2.items() if k == "ob"), None)
         c_man2    = next((v for k, v in nm2.items() if "manifiesto" in k), None)
