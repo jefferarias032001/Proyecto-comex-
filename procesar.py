@@ -1397,6 +1397,39 @@ def main():
     ruta_html = os.path.join(BASE, "index.html")
     open(ruta_html, "w", encoding="utf-8").write(tpl.replace("/*__DATOS__*/", payload))
 
+    # Exportar JSON compacto para el bot de Slack (solo resúmenes, no filas brutas)
+    ruta_json = os.path.join(BASE, "datos_bot.json")
+    try:
+        # Resumen de ventas por cliente (top 20) y por mes
+        d_bot = U[U["AFacturar"] > 0].copy()
+        top_clientes = (d_bot.groupby("ClienteNIT")
+                        .agg(af=("AFacturar","sum"), ap=("APagar","sum"), viajes=("OB","count"))
+                        .nlargest(20, "af")
+                        .reset_index()
+                        .to_dict("records"))
+        por_mes = (d_bot.groupby("Mes")
+                   .agg(af=("AFacturar","sum"), ap=("APagar","sum"), viajes=("OB","count"))
+                   .reset_index()
+                   .to_dict("records"))
+        ventas_resumen = {
+            "af_total": float(d_bot["AFacturar"].sum()),
+            "ap_total": float(d_bot["APagar"].sum()),
+            "viajes_total": int(len(d_bot)),
+            "top_clientes": top_clientes,
+            "por_mes": por_mes
+        }
+    except Exception:
+        ventas_resumen = {}
+    bot_data = {
+        "ventas_resumen": ventas_resumen,
+        "meta":    meta,
+        "ajover":  ajover_data or {},
+        "ajcomex": ajcomex_data or {},
+        "generado": dt.datetime.now().isoformat()
+    }
+    with open(ruta_json, "w", encoding="utf-8") as jf:
+        json.dump(bot_data, jf, ensure_ascii=False, default=str)
+
     af, ap = U["AFacturar"].sum(), U["APagar"].sum()
     print("-" * 64)
     print(f"  Registros borrados excluidos : {stats['borradas']}")
