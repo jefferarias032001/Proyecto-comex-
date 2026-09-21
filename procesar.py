@@ -15,6 +15,19 @@ USO (en la terminal de VS Code):
 import os, sys, json, glob, webbrowser, unicodedata, warnings, datetime as dt
 import pandas as pd
 import numpy as np
+try:
+    import requests as _requests
+except ImportError:
+    _requests = None
+
+# Cargar .env local si existe (WEBAPP_COOKIE, etc.)
+_env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+if os.path.isfile(_env_path):
+    for _line in open(_env_path, encoding="utf-8"):
+        _line = _line.strip()
+        if _line and not _line.startswith("#") and "=" in _line:
+            _k, _, _v = _line.partition("=")
+            os.environ.setdefault(_k.strip(), _v.strip())
 
 warnings.filterwarnings("ignore")  # oculta avisos técnicos (no son errores) para una salida limpia
 
@@ -24,6 +37,12 @@ CARPETA = r"C:\Users\jarias\OneDrive - TRACTOCAR LOGISTICS SAS\POWER BI JEFFER\A
 # Carpeta del mes actual (cedis2, expo2, impu2) — misma estructura, se lee igual
 CARPETA2 = r"C:\Users\jarias\OneDrive - TRACTOCAR LOGISTICS SAS\POWER BI JEFFER\ACHIVOS 2"
 # =======================================================================
+
+# ---------- Web app COMEX (despachoscomex.tractocar.com) ----------
+WEBAPP_URL = "https://despachoscomex.tractocar.com"
+# Cookie CF_Authorization — cópialo de Chrome DevTools > Application > Cookies
+# o ponlo en variable de entorno WEBAPP_COOKIE
+WEBAPP_COOKIE = os.environ.get("WEBAPP_COOKIE", "")
 
 # ---------- Cruce Samaritima (opcional) ----------
 # Ruta del archivo 'exportación Ajover.xlsx' (hoja 'VACIOS AJOVER'). Si no existe, se omite el cruce.
@@ -499,6 +518,294 @@ def leer_ajover_comex(stats):
             stats["avisos"].append(f"Ajover COMEX {hoja} error: {e} | {traceback.format_exc()[:300]}")
 
     return result
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Web app helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _fetch_webapp_rows(op):
+    """Llama /api/rows?op={op} en despachoscomex.tractocar.com y devuelve lista de dicts."""
+    cookie = os.environ.get("WEBAPP_COOKIE", WEBAPP_COOKIE)
+    if not cookie or not _requests:
+        return None
+    try:
+        r = _requests.get(
+            f"{WEBAPP_URL}/api/rows",
+            params={"op": op},
+            cookies={"CF_Authorization": cookie},
+            timeout=30,
+        )
+        r.raise_for_status()
+        data = r.json()
+        rows = data.get("rows", data) if isinstance(data, dict) else data
+        return rows if isinstance(rows, list) else None
+    except Exception as e:
+        return None
+
+
+def _parse_wdt(fecha_str, time_str):
+    """Combina fecha='2026-05-08' con time='17:04' o '08:50+1' → pd.Timestamp."""
+    if not fecha_str or not time_str:
+        return pd.NaT
+    s = str(time_str).strip()
+    if s in ("", "—", "nan", "None"):
+        return pd.NaT
+    try:
+        base = pd.Timestamp(str(fecha_str)[:10])
+        off = 0
+        if '+' in s:
+            s, n = s.rsplit('+', 1)
+            off = int(n)
+        h, m = int(s[:2]), int(s[3:5])
+        return base + pd.Timedelta(days=off, hours=h, minutes=m)
+    except Exception:
+        return pd.NaT
+
+
+def leer_ajover_webapp(stats):
+    """Lee VACIOS y LLENOS de Ajover directamente desde la web app (API REST).
+    Devuelve la misma estructura que leer_ajover_completo, o None si no hay cookie/red."""
+    llenos_rows = _fetch_webapp_rows("ajover_expo_lleno")
+    vacios_rows = _fetch_webapp_rows("ajover_expo_vacio")
+    if not llenos_rows and not vacios_rows:
+        return None
+
+    result = {}
+
+    # ── VACIOS ────────────────────────────────────────────────────────────────
+    if vacios_rows:
+        a_tiempo = tarde = sin_fecha = 0
+        dt1s = []; dt2s = []; dt3s = []; dt4s = []
+        patio_ct = {}; linea_ct = {}; va_rows_out = []
+
+        for r in vacios_rows:
+            fp = str(r.get("Fecha programación") or "").strip()
+            fe = str(r.get("Fecha") or "").strip()
+            fecha_ref = fe or fp
+            pg  = pd.Timestamp(fp) if fp else pd.NaT
+            at  = pd.Timestamp(fe) if fe else pd.NaT
+            lpa  = _parse_wdt(fecha_ref, r.get("Llegada patio entrega vacío"))
+            slpa = _parse_wdt(fecha_ref, r.get("Salida patio entrega vacío"))
+            llp  = _parse_wdt(fecha_ref, r.get("Llegada planta"))
+
+            if pd.isna(pg) or pd.isna(at):
+                cumpl = "Sin fecha"; sin_fecha += 1
+            elif at.date() <= pg.date():
+                cumpl = "A tiempo"; a_tiempo += 1
+            else:
+                horas = round((at - pg).total_seconds() / 3600, 1)
+                cumpl = f"Tarde +{horas}h"; tarde += 1
+
+            def _mins(a, b):
+                if pd.isna(a) or pd.isna(b): return None
+                d = (b - a).total_seconds() / 60
+                return None if d < 0 else round(d, 1)
+
+            d1 = _mins(pg, at);   d1 and dt1s.append(d1)
+            d2 = _mins(at, lpa);  d2 and dt2s.append(d2)
+            d3 = _mins(lpa, slpa); d3 and dt3s.append(d3)
+            d4 = _mins(slpa, llp); d4 and dt4s.append(d4)
+
+            patio = str(r.get("Patio devolución") or "").strip()
+            linea = str(r.get("Naviera") or "").strip()
+            if patio: patio_ct[patio] = patio_ct.get(patio, 0) + 1
+            if linea: linea_ct[linea] = linea_ct.get(linea, 0) + 1
+
+            va_rows_out.append({
+                "mes":      pg.strftime("%Y-%m")         if not pd.isna(pg)   else "",
+                "fprog":    pg.strftime("%d-%m-%Y %H:%M") if not pd.isna(pg)   else "",
+                "faten":    at.strftime("%d-%m-%Y %H:%M") if not pd.isna(at)   else "",
+                "fllpatio": lpa.strftime("%d-%m-%Y %H:%M")  if not pd.isna(lpa)  else "",
+                "fslpatio": slpa.strftime("%d-%m-%Y %H:%M") if not pd.isna(slpa) else "",
+                "fplanta":  llp.strftime("%d-%m-%Y %H:%M")  if not pd.isna(llp)  else "",
+                "patio": patio, "linea": linea,
+                "cont": str(r.get("Contenedor") or ""),
+                "man":  str(r.get("Manifiesto vacío") or ""),
+                "cumpl": cumpl,
+                "dt1": d1, "dt2": d2, "dt3": d3, "dt4": d4,
+            })
+
+        def _avg(lst): return round(sum(lst)/len(lst), 1) if lst else None
+        result["vacios"] = {
+            "total": len(vacios_rows), "a_tiempo": a_tiempo, "tarde": tarde, "sin_fecha": sin_fecha,
+            "patios": patio_ct, "lineas": linea_ct, "rows": va_rows_out,
+            "prom": {
+                "prog_aten":    _avg(dt1s),
+                "aten_llpatio": _avg(dt2s),
+                "en_patio":     _avg(dt3s),
+                "patio_planta": _avg(dt4s),
+            }
+        }
+
+    # ── LLENOS ────────────────────────────────────────────────────────────────
+    if llenos_rows:
+        exitosos = fallidos = 0
+        cumpl_cita = no_cumpl = sin_fecha_c = externo_ok = reprog_ajover_ok = 0
+        motivos = {}; no_cumpl_motivos = {}; estados = {}; motivos_repr = {}
+        dt1s = []; dt2s = []; dt3s = []; delta_citas = []
+        tendencia_raw = {}; ll_rows_out = []
+
+        EXTERNO = ["manifestaci", "accidente de transito", "accidente en la via",
+                   "accidente en la vía", "cierre", "paro", "bloqueo", "lluvia",
+                   "semaforo", "trafico", "tráfico", "demora en salida de planta",
+                   "salida tarde de planta", "no lo dejaron ingresar",
+                   "protesta", "orden publica", "orden pública", "huelga",
+                   "derrumbe", "via cerrada", "vía cerrada", "represamiento"]
+        INTERNO = ["falla mec", "trompo", "mal estado", "averia", "avería",
+                   "llanta", "conductor llega tarde", "conductor asignado",
+                   "perdida de cita por salida tard", "demora conductor"]
+
+        def _clasif_w(m):
+            ml = _norm(m)
+            for k in EXTERNO:
+                if k in ml: return "externo"
+            for k in INTERNO:
+                if k in ml: return "interno"
+            return "otro"
+
+        def _dmin(a, b):
+            if pd.isna(a) or pd.isna(b): return None
+            d = (b - a).total_seconds() / 60
+            return None if d < 0 else round(d, 1)
+
+        for r in llenos_rows:
+            fecha_ref = str(r.get("Fecha") or "").strip()
+            fa  = pd.Timestamp(fecha_ref) if fecha_ref else pd.NaT
+            ct  = _parse_wdt(fecha_ref, r.get("Cita programada"))
+            lp  = _parse_wdt(fecha_ref, r.get("Llegada puerto"))
+            llp = _parse_wdt(fecha_ref, r.get("Llegada planta"))
+            sal = _parse_wdt(fecha_ref, r.get("Salida planta"))
+
+            estado = str(r.get("Estado") or "").strip().upper()
+            obs    = str(r.get("Notas") or "").strip()
+            motivo = obs  # Notas es el mejor proxy para motivo en la web app
+            if motivo in ("nan", "None", "NAN", "NONE", ""): motivo = ""
+
+            if estado in ("CERRADO", "EXITOSO"): exitosos += 1
+            elif estado:
+                fallidos += 1
+                if motivo: motivos[motivo] = motivos.get(motivo, 0) + 1
+            if estado: estados[estado] = estados.get(estado, 0) + 1
+
+            mes_iso = fa.strftime("%Y-%m") if not pd.isna(fa) else ""
+            clasif  = _clasif_w(motivo) if motivo else "otro"
+
+            if pd.isna(ct) or pd.isna(lp):
+                cumpl_c = "Sin fecha"; sin_fecha_c += 1
+            elif lp <= ct + pd.Timedelta(hours=1):
+                cumpl_c = "A tiempo"; cumpl_cita += 1
+            elif clasif == "externo":
+                mins = round((lp - ct).total_seconds() / 60)
+                cumpl_c = f"Tarde +{mins}min (externo)"; externo_ok += 1; cumpl_cita += 1
+            else:
+                mins = round((lp - ct).total_seconds() / 60)
+                cumpl_c = f"Tarde +{mins}min"; no_cumpl += 1
+                key = motivo or "(sin motivo)"
+                no_cumpl_motivos[key] = no_cumpl_motivos.get(key, 0) + 1
+
+            delta_min = None
+            if not pd.isna(ct) and not pd.isna(lp):
+                delta_min = round((lp - ct).total_seconds() / 60, 1)
+                delta_citas.append(delta_min)
+
+            cumpl_opt = None
+            if delta_min is not None:
+                cumpl_opt = 1 if delta_min <= 30 else 0
+            if cumpl_opt == 0 and "externo" in cumpl_c:
+                cumpl_opt = 1
+
+            d1 = _dmin(pd.NaT, llp)  # sin "planeada" en API
+            d2 = _dmin(llp, sal)
+            d3 = _dmin(sal, lp)
+            if d2: dt2s.append(d2)
+            if d3: dt3s.append(d3)
+
+            ob  = str(r.get("Pedido") or "").strip()
+            man = str(r.get("Manifiesto lleno") or "").strip()
+
+            if mes_iso:
+                t = tendencia_raw.setdefault(mes_iso, {
+                    "total": 0, "cumpl": 0, "no_cumpl": 0, "externo": 0,
+                    "cumpl_opt": 0, "no_cumpl_opt": 0, "obs_set": set(), "mans": 0, "rows_tot": 0
+                })
+                t["rows_tot"] += 1
+                if ob:  t["obs_set"].add(ob)
+                if man: t["mans"] += 1
+                if not pd.isna(ct) and not pd.isna(lp):
+                    t["total"] += 1
+                    if "externo" in cumpl_c:    t["cumpl"] += 1; t["externo"] += 1
+                    elif cumpl_c == "A tiempo": t["cumpl"] += 1
+                    else:                        t["no_cumpl"] += 1
+                    if cumpl_opt == 1: t["cumpl_opt"] += 1
+                    else:              t["no_cumpl_opt"] += 1
+                if d2: t.setdefault("dt2s", []).append(d2)
+                if d3: t.setdefault("dt3s", []).append(d3)
+
+            ll_rows_out.append({
+                "fecha":        fa.strftime("%d-%m-%Y")       if not pd.isna(fa)  else "",
+                "mes_iso":      mes_iso,
+                "ob":           ob,
+                "man":          man,
+                "cont":         str(r.get("Contenedor") or "").strip(),
+                "terminal":     str(r.get("Terminal portuaria") or "").strip(),
+                "placa":        str(r.get("Placa retiro") or "").strip(),
+                "estado":       estado,
+                "motivo":       motivo,
+                "clasif":       clasif,
+                "obs":          obs,
+                "fcita":        ct.strftime("%d-%m-%Y %H:%M")  if not pd.isna(ct)  else "",
+                "fcita_repr":   "",
+                "motivo_repr":  "",
+                "resp_repr":    "",
+                "resp_opt":     "",
+                "motivo_opt":   "",
+                "delta_min":    delta_min,
+                "fllpuerto":    lp.strftime("%d-%m-%Y %H:%M")  if not pd.isna(lp)  else "",
+                "fplanta_plan": "",
+                "fplanta_real": llp.strftime("%d-%m-%Y %H:%M") if not pd.isna(llp) else "",
+                "fsalida":      sal.strftime("%d-%m-%Y %H:%M") if not pd.isna(sal) else "",
+                "cumpl_cita":   cumpl_c,
+                "dt1": None, "dt2": d2, "dt3": d3,
+            })
+
+        def _avg2(lst): return round(sum(lst)/len(lst), 1) if lst else None
+        avg_delta = round(sum(delta_citas)/len(delta_citas), 1) if delta_citas else None
+
+        tendencia = [
+            {"mes": m,
+             "total":        v["total"],       "cumpl":        v["cumpl"],
+             "no_cumpl":     v["no_cumpl"],     "externo":      v["externo"],
+             "cumpl_opt":    v.get("cumpl_opt", 0), "no_cumpl_opt": v.get("no_cumpl_opt", 0),
+             "obs_dist":     len(v["obs_set"]), "mans":         v["mans"],
+             "rows_tot":     v["rows_tot"],
+             "pct":     round(v["cumpl"]/v["total"]*100, 1) if v["total"] else 0,
+             "pct_opt": round(v.get("cumpl_opt",0)/v["total"]*100, 1) if v["total"] else 0,
+             "dt1_avg": None,
+             "dt2_avg": round(sum(v["dt2s"])/len(v["dt2s"]),1) if v.get("dt2s") else None,
+             "dt3_avg": round(sum(v["dt3s"])/len(v["dt3s"]),1) if v.get("dt3s") else None}
+            for m, v in sorted(tendencia_raw.items())
+        ]
+
+        result["llenos"] = {
+            "total": len(llenos_rows), "exitosos": exitosos, "fallidos": fallidos,
+            "cumpl_cita": cumpl_cita, "no_cumpl": no_cumpl,
+            "externo_ok": externo_ok, "reprog_ajover_ok": reprog_ajover_ok,
+            "sin_fecha_cita": sin_fecha_c,
+            "motivos":          dict(sorted(motivos.items(),          key=lambda x: -x[1])[:20]),
+            "no_cumpl_motivos": dict(sorted(no_cumpl_motivos.items(), key=lambda x: -x[1])),
+            "motivos_repr":     dict(sorted(motivos_repr.items(),     key=lambda x: -x[1])),
+            "tendencia": tendencia, "estados": estados, "rows": ll_rows_out,
+            "prom": {
+                "retraso_planta":  _avg2(dt1s),
+                "cargue_planta":   _avg2(dt2s),
+                "transito_puerto": _avg2(dt3s),
+                "delta_cita":      avg_delta,
+            }
+        }
+
+    stats["ajover_fuente"] = "webapp"
+    return result if result else None
 
 
 def leer_ajover_completo(stats):
@@ -1372,7 +1679,7 @@ def main():
                            "info": stats.get("sam_info")}}
 
     ajcomex_data = leer_ajover_comex(stats)
-    ajover_data = leer_ajover_completo(stats)
+    ajover_data = leer_ajover_webapp(stats) or leer_ajover_completo(stats)
     if ajover_data:
         v = ajover_data.get("vacios") or {}
         l = ajover_data.get("llenos") or {}
