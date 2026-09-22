@@ -795,7 +795,7 @@ def leer_ajover_webapp(stats):
                 if d3: t.setdefault("dt3s", []).append(d3)
 
             ll_rows_out.append({
-                "fecha":        _fmt(fa),
+                "fecha":        fa.strftime("%d-%m-%Y") if not pd.isna(fa) else "",
                 "mes_iso":      mes_iso,
                 "ob":           ob,
                 "man":          man,
@@ -1063,6 +1063,48 @@ def _suplementar_excel(result, stats):
                 nuevos += 1
             if nuevos:
                 stats["avisos"].append(f"Excel histórico: {nuevos} llenos agregados (no estaban en web app).")
+
+            # Reconstruir tendencia con TODOS los rows (web app + Excel histórico)
+            t_raw = {}
+            for row in ll_data.get("rows", []):
+                m = row.get("mes_iso", "")
+                if not m: continue
+                t = t_raw.setdefault(m, {
+                    "total": 0, "cumpl": 0, "no_cumpl": 0, "externo": 0,
+                    "cumpl_opt": 0, "no_cumpl_opt": 0, "obs_set": set(), "mans": 0, "rows_tot": 0,
+                    "dt1s": [], "dt2s": [], "dt3s": []
+                })
+                t["rows_tot"] += 1
+                ob = row.get("ob", ""); man = row.get("man", "")
+                if ob:  t["obs_set"].add(ob)
+                if man: t["mans"] += 1
+                cc = row.get("cumpl_cita", ""); dm = row.get("delta_min")
+                if dm is not None:
+                    t["total"] += 1
+                    if "externo" in cc:         t["cumpl"] += 1; t["externo"] += 1
+                    elif "reprog Ajover" in cc: t["cumpl"] += 1
+                    elif cc == "A tiempo":      t["cumpl"] += 1
+                    else:                       t["no_cumpl"] += 1
+                    if dm <= 30 or "externo" in cc or "reprog Ajover" in cc:
+                        t["cumpl_opt"] += 1
+                    else:
+                        t["no_cumpl_opt"] += 1
+                d1 = row.get("dt1"); d2 = row.get("dt2"); d3 = row.get("dt3")
+                if d1: t["dt1s"].append(d1)
+                if d2: t["dt2s"].append(d2)
+                if d3: t["dt3s"].append(d3)
+            ll_data["tendencia"] = [
+                {"mes": m,
+                 "total": v["total"], "cumpl": v["cumpl"], "no_cumpl": v["no_cumpl"], "externo": v["externo"],
+                 "cumpl_opt": v["cumpl_opt"], "no_cumpl_opt": v["no_cumpl_opt"],
+                 "obs_dist": len(v["obs_set"]), "mans": v["mans"], "rows_tot": v["rows_tot"],
+                 "pct":     round(v["cumpl"]/v["total"]*100, 1) if v["total"] else 0,
+                 "pct_opt": round(v["cumpl_opt"]/v["total"]*100, 1) if v["total"] else 0,
+                 "dt1_avg": round(sum(v["dt1s"])/len(v["dt1s"]),1) if v["dt1s"] else None,
+                 "dt2_avg": round(sum(v["dt2s"])/len(v["dt2s"]),1) if v["dt2s"] else None,
+                 "dt3_avg": round(sum(v["dt3s"])/len(v["dt3s"]),1) if v["dt3s"] else None}
+                for m, v in sorted(t_raw.items())
+            ]
         except Exception as e:
             stats["avisos"].append(f"Error suplementando llenos desde Excel: {e}")
 
