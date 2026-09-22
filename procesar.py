@@ -703,6 +703,13 @@ def leer_ajover_webapp(stats):
             try: return pd.Timestamp(str(v).strip()) if v and str(v).strip() not in ("", "nan", "None") else pd.NaT
             except: return pd.NaT
         def _sc(v): s = str(v or "").strip(); return "" if s in ("nan","None","NAN","NONE") else s
+        _TERM_NORM = {"contecar": "CONTECAR", "sprc": "SPRC", "manga": "MANGA"}
+        def _norm_term(v):
+            s = _sc(v)
+            sl = s.lower()
+            for k, rep in _TERM_NORM.items():
+                if k in sl: return rep
+            return s
 
         for r in llenos_rows:
             fa      = _ts_ll(r.get("Fecha de atención del pedido"))
@@ -800,7 +807,7 @@ def leer_ajover_webapp(stats):
                 "ob":           ob,
                 "man":          man,
                 "cont":         _sc(r.get("CONTENEDOR")),
-                "terminal":     _sc(r.get("Terminal portuaria")),
+                "terminal":     _norm_term(r.get("Terminal portuaria")),
                 "placa":        _sc(r.get("PLACA")),
                 "estado":       estado,
                 "motivo":       motivo,
