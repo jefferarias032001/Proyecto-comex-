@@ -721,7 +721,7 @@ def leer_ajover_webapp(stats):
             lp      = _ts_ll(r.get("Fecha y hora de llegada a puerto"))
             fpesaje = _ts_ll(r.get("Fecha y hora de ingreso a pesaje"))
 
-            estado       = _sc(r.get("ESTADO DE OPERACIÓN")).upper()
+            estado       = "".join(c for c in _sc(r.get("ESTADO DE OPERACIÓN")) if c.isalpha() or c == " ").strip().upper()
             obs          = _sc(r.get("OBSERVACIONES"))
             motivo_fallo = _sc(r.get("MOTIVO DE FALLIDO"))
             motivo       = motivo_fallo or obs
@@ -749,7 +749,7 @@ def leer_ajover_webapp(stats):
             elif clasif == "externo":
                 mins = round((lp - ct).total_seconds() / 60)
                 cumpl_c = f"Tarde +{mins}min (externo)"; externo_ok += 1; cumpl_cita += 1
-            elif resp_es_ajover and not pd.isna(ct_repr):
+            elif resp_es_ajover:
                 mins = round((lp - ct).total_seconds() / 60)
                 cumpl_c = f"Tarde +{mins}min (reprog Ajover)"; reprog_ajover_ok += 1; cumpl_cita += 1
             else:
@@ -1010,7 +1010,7 @@ def _suplementar_excel(result, stats):
                 elif clasif == "externo":
                     mins = round((lp - ct).total_seconds() / 60)
                     cumpl_c = f"Tarde +{mins}min (externo)"
-                elif resp_es_ajover and not pd.isna(ct_repr):
+                elif resp_es_ajover:
                     mins = round((lp - ct).total_seconds() / 60)
                     cumpl_c = f"Tarde +{mins}min (reprog Ajover)"
                 else:
@@ -1426,7 +1426,7 @@ def leer_ajover_completo(stats):
             elif clasif == "externo":
                 mins = round((lp - ct).total_seconds() / 60)
                 cumpl_c = f"Tarde +{mins}min (externo)"; externo_ok += 1; cumpl_cita += 1
-            elif resp_es_ajover and not pd.isna(ct_repr):
+            elif resp_es_ajover:
                 mins = round((lp - ct).total_seconds() / 60)
                 cumpl_c = f"Tarde +{mins}min (reprog Ajover)"; reprog_ajover_ok += 1; cumpl_cita += 1
             else:
