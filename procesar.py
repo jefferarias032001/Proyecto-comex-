@@ -564,7 +564,8 @@ def _parse_wdt(fecha_str, time_str):
 
 
 def leer_ajover_webapp(stats):
-    """Lee VACIOS y LLENOS de Ajover directamente desde la web app (API REST).
+    """SOLO SE USA COMO FALLBACK cuando no hay Excel.
+    Para la operación normal, la fuente primaria es leer_ajover_completo (Excel).
     Devuelve la misma estructura que leer_ajover_completo, o None si no hay cookie/red."""
     llenos_rows = _fetch_webapp_rows("ajover_expo_lleno")
     vacios_rows = _fetch_webapp_rows("ajover_expo_vacio")
@@ -806,6 +807,152 @@ def leer_ajover_webapp(stats):
 
     stats["ajover_fuente"] = "webapp"
     return result if result else None
+
+
+def _suplementar_webapp(result, stats):
+    """Agrega al resultado del Excel las filas de la web app que NO están en el Excel.
+    La web app provee los datos operativos nuevos; el Excel tiene el histórico completo
+    incluyendo los campos de reprogramación que la web app no registra."""
+    if not result:
+        return
+
+    webapp_ll = _fetch_webapp_rows("ajover_expo_lleno") or []
+    webapp_va = _fetch_webapp_rows("ajover_expo_vacio") or []
+    if not webapp_ll and not webapp_va:
+        return
+
+    # ── LLENOS nuevos (contenedores no en el Excel) ──────────────────────────
+    ll_data = result.get("llenos")
+    if webapp_ll and ll_data is not None:
+        xl_conts = {str(r.get("cont", "")).strip() for r in ll_data.get("rows", [])}
+        nuevos   = [r for r in webapp_ll if str(r.get("Contenedor", "")).strip() not in xl_conts]
+        if nuevos:
+            EXTERNO = ["manifestaci","accidente de transito","accidente en la via",
+                       "accidente en la vía","cierre","paro","bloqueo","lluvia",
+                       "semaforo","trafico","tráfico","demora en salida de planta",
+                       "salida tarde de planta","no lo dejaron ingresar",
+                       "protesta","orden publica","orden pública","huelga",
+                       "derrumbe","via cerrada","vía cerrada","represamiento"]
+            for r in nuevos:
+                fecha_ref = str(r.get("Fecha") or "").strip()
+                fa  = pd.Timestamp(fecha_ref) if fecha_ref else pd.NaT
+                ct  = _parse_wdt(fecha_ref, r.get("Cita programada"))
+                lp  = _parse_wdt(fecha_ref, r.get("Llegada puerto"))
+                llp = _parse_wdt(fecha_ref, r.get("Llegada planta"))
+                sal = _parse_wdt(fecha_ref, r.get("Salida planta"))
+                estado = str(r.get("Estado") or "").strip().upper()
+                obs    = str(r.get("Notas") or "").strip()
+                if obs in ("nan","None","NAN","NONE",""): obs = ""
+                motivo = obs
+
+                def _clasif_s(m):
+                    ml = _norm(m)
+                    for k in EXTERNO:
+                        if k in ml: return "externo"
+                    return "otro"
+
+                if pd.isna(ct) or pd.isna(lp):
+                    cumpl_c = "Sin fecha"
+                elif lp <= ct + pd.Timedelta(hours=1):
+                    cumpl_c = "A tiempo"
+                elif _clasif_s(motivo) == "externo":
+                    mins = round((lp - ct).total_seconds() / 60)
+                    cumpl_c = f"Tarde +{mins}min (externo)"
+                else:
+                    mins = round((lp - ct).total_seconds() / 60)
+                    cumpl_c = f"Tarde +{mins}min"
+
+                delta_min = None
+                if not pd.isna(ct) and not pd.isna(lp):
+                    delta_min = round((lp - ct).total_seconds() / 60, 1)
+
+                def _dmin2(a, b):
+                    if pd.isna(a) or pd.isna(b): return None
+                    d = (b - a).total_seconds() / 60
+                    return None if d < 0 else round(d, 1)
+
+                ll_data["rows"].append({
+                    "fecha":        fa.strftime("%d-%m-%Y")       if not pd.isna(fa)  else "",
+                    "mes_iso":      fa.strftime("%Y-%m")          if not pd.isna(fa)  else "",
+                    "ob":           str(r.get("Pedido") or "").strip(),
+                    "man":          str(r.get("Manifiesto lleno") or "").strip(),
+                    "cont":         str(r.get("Contenedor") or "").strip(),
+                    "terminal":     str(r.get("Terminal portuaria") or "").strip(),
+                    "placa":        str(r.get("Placa retiro") or "").strip(),
+                    "estado":       estado,
+                    "motivo":       motivo,
+                    "clasif":       _clasif_s(motivo),
+                    "obs":          obs,
+                    "fcita":        ct.strftime("%d-%m-%Y %H:%M")  if not pd.isna(ct)  else "",
+                    "fcita_repr":   "",
+                    "motivo_repr":  "",
+                    "resp_repr":    "",
+                    "resp_opt":     "",
+                    "motivo_opt":   "",
+                    "delta_min":    delta_min,
+                    "fllpuerto":    lp.strftime("%d-%m-%Y %H:%M")  if not pd.isna(lp)  else "",
+                    "fplanta_plan": "",
+                    "fplanta_real": llp.strftime("%d-%m-%Y %H:%M") if not pd.isna(llp) else "",
+                    "fsalida":      sal.strftime("%d-%m-%Y %H:%M") if not pd.isna(sal) else "",
+                    "cumpl_cita":   cumpl_c,
+                    "dt1": None, "dt2": _dmin2(llp, sal), "dt3": _dmin2(sal, lp),
+                })
+                # Actualizar contadores
+                ll_data["total"] = ll_data.get("total", 0) + 1
+                if estado in ("CERRADO","EXITOSO"): ll_data["exitosos"] = ll_data.get("exitosos",0) + 1
+                elif estado:                        ll_data["fallidos"]  = ll_data.get("fallidos",0)  + 1
+                if "Sin fecha" in cumpl_c:          ll_data["sin_fecha_cita"] = ll_data.get("sin_fecha_cita",0) + 1
+                elif "A tiempo" in cumpl_c:         ll_data["cumpl_cita"]     = ll_data.get("cumpl_cita",0) + 1
+                elif "externo" in cumpl_c:          ll_data["externo_ok"]     = ll_data.get("externo_ok",0)  + 1; ll_data["cumpl_cita"] = ll_data.get("cumpl_cita",0) + 1
+                else:                               ll_data["no_cumpl"]       = ll_data.get("no_cumpl",0)      + 1
+            stats["avisos"].append(f"Web app: {len(nuevos)} llenos nuevos agregados (no estaban en Excel).")
+
+    # ── VACIOS nuevos ──────────────────────────────────────────────────────────
+    va_data = result.get("vacios")
+    if webapp_va and va_data is not None:
+        xl_conts_va = {str(r.get("cont", "")).strip() for r in va_data.get("rows", [])}
+        nuevos_va   = [r for r in webapp_va if str(r.get("Contenedor", "")).strip() not in xl_conts_va]
+        if nuevos_va:
+            for r in nuevos_va:
+                fp = str(r.get("Fecha programación") or "").strip()
+                fe = str(r.get("Fecha") or "").strip()
+                fecha_ref = fe or fp
+                pg   = pd.Timestamp(fp) if fp else pd.NaT
+                at   = pd.Timestamp(fe) if fe else pd.NaT
+                lpa  = _parse_wdt(fecha_ref, r.get("Llegada patio entrega vacío"))
+                slpa = _parse_wdt(fecha_ref, r.get("Salida patio entrega vacío"))
+                llp  = _parse_wdt(fecha_ref, r.get("Llegada planta"))
+                if pd.isna(pg) or pd.isna(at):    cumpl = "Sin fecha"
+                elif at.date() <= pg.date():       cumpl = "A tiempo"
+                else:
+                    horas = round((at - pg).total_seconds() / 3600, 1)
+                    cumpl = f"Tarde +{horas}h"
+
+                def _m2(a, b):
+                    if pd.isna(a) or pd.isna(b): return None
+                    d = (b - a).total_seconds() / 60
+                    return None if d < 0 else round(d, 1)
+
+                va_data["rows"].append({
+                    "mes":      pg.strftime("%Y-%m")          if not pd.isna(pg)   else "",
+                    "fprog":    pg.strftime("%d-%m-%Y %H:%M") if not pd.isna(pg)   else "",
+                    "faten":    at.strftime("%d-%m-%Y %H:%M") if not pd.isna(at)   else "",
+                    "fllpatio": lpa.strftime("%d-%m-%Y %H:%M")  if not pd.isna(lpa)  else "",
+                    "fslpatio": slpa.strftime("%d-%m-%Y %H:%M") if not pd.isna(slpa) else "",
+                    "fplanta":  llp.strftime("%d-%m-%Y %H:%M")  if not pd.isna(llp)  else "",
+                    "patio": str(r.get("Patio devolución") or "").strip(),
+                    "linea": str(r.get("Naviera") or "").strip(),
+                    "cont":  str(r.get("Contenedor") or "").strip(),
+                    "man":   str(r.get("Manifiesto vacío") or "").strip(),
+                    "cumpl": cumpl,
+                    "dt1": _m2(pg, at), "dt2": _m2(at, lpa),
+                    "dt3": _m2(lpa, slpa), "dt4": _m2(slpa, llp),
+                })
+                va_data["total"] = va_data.get("total", 0) + 1
+                if "Sin fecha" in cumpl: va_data["sin_fecha"] = va_data.get("sin_fecha",0) + 1
+                elif "A tiempo" in cumpl: va_data["a_tiempo"]  = va_data.get("a_tiempo",0)  + 1
+                else:                     va_data["tarde"]      = va_data.get("tarde",0)      + 1
+            stats["avisos"].append(f"Web app: {len(nuevos_va)} vacíos nuevos agregados (no estaban en Excel).")
 
 
 def leer_ajover_completo(stats):
@@ -1679,7 +1826,8 @@ def main():
                            "info": stats.get("sam_info")}}
 
     ajcomex_data = leer_ajover_comex(stats)
-    ajover_data = leer_ajover_webapp(stats) or leer_ajover_completo(stats)
+    ajover_data = leer_ajover_completo(stats) or leer_ajover_webapp(stats)
+    _suplementar_webapp(ajover_data, stats)
     if ajover_data:
         v = ajover_data.get("vacios") or {}
         l = ajover_data.get("llenos") or {}
