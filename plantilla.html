@@ -467,7 +467,7 @@
             <div>
               <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Estado</div>
               <select id="ajLlFiltEst" style="padding:5px 10px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;background:rgba(255,255,255,.07);color:#e2e8f0;outline:none">
-                <option value="" style="background:#1e293b">Todos</option><option value="EXITOSO" style="background:#1e293b">Exitoso</option><option value="FALLIDO" style="background:#1e293b">Fallido</option>
+                <option value="" style="background:#1e293b">Todos</option><option value="EXITOSO" style="background:#1e293b">Exitoso</option><option value="COMPLETADA" style="background:#1e293b">Completada</option><option value="FALLIDO" style="background:#1e293b">Fallido</option>
               </select>
             </div>
             <div>
@@ -1472,7 +1472,13 @@ const LL_COLS=[
   {k:'cont',        t:'s',l:'Contenedor',      cell:(r,s)=>`<td style="${s};font-family:monospace">${esc(r.cont)}</td>`},
   {k:'terminal',    t:'s',l:'Terminal',        cell:(r,s)=>`<td style="${s}">${esc(r.terminal)}</td>`},
   {k:'placa',       t:'s',l:'Placa',           cell:(r,s)=>`<td style="${s}">${esc(r.placa)}</td>`},
-  {k:'estado',      t:'s',l:'Estado',          cell:(r,s)=>`<td style="${s}">${r.estado==='EXITOSO'?'<span style="background:#d4edda;color:#155724;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">✓ Exitoso</span>':r.estado?`<span style="background:#f8d7da;color:#721c24;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">✗ ${esc(r.estado)}</span>`:'—'}</td>`},
+  {k:'estado',      t:'s',l:'Estado',          cell:(r,s)=>{
+    const es=r.estado||'';
+    if(es==='EXITOSO'||es==='COMPLETADA')
+      return `<td style="${s}"><span style="background:#d4edda;color:#155724;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">✓ ${es==='COMPLETADA'?'Completada':'Exitoso'}</span></td>`;
+    if(es) return `<td style="${s}"><span style="background:#f8d7da;color:#721c24;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">✗ ${esc(es)}</span></td>`;
+    return `<td style="${s}">—</td>`;
+  }},
   {k:'fplanta_real', t:'s',l:'Llegada planta',  cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fplanta_real)||'—'}</td>`},
   {k:'fcita',        t:'s',l:'Cita puerto',    cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fcita)}</td>`},
   {k:'fcita_repr',   t:'s',l:'Cita reprog.',   cell:(r,s)=>`<td style="${s};white-space:nowrap;color:var(--warn)">${esc(r.fcita_repr)||'—'}</td>`},
