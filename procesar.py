@@ -700,7 +700,18 @@ def leer_ajover_webapp(stats):
             return None if d < 0 else round(d, 1)
 
         def _ts_ll(v):
-            try: return pd.Timestamp(str(v).strip()) if v and str(v).strip() not in ("", "nan", "None") else pd.NaT
+            try:
+                s = str(v).strip()
+                if not s or s in ("", "nan", "None"): return pd.NaT
+                ts = pd.Timestamp(s)
+                # Corregir año mal digitado: 0206-09-26 → 2026-09-26
+                if ts.year < 2000:
+                    if 200 <= ts.year <= 299:  # 206→2026, 207→2027, etc.
+                        ts = ts.replace(year=ts.year + 1820)
+                    else:
+                        return pd.NaT
+                if ts.year > 2100: return pd.NaT
+                return ts
             except: return pd.NaT
         def _sc(v): s = str(v or "").strip(); return "" if s in ("nan","None","NAN","NONE") else s
         _TERM_NORM = {"contecar": "CONTECAR", "sprc": "SPRC", "manga": "MANGA"}
@@ -2102,7 +2113,8 @@ def main():
         sys.exit(1)
     tpl = open(tpl_path, encoding="utf-8").read()
     ruta_html = os.path.join(BASE, "index.html")
-    open(ruta_html, "w", encoding="utf-8").write(tpl.replace("/*__DATOS__*/", payload))
+    html_out = tpl.replace("/*__DATOS__*/", payload).replace("\x00", "")
+    open(ruta_html, "w", encoding="utf-8").write(html_out)
 
     # Exportar JSON compacto para el bot de Slack (solo resúmenes, no filas brutas)
     ruta_json = os.path.join(BASE, "datos_bot.json")

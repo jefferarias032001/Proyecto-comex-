@@ -474,9 +474,17 @@
               <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Período</div>
               <button id="ajLlAyer" style="padding:5px 14px;border:none;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all .18s;background:rgba(255,255,255,.06);color:#94a3b8">Ayer</button>
             </div>
-            <div style="margin-left:auto;display:flex;gap:8px">
+            <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
               <button class="btn btn-light" id="ajLlClear">Limpiar</button>
               <button class="btn btn-light" id="ajLlCSV">↓ CSV</button>
+              <button onclick="waSendAjover('numero')" style="padding:5px 13px;border:none;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;background:#25D366;color:#fff;display:flex;align-items:center;gap:5px;white-space:nowrap">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.556 4.112 1.528 5.835L0 24l6.336-1.507A11.951 11.951 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.006-1.371l-.36-.214-3.724.886.919-3.622-.235-.373A9.818 9.818 0 1112 21.818z"/></svg>
+                +57 320 5655282
+              </button>
+              <button id="ajLlWaGrupo" onclick="waSendAjover('grupo')" style="padding:5px 13px;border:none;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;background:#128C7E;color:#fff;display:flex;align-items:center;gap:5px;white-space:nowrap">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.556 4.112 1.528 5.835L0 24l6.336-1.507A11.951 11.951 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.006-1.371l-.36-.214-3.724.886.919-3.622-.235-.373A9.818 9.818 0 1112 21.818z"/></svg>
+                Comex Tractocar
+              </button>
             </div>
           </div>
         </div>
@@ -1659,58 +1667,140 @@ function _svgTend(data,cfg){
 }
 
 function _renderAlertas(rows,tipo,containerId){
+  // Genera una mini-tabla HTML para una alerta con columnas configurables
+  const _tblStyle='width:100%;border-collapse:collapse;font-size:11px;margin-top:7px';
+  const _thStyle=(col)=>`padding:4px 8px;text-align:left;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:${col};border-bottom:1px solid rgba(255,255,255,.08);white-space:nowrap`;
+  const _tdStyle='padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.05);color:var(--ink-2);white-space:nowrap';
+  const _tdMono='padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.05);color:var(--ink);font-family:monospace;font-size:10px;white-space:nowrap';
+  const _tdWarn='padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.05);color:#f59e0b;font-style:italic';
+  const _dash='<span style="color:var(--ink-3)">—</span>';
+
+  function _tbl(cols, dataRows, col, maxRows=15){
+    const shown=dataRows.slice(0,maxRows);
+    const more=dataRows.length>maxRows?`<tr><td colspan="${cols.length}" style="${_tdStyle};color:var(--ink-3);text-align:center">… y ${dataRows.length-maxRows} más</td></tr>`:'';
+    return `<div style="overflow-x:auto"><table style="${_tblStyle}">
+      <thead><tr>${cols.map(c=>`<th style="${_thStyle(col)}">${c.label}</th>`).join('')}</tr></thead>
+      <tbody>${shown.map(r=>`<tr>${cols.map(c=>`<td style="${c.mono?_tdMono:c.warn?_tdWarn:_tdStyle}">${c.val(r)||_dash}</td>`).join('')}</tr>`).join('')}${more}</tbody>
+    </table></div>`;
+  }
+
   const alertas=[];
   if(tipo==='llenos'){
     const sinCita=rows.filter(r=>!r.fcita);
     if(sinCita.length)alertas.push({lvl:'error',icon:'📅',
       titulo:`${fN(sinCita.length)} contenedor${sinCita.length>1?'es':''} sin fecha de cita puerto`,
-      desc:'Aparecen como "Sin fecha" en el indicador. No se puede calcular cumplimiento.',
-      items:sinCita.map(r=>r.cont).filter(Boolean)});
+      desc:'No se puede calcular cumplimiento sin fecha de cita.',
+      tbl:_tbl([
+        {label:'Contenedor',mono:true,val:r=>esc(r.cont)},
+        {label:'Fecha atención',val:r=>esc(r.fecha)},
+        {label:'Estado',val:r=>esc(r.estado)},
+        {label:'Placa',val:r=>esc(r.placa)},
+      ],sinCita,'#ef4444')});
+
     const sinLlegada=rows.filter(r=>r.fcita&&!r.fllpuerto);
     if(sinLlegada.length)alertas.push({lvl:'error',icon:'⚓',
       titulo:`${fN(sinLlegada.length)} contenedor${sinLlegada.length>1?'es':''} sin fecha de llegada a puerto`,
-      desc:'Tienen cita registrada pero sin llegada al puerto. El cumplimiento queda incalculable.',
-      items:sinLlegada.map(r=>r.cont).filter(Boolean)});
+      desc:'Tienen cita registrada pero sin llegada al puerto.',
+      tbl:_tbl([
+        {label:'Contenedor',mono:true,val:r=>esc(r.cont)},
+        {label:'Cita puerto',val:r=>esc(r.fcita)},
+        {label:'Estado',val:r=>esc(r.estado)},
+        {label:'Placa',val:r=>esc(r.placa)},
+      ],sinLlegada,'#ef4444')});
+
     const reprIncomp=rows.filter(r=>r.fcita_repr&&(!r.resp_repr||!r.motivo_repr));
     if(reprIncomp.length){
       const sinResp=reprIncomp.filter(r=>!r.resp_repr).length,sinMot=reprIncomp.filter(r=>!r.motivo_repr).length;
       alertas.push({lvl:'warn',icon:'🔄',
         titulo:`${fN(reprIncomp.length)} reprogramación${reprIncomp.length>1?'es':''} con datos incompletos`,
-        desc:`Faltan: ${sinResp} responsable${sinResp!==1?'s':''} y ${sinMot} motivo${sinMot!==1?'s':''}. Sin esto el control de reprogramación queda incompleto.`,
-        items:reprIncomp.map(r=>r.cont).filter(Boolean)});
+        desc:`Faltan: ${sinResp} responsable${sinResp!==1?'s':''} · ${sinMot} motivo${sinMot!==1?'s':''}.`,
+        tbl:_tbl([
+          {label:'Contenedor',mono:true,val:r=>esc(r.cont)},
+          {label:'Cita puerto',val:r=>esc(r.fcita)},
+          {label:'Cita reprog.',val:r=>esc(r.fcita_repr)},
+          {label:'Responsable',warn:true,val:r=>r.resp_repr?esc(r.resp_repr):'⚠ falta'},
+          {label:'Motivo reprog.',warn:true,val:r=>r.motivo_repr?esc(r.motivo_repr):'⚠ falta'},
+        ],reprIncomp,'#f59e0b')});
     }
+
+    const reprSinCita=rows.filter(r=>r.resp_repr&&r.resp_repr.toLowerCase().includes('ajover')&&!r.fcita_repr);
+    if(reprSinCita.length)alertas.push({lvl:'warn',icon:'📋',
+      titulo:`${fN(reprSinCita.length)} reprog Ajover sin nueva cita registrada`,
+      desc:'Ajover es responsable pero no se registró la nueva fecha de cita.',
+      tbl:_tbl([
+        {label:'Contenedor',mono:true,val:r=>esc(r.cont)},
+        {label:'Cita puerto original',val:r=>esc(r.fcita)},
+        {label:'Nueva cita',warn:true,val:r=>'⚠ no registrada'},
+        {label:'Motivo reprog.',val:r=>esc(r.motivo_repr)},
+      ],reprSinCita,'#f59e0b')});
+
+    const tardeSinMot=rows.filter(r=>r.cumpl_cita&&r.cumpl_cita.startsWith('Tarde')&&!r.cumpl_cita.includes('externo')&&!r.cumpl_cita.includes('reprog')&&!r.motivo&&!r.obs);
+    if(tardeSinMot.length)alertas.push({lvl:'warn',icon:'⚠️',
+      titulo:`${fN(tardeSinMot.length)} llegó tarde sin motivo registrado`,
+      desc:'Incumplimiento imputable a Tractocar sin justificación.',
+      tbl:_tbl([
+        {label:'Contenedor',mono:true,val:r=>esc(r.cont)},
+        {label:'Cita puerto',val:r=>esc(r.fcita)},
+        {label:'Cumplimiento',val:r=>esc(r.cumpl_cita)},
+        {label:'Motivo',warn:true,val:r=>'⚠ no registrado'},
+      ],tardeSinMot,'#f59e0b')});
+
     const sinPlaca=rows.filter(r=>!r.placa);
     if(sinPlaca.length)alertas.push({lvl:'info',icon:'🚛',
       titulo:`${fN(sinPlaca.length)} contenedor${sinPlaca.length>1?'es':''} sin placa de tracto`,
       desc:'No se puede identificar el vehículo transportador.',
-      items:sinPlaca.map(r=>r.cont).filter(Boolean)});
+      tbl:_tbl([
+        {label:'Contenedor',mono:true,val:r=>esc(r.cont)},
+        {label:'Cita puerto',val:r=>esc(r.fcita)},
+        {label:'Estado',val:r=>esc(r.estado)},
+      ],sinPlaca,'#60a5fa')});
   }
   if(tipo==='vacios'){
     const sinFprog=rows.filter(r=>!r.fprog);
     if(sinFprog.length)alertas.push({lvl:'error',icon:'📅',
       titulo:`${fN(sinFprog.length)} vacío${sinFprog.length>1?'s':''} sin fecha programada`,
       desc:'Sin fecha de programación no se puede medir el cumplimiento de cita.',
-      items:sinFprog.map(r=>r.cont).filter(Boolean)});
+      tbl:_tbl([
+        {label:'Contenedor',mono:true,val:r=>esc(r.cont)},
+        {label:'Manifiesto',val:r=>esc(r.man)},
+        {label:'Cumplimiento',val:r=>esc(r.cumpl)},
+      ],sinFprog,'#ef4444')});
     const sinFaten=rows.filter(r=>!r.faten);
     if(sinFaten.length)alertas.push({lvl:'error',icon:'⏱',
       titulo:`${fN(sinFaten.length)} vacío${sinFaten.length>1?'s':''} sin fecha de atención`,
-      desc:'Sin fecha de atención el registro está incompleto y no entra al cálculo de cumplimiento.',
-      items:sinFaten.map(r=>r.cont).filter(Boolean)});
+      desc:'Sin fecha de atención el registro está incompleto.',
+      tbl:_tbl([
+        {label:'Contenedor',mono:true,val:r=>esc(r.cont)},
+        {label:'Fecha prog.',val:r=>esc(r.fprog)},
+        {label:'Manifiesto',val:r=>esc(r.man)},
+      ],sinFaten,'#ef4444')});
     const sinPatio=rows.filter(r=>!r.fllpatio);
     if(sinPatio.length)alertas.push({lvl:'warn',icon:'🏭',
       titulo:`${fN(sinPatio.length)} vacío${sinPatio.length>1?'s':''} sin fecha de llegada a patio`,
       desc:'No se puede calcular el tiempo de estadía en patio (dt2/dt3).',
-      items:sinPatio.map(r=>r.cont).filter(Boolean)});
+      tbl:_tbl([
+        {label:'Contenedor',mono:true,val:r=>esc(r.cont)},
+        {label:'Fecha prog.',val:r=>esc(r.fprog)},
+        {label:'Fecha aten.',val:r=>esc(r.faten)},
+      ],sinPatio,'#f59e0b')});
     const sinPlanta=rows.filter(r=>!r.fplanta);
     if(sinPlanta.length)alertas.push({lvl:'warn',icon:'🏗',
       titulo:`${fN(sinPlanta.length)} vacío${sinPlanta.length>1?'s':''} sin fecha de llegada a planta`,
       desc:'No se puede calcular el tiempo de tránsito patio → planta (dt4).',
-      items:sinPlanta.map(r=>r.cont).filter(Boolean)});
+      tbl:_tbl([
+        {label:'Contenedor',mono:true,val:r=>esc(r.cont)},
+        {label:'Fecha prog.',val:r=>esc(r.fprog)},
+        {label:'Fecha aten.',val:r=>esc(r.faten)},
+      ],sinPlanta,'#f59e0b')});
     const sinMan=rows.filter(r=>!r.man);
     if(sinMan.length)alertas.push({lvl:'info',icon:'📋',
       titulo:`${fN(sinMan.length)} vacío${sinMan.length>1?'s':''} sin número de manifiesto`,
       desc:'Sin manifiesto no se puede cruzar con el documento de importación.',
-      items:sinMan.map(r=>r.cont).filter(Boolean)});
+      tbl:_tbl([
+        {label:'Contenedor',mono:true,val:r=>esc(r.cont)},
+        {label:'Fecha prog.',val:r=>esc(r.fprog)},
+        {label:'Cumplimiento',val:r=>esc(r.cumpl)},
+      ],sinMan,'#60a5fa')});
   }
   if(!alertas.length){
     $(containerId).innerHTML=`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:10px">
@@ -1724,21 +1814,20 @@ function _renderAlertas(rows,tipo,containerId){
   const resumen=[nErr&&`${nErr} error${nErr>1?'es':''}`,nWarn&&`${nWarn} advertencia${nWarn>1?'s':''}`].filter(Boolean).join(', ');
   const cards=alertas.map(a=>{
     const {col,bg}=a.lvl==='error'?{col:'#ef4444',bg:'rgba(239,68,68,.07)'}:a.lvl==='warn'?{col:'#f59e0b',bg:'rgba(245,158,11,.07)'}:{col:'#60a5fa',bg:'rgba(96,165,250,.07)'};
-    const itemsStr=a.items.slice(0,12).join('  ·  ')+(a.items.length>12?`  · +${a.items.length-12} más`:'');
     return `<div style="padding:10px 14px;border-radius:8px;background:${bg};border-left:3px solid ${col}">
       <div style="display:flex;align-items:flex-start;gap:8px">
         <span style="font-size:16px;line-height:1.4">${a.icon}</span>
         <div style="flex:1;min-width:0">
           <div style="font-size:12px;font-weight:700;color:${col};margin-bottom:2px">${a.titulo}</div>
-          <div style="font-size:11px;color:var(--ink-3)">${a.desc}</div>
-          ${a.items.length?`<div style="font-size:10px;color:var(--ink-2);margin-top:5px;font-family:monospace;word-break:break-all">${esc(itemsStr)}</div>`:''}
+          <div style="font-size:11px;color:var(--ink-3);margin-bottom:2px">${a.desc}</div>
+          ${a.tbl||''}
         </div>
       </div>
     </div>`;
   }).join('');
   $(containerId).innerHTML=`<div style="background:var(--surface-2);border-radius:12px;padding:14px 16px;border-left:4px solid ${borderCol}">
     <div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">⚡ Alertas operativas${resumen?' — '+resumen:''}</div>
-    <div style="display:flex;flex-direction:column;gap:7px">${cards}</div>
+    <div style="display:flex;flex-direction:column;gap:10px">${cards}</div>
   </div>`;
 }
 
@@ -1949,7 +2038,7 @@ function renderAjoverLlenos(){
     const grp={};
     allTardeRows.forEach(r=>{
       const resp=_isExterno(r)?'Externo':_isReprogAjover(r)?'Ajover':(r.resp_repr||'Tractocar');
-      const mot=r.motivo||'Sin motivo';
+      const mot=r.motivo||r.motivo_repr||'Sin motivo';
       if(!grp[resp])grp[resp]={};
       grp[resp][mot]=(grp[resp][mot]||0)+1;
     });
@@ -2889,6 +2978,84 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
 });
 document.addEventListener('click',()=>document.querySelectorAll('.dd.open').forEach(x=>x.classList.remove('open')));
 // init() solo se llama desde _applyAuth() despues del login exitoso
+
+// ── WhatsApp Ajover EXPO ──────────────────────────────────────────────────────
+function waSendAjover(dest) {
+  const ll = (window.AJOVER || {}).llenos;
+  if (!ll) { alert('Datos no cargados. Abre el tablero desde el servidor o recarga la página.'); return; }
+  const hoy = new Date().toLocaleDateString('es-CO', {day:'2-digit', month:'2-digit', year:'numeric'});
+
+  // Aplicar el mismo filtro activo en el panel (mes / día)
+  const allRows = ll.rows || [];
+  const _llFdWa = SAJ.ll.dia === 'ayer' ? _ayerKey() : null;
+  const rows = allRows.filter(r => {
+    if (SAJ.ll.mes && r.mes_iso !== SAJ.ll.mes) return false;
+    if (_llFdWa && _dayKey(r.fecha) !== _llFdWa) return false;
+    return true;
+  });
+
+  // Recalcular stats desde filas filtradas
+  const _isE  = r => r.cumpl_cita && r.cumpl_cita.includes('externo');
+  const _isR  = r => r.cumpl_cita && r.cumpl_cita.includes('reprog Ajover');
+  const _isNC = r => r.cumpl_cita && r.cumpl_cita.startsWith('Tarde') && !_isE(r) && !_isR(r);
+  const _isC  = r => r.cumpl_cita && (r.cumpl_cita.startsWith('A tiempo') || _isE(r) || _isR(r));
+
+  const externo  = rows.filter(_isE).length;
+  const reprog   = rows.filter(_isR).length;
+  const noCumpl  = rows.filter(_isNC).length;
+  const cumpl    = rows.filter(_isC).length;
+  const sinFecha = rows.filter(r => !r.fcita).length;
+  const pct = (cumpl + noCumpl) > 0 ? Math.round((cumpl / (cumpl + noCumpl)) * 100) : 0;
+  const aTiempoN = cumpl - externo - reprog;
+  const filtroLabel = SAJ.ll.mes ? ` · ${SAJ.ll.mes}` : (_llFdWa ? ` · ayer` : '');
+
+  const sinLlegada  = rows.filter(r => r.fcita && !r.fllpuerto);
+  const reprSinCita = rows.filter(r => r.resp_repr && r.resp_repr.toLowerCase().includes('ajover') && !r.fcita_repr);
+  const reprSinResp = rows.filter(r => r.fcita_repr && !r.resp_repr);
+  const tardeSinMot = rows.filter(r => r.cumpl_cita && r.cumpl_cita.startsWith('Tarde') && !r.cumpl_cita.includes('externo') && !r.cumpl_cita.includes('reprog') && !r.motivo && !r.obs);
+
+  let msg = `*AJOVER EXPO - Llenos* | ${hoy}${filtroLabel}\n`;
+  msg += `------------------------------------\n`;
+  msg += `*Cumplimiento cita:* ${pct}% (${cumpl}/${cumpl + noCumpl})\n`;
+  msg += `• A tiempo: ${aTiempoN}\n`;
+  if (externo)  msg += `• Causa externa: ${externo}\n`;
+  if (reprog)   msg += `• Reprog Ajover: ${reprog}\n`;
+  if (noCumpl)  msg += `• Incumplimiento TC: ${noCumpl}\n`;
+  if (sinFecha) msg += `• Sin fecha cita: ${sinFecha}\n`;
+
+  const hayAlertas = reprSinCita.length || reprSinResp.length || sinLlegada.length || tardeSinMot.length;
+  if (hayAlertas) {
+    msg += `\n*⚠️ Alertas — datos incompletos:*\n`;
+  } else {
+    msg += `\n✅ Sin alertas de datos incompletos.\n`;
+  }
+  if (reprSinCita.length) {
+    msg += `\n📋 *Reprog Ajover sin nueva cita (${reprSinCita.length}):*\n`;
+    reprSinCita.forEach(r => { msg += `• ${r.cont || '—'} | ${r.motivo_repr || 'sin motivo registrado'}\n`; });
+  }
+  if (reprSinResp.length) {
+    msg += `\n👤 *Cita reprog sin responsable (${reprSinResp.length}):*\n`;
+    reprSinResp.forEach(r => { msg += `• ${r.cont || '—'} | nueva cita: ${r.fcita_repr}\n`; });
+  }
+  if (sinLlegada.length) {
+    msg += `\n⚓ *Sin llegada a puerto (${sinLlegada.length}):*\n`;
+    sinLlegada.forEach(r => { msg += `• ${r.cont || '—'} | cita: ${r.fcita}\n`; });
+  }
+  if (tardeSinMot.length) {
+    msg += `\n⚠️ *Tarde sin motivo registrado (${tardeSinMot.length}):*\n`;
+    tardeSinMot.slice(0, 8).forEach(r => { msg += `• ${r.cont || '—'} | ${r.cumpl_cita}\n`; });
+    if (tardeSinMot.length > 8) msg += `  ... y ${tardeSinMot.length - 8} más\n`;
+  }
+
+  if (dest === 'numero') {
+    window.open('https://wa.me/573205655282?text=' + encodeURIComponent(msg), '_blank');
+  } else {
+    navigator.clipboard.writeText(msg).then(() => {
+      const btn = document.getElementById('ajLlWaGrupo');
+      if (btn) { const orig = btn.innerHTML; btn.textContent = '✅ ¡Copiado!'; setTimeout(() => { btn.innerHTML = orig; }, 2500); }
+    });
+  }
+}
 </script>
 </body>
 </html>
