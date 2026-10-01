@@ -2031,6 +2031,31 @@ function renderAjoverLlenos(){
     :(r.cumpl_cita&&r.cumpl_cita.startsWith('Tarde')));
   const nImputables=noCumplRows.length,nTotal=allTardeRows.length;
   const _grp=(rows,key,alias)=>{const m={};rows.forEach(r=>{const k=r[key]||alias;m[k]=(m[k]||0)+1;});return m;};
+  // Normaliza texto libre de motivo a categoría general (scope global para barras y donut)
+  const _normMot=mot=>{
+    const m=(mot||'').toLowerCase();
+    if(!m||m==='sin motivo')return 'Sin motivo';
+    if(m.includes('escolta'))                          return 'Problema de escolta';
+    if(m.includes('sello'))                            return 'Demoras en sello';
+    if(m.includes('diferencia de peso')||m.includes('contenedor con diferencia')||m.includes('peso'))
+                                                       return 'Diferencia de peso';
+    if(m.includes('lluvia')||m.includes('lluvias')||m.includes('clima'))
+                                                       return 'Condiciones climáticas';
+    if(m.includes('tráfico')||m.includes('trafico')||m.includes('vía cerrada')||m.includes('via cerrada'))
+                                                       return 'Tráfico / vía cerrada';
+    if(m.includes('báscula')||m.includes('bascula'))   return 'Daños en báscula';
+    if(m.includes('mecán')||m.includes('mecan')||m.includes('llanta')||m.includes('falla mec'))
+                                                       return 'Falla mecánica';
+    if(m.includes('motonave')||m.includes('buque')||m.includes('corrió la fecha'))
+                                                       return 'Cambio fecha motonave';
+    if(m.includes('programac'))                        return 'Cambio en programación';
+    if(m.includes('rndc')||m.includes('manifest'))     return 'Trámites RNDC / manifiesto';
+    if(m.includes('seguridad'))                        return 'Retrasos con seguridad';
+    if(m.includes('solicitud')||m.includes('cliente')) return 'Solicitud del cliente';
+    if(m.includes('subir la cita')||m.includes('ajover solicit'))
+                                                       return 'Decisión Ajover';
+    return mot.length>35?mot.slice(0,35).trim()+'…':mot;
+  };
   if(!nTotal){
     $('ajLlPies').innerHTML='<div style="font-size:11px;color:var(--pos);padding:6px 0">✓ Sin citas no cumplidas en el período seleccionado</div>';
   } else {
@@ -2039,32 +2064,6 @@ function renderAjoverLlenos(){
       Tractocar:['#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe'],
       Ajover:   ['#dc2626','#ef4444','#f87171','#fca5a5','#fecaca'],
       Externo:  ['#059669','#10b981','#34d399','#6ee7b7','#a7f3d0']
-    };
-    // Normaliza texto libre de motivo a categoría general
-    const _normMot=mot=>{
-      const m=(mot||'').toLowerCase();
-      if(!m||m==='sin motivo')return 'Sin motivo';
-      if(m.includes('escolta'))                          return 'Problema de escolta';
-      if(m.includes('sello'))                            return 'Demoras en sello';
-      if(m.includes('diferencia de peso')||m.includes('contenedor con diferencia')||m.includes('peso'))
-                                                         return 'Diferencia de peso';
-      if(m.includes('lluvia')||m.includes('lluvias')||m.includes('clima'))
-                                                         return 'Condiciones climáticas';
-      if(m.includes('tráfico')||m.includes('trafico')||m.includes('vía cerrada')||m.includes('via cerrada'))
-                                                         return 'Tráfico / vía cerrada';
-      if(m.includes('báscula')||m.includes('bascula'))   return 'Daños en báscula';
-      if(m.includes('mecán')||m.includes('mecan')||m.includes('llanta')||m.includes('falla mec'))
-                                                         return 'Falla mecánica';
-      if(m.includes('motonave')||m.includes('buque')||m.includes('corrió la fecha'))
-                                                         return 'Cambio fecha motonave';
-      if(m.includes('programac'))                        return 'Cambio en programación';
-      if(m.includes('rndc')||m.includes('manifest'))     return 'Trámites RNDC / manifiesto';
-      if(m.includes('seguridad'))                        return 'Retrasos con seguridad';
-      if(m.includes('solicitud')||m.includes('cliente')) return 'Solicitud del cliente';
-      if(m.includes('subir la cita')||m.includes('ajover solicit'))
-                                                         return 'Decisión Ajover';
-      // fallback: primeras 35 chars
-      return mot.length>35?mot.slice(0,35).trim()+'…':mot;
     };
     // Build groups: {responsable: {motivo: count}}
     const grp={};
