@@ -2311,7 +2311,7 @@ function renderAjoverLlenos(){
   // ── motivos de incumplimiento — todos los tarde (incluyendo externo y reprog) ──
   const ncRows=allTardeRows;
   const ncmFilt={};
-  ncRows.forEach(r=>{const m=r.motivo||'(sin motivo)';ncmFilt[m]=(ncmFilt[m]||0)+1;});
+  ncRows.forEach(r=>{const m=_normMot(r.motivo||'');ncmFilt[m]=(ncmFilt[m]||0)+1;});
   if(ncRows.length){
     $('ajLlNoCumpl').innerHTML=`<div style="padding:12px;background:var(--surface-2);border-radius:8px;border-left:3px solid var(--neg)">
       <div style="font-size:11px;font-weight:700;color:var(--neg);text-transform:uppercase;margin-bottom:4px">⚠ Motivos de incumplimiento — ${fN(ncRows.length)} citas no cumplidas</div>
@@ -2479,8 +2479,8 @@ function renderAjoverLlenos(){
   const fEstados={},fMotivos={},fMotivosRepr={};
   filtRows.forEach(r=>{
     if(r.estado)fEstados[r.estado]=(fEstados[r.estado]||0)+1;
-    if(r.motivo)fMotivos[r.motivo]=(fMotivos[r.motivo]||0)+1;
-    if(r.motivo_repr)fMotivosRepr[r.motivo_repr]=(fMotivosRepr[r.motivo_repr]||0)+1;
+    if(r.motivo){const k=_normMot(r.motivo);fMotivos[k]=(fMotivos[k]||0)+1;}
+    if(r.motivo_repr){const k=_normMot(r.motivo_repr);fMotivosRepr[k]=(fMotivosRepr[k]||0)+1;}
   });
   _ajBarras(fEstados,'ajLlEstados');
   _ajBarras(fMotivos,'ajLlMotivos');
