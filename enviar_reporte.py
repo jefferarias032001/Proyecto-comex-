@@ -200,7 +200,7 @@ def build_html(datos, interno=False):
     inc_resp = defaultdict(list)
     for r in tarde_m: inc_resp[_resp_cat(r)].append(r)
     mot_m = defaultdict(int)
-    for r in tarde_m: mot_m[_norm_mot(r.get("motivo_repr","") or r.get("motivo",""))] += 1
+    for r in tarde_m: mot_m[(r.get("motivo_repr","") or "").strip() or "Sin motivo"] += 1
 
     # ── Tendencia últimos 7 meses (hasta el corte en el mes actual)
     meses_disp = sorted(set(r["mes_iso"] for r in rows if r.get("mes_iso")))[-7:]
@@ -286,7 +286,7 @@ def build_html(datos, interno=False):
     for resp in ["Tractocar","Ajover","Externo"]:
         lst = inc_resp.get(resp, [])
         if not lst: continue
-        mots = Counter(_norm_mot(r.get("motivo_repr","") or r.get("motivo","")) for r in lst)
+        mots = Counter((r.get("motivo_repr","") or "").strip() or "Sin motivo" for r in lst)
         top  = "; ".join(f"{m} ({c})" for m,c in mots.most_common(3))
         r_   = RESP_L[resp]
         inc_mes += f'''<tr>
@@ -332,7 +332,7 @@ def build_html(datos, interno=False):
     for resp in ["Tractocar","Ajover","Externo"]:
         for r in dia_inc_resp.get(resp, []):
             cc   = r.get("cumpl_cita","") or ""
-            mot  = _norm_mot(r.get("motivo_repr","") or r.get("motivo",""))
+            mot  = (r.get("motivo_repr","") or "").strip() or "—"
             obs  = (r.get("obs","") or r.get("motivo","") or "—")[:60] + ("…" if len(r.get("obs","") or r.get("motivo","") or "") > 60 else "")
             nrep = r.get("fcita_repr","") or "—"
             rresp = r.get("resp_repr","") or "—"
@@ -352,7 +352,7 @@ def build_html(datos, interno=False):
     repr_ayer = ""
     for r in dia_repr:
         rr  = r.get("resp_repr") or "Sin responsable"
-        mot = _norm_mot(r.get("motivo_repr","") or r.get("motivo",""))
+        mot = (r.get("motivo_repr","") or "").strip() or "—"
         obs = (r.get("obs","") or r.get("motivo","") or "—")[:60] + ("…" if len(r.get("obs","") or r.get("motivo","") or "") > 60 else "")
         repr_ayer += f'''<tr>
           {_tc(None,mono=True)}   {r.get("ob","—")}</td>
@@ -401,7 +401,7 @@ def build_html(datos, interno=False):
             det_ayer += f'<tr><td colspan="{NCOLS}" bgcolor="{bg}" style="background:{bg};padding:5px 10px;font-size:9px;font-weight:700;color:{fg};text-transform:uppercase;letter-spacing:.1em;border-bottom:1px solid #e2e8f0">{lbl}</td></tr>'
             prev_grupo = grupo
 
-        mot  = _norm_mot(r.get("motivo_repr","") or r.get("motivo","")) if (not ok and cc) else "—"
+        mot  = ((r.get("motivo_repr","") or "").strip() or "—") if (not ok and cc) else "—"
         obs  = (r.get("obs","") or r.get("motivo","") or "") if (not ok and cc) else ""
         obs_s = obs[:55] + ("…" if len(obs) > 55 else "") if obs else "—"
         nrep  = r.get("fcita_repr","") or "—"
