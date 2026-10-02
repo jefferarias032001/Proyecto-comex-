@@ -301,27 +301,59 @@ def build_html(datos):
           {_tc(None,col="#94a3b8")}{obs}</td>
         </tr>'''
 
-    # Detalle ayer completo
+    # Detalle ayer completo — agrupado: reprog > tarde sin reprog > sin fecha > a tiempo
+    def _sort_key(r):
+        cc = r.get("cumpl_cita","") or ""
+        tiene_reprog = bool(r.get("fcita_repr",""))
+        if _tarde(r) and tiene_reprog:   grupo = 0
+        elif _tarde(r):                  grupo = 1
+        elif cc == "Sin fecha":          grupo = 2
+        elif _cumple(r):                 grupo = 3
+        else:                            grupo = 4
+        return (grupo, r.get("fcita","") or "")
+
     det_ayer = ""
-    for r in sorted(dia_rows, key=lambda r: r.get("fcita","") or ""):
+    prev_grupo = None
+    GRUPO_LABEL = {
+        0: ("Incumplimientos con reprogramacion", "#fee2e2", "#dc2626"),
+        1: ("Incumplimientos sin reprogramacion", "#fef3c7", "#b45309"),
+        2: ("Sin fecha de cita", "#f1f5f9", "#64748b"),
+        3: ("A tiempo", "#dcfce7", "#15803d"),
+        4: ("Otros", "#f8fafc", "#94a3b8"),
+    }
+    NCOLS = 10  # número de columnas de la tabla
+    for r in sorted(dia_rows, key=_sort_key):
         cc   = r.get("cumpl_cita","") or ""
         ok   = _cumple(r)
+        tiene_reprog = bool(r.get("fcita_repr",""))
+        if _tarde(r) and tiene_reprog:   grupo = 0
+        elif _tarde(r):                  grupo = 1
+        elif cc == "Sin fecha":          grupo = 2
+        elif ok:                         grupo = 3
+        else:                            grupo = 4
+
+        # Separador de grupo
+        if grupo != prev_grupo:
+            lbl, bg, fg = GRUPO_LABEL[grupo]
+            det_ayer += f'<tr><td colspan="{NCOLS}" bgcolor="{bg}" style="background:{bg};padding:5px 10px;font-size:9px;font-weight:700;color:{fg};text-transform:uppercase;letter-spacing:.1em;border-bottom:1px solid #e2e8f0">{lbl}</td></tr>'
+            prev_grupo = grupo
+
         mot  = _norm_mot(r.get("motivo_repr","") or r.get("motivo","")) if (not ok and cc) else "—"
         obs  = (r.get("obs","") or r.get("motivo","") or "") if (not ok and cc) else ""
         obs_s = obs[:55] + ("…" if len(obs) > 55 else "") if obs else "—"
         nrep  = r.get("fcita_repr","") or "—"
         rresp = r.get("resp_repr","") or "—"
         det_ayer += f'''<tr>
-          {_tc(None,mono=True)}             {r.get("ob","—")}</td>
-          {_tc(None,mono=True)}             {r.get("cont","—")}</td>
-          {_tc(None,col="#64748b")}         {r.get("terminal","—")}</td>
+          {_tc(None,mono=True)}              {r.get("ob","—")}</td>
+          {_tc(None,mono=True)}              {r.get("cont","—")}</td>
+          {_tc(None,col="#64748b")}          {r.get("terminal","—")}</td>
           {_tc(None,col="#64748b",wrap=False)}{r.get("fcita","—") or "—"}</td>
           {_tc(None,col="#64748b",wrap=False)}{r.get("fllpuerto","—") or "—"}</td>
           {_tc(None,col="#2563eb",wrap=False)}{nrep}</td>
-          {_tc(None)}                        {_resp_pill(rresp) if rresp != "—" else "—"}</td>
-          {_tc(None)}                        {_pill(cc, ok)}</td>
-          {_tc(None,col="#475569")}          {mot}</td>
-          {_tc(None,col="#94a3b8")}          {obs_s}</td>
+          {_tc(None)}                         {_resp_pill(rresp) if rresp != "—" else "—"}</td>
+          {_tc(None)}                         {_pill(cc, ok)}</td>
+          {_tc(None,col="#475569")}           {mot}</td>
+          {_tc(None,col="#94a3b8")}           {obs_s}</td>
         </tr>'''
 
     # ─────────────────────────────────────────────────────────────────────────
