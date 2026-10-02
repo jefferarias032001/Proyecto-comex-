@@ -116,6 +116,12 @@ def _cumple(r):
 def _tarde(r):
     return (r.get("cumpl_cita","") or "").startswith("Tarde")
 
+def _pendiente(r):
+    """Responsable asignado pero sin nueva cita aun — excluir del calculo como sin fecha."""
+    return (bool((r.get("resp_repr","") or "").strip())
+            and not (r.get("fcita_repr","") or "").strip()
+            and not _cumple(r))
+
 def _resp_cat(r):
     cc = r.get("cumpl_cita","") or ""
     if "externo" in cc:       return "Externo"
@@ -183,9 +189,9 @@ def build_html(datos, interno=False):
                 if r.get("mes_iso") == mes_actual
                 and (_r_fecha(r) is None or _r_fecha(r) <= corte.date())]
     total_m  = len(mes_rows)
-    sf_m     = sum(1 for r in mes_rows if (r.get("cumpl_cita","") or "") == "Sin fecha")
+    sf_m     = sum(1 for r in mes_rows if (r.get("cumpl_cita","") or "") == "Sin fecha" or _pendiente(r))
     cumpl_m  = sum(1 for r in mes_rows if _cumple(r))
-    tarde_m  = [r for r in mes_rows if _tarde(r)]
+    tarde_m  = [r for r in mes_rows if _tarde(r) and not _pendiente(r)]
     repr_m   = [r for r in mes_rows if r.get("fcita_repr")]
     base_m   = total_m - sf_m
     pct_m    = _pct(cumpl_m, base_m)
@@ -204,7 +210,7 @@ def build_html(datos, interno=False):
             mr = mes_rows          # ya filtrado hasta ayer
         else:
             mr = [r for r in rows if r.get("mes_iso") == mes]
-        sf    = sum(1 for r in mr if (r.get("cumpl_cita","") or "") == "Sin fecha")
+        sf    = sum(1 for r in mr if (r.get("cumpl_cita","") or "") == "Sin fecha" or _pendiente(r))
         base  = len(mr) - sf
         cumpl = sum(1 for r in mr if _cumple(r))
         nc    = sum(1 for r in mr if _tarde(r))
@@ -222,9 +228,9 @@ def build_html(datos, interno=False):
 
     dia_label = dia_dt.strftime("%A %d de %B de %Y").capitalize() if dia_dt else "Sin datos recientes"
     dia_total = len(dia_rows)
-    dia_sf    = sum(1 for r in dia_rows if (r.get("cumpl_cita","") or "") == "Sin fecha")
+    dia_sf    = sum(1 for r in dia_rows if (r.get("cumpl_cita","") or "") == "Sin fecha" or _pendiente(r))
     dia_cumpl = sum(1 for r in dia_rows if _cumple(r))
-    dia_tarde = [r for r in dia_rows if _tarde(r) and not _cumple(r)]
+    dia_tarde = [r for r in dia_rows if _tarde(r) and not _cumple(r) and not _pendiente(r)]
     dia_repr  = [r for r in dia_rows if r.get("fcita_repr")]
     dia_pct   = _pct(dia_cumpl, dia_total - dia_sf)
     col_d     = _col(dia_pct)
@@ -362,11 +368,11 @@ def build_html(datos, interno=False):
     def _sort_key(r):
         cc = r.get("cumpl_cita","") or ""
         tiene_reprog = bool(r.get("fcita_repr",""))
-        if _tarde(r) and tiene_reprog:   grupo = 0
-        elif _tarde(r):                  grupo = 1
-        elif cc == "Sin fecha":          grupo = 2
-        elif _cumple(r):                 grupo = 3
-        else:                            grupo = 4
+        if _tarde(r) and tiene_reprog and not _pendiente(r):  grupo = 0
+        elif _tarde(r) and not _pendiente(r):                 grupo = 1
+        elif cc == "Sin fecha" or _pendiente(r):              grupo = 2
+        elif _cumple(r):                                      grupo = 3
+        else:                                                 grupo = 4
         return (grupo, r.get("fcita","") or "")
 
     det_ayer = ""
@@ -383,11 +389,11 @@ def build_html(datos, interno=False):
         cc   = r.get("cumpl_cita","") or ""
         ok   = _cumple(r)
         tiene_reprog = bool(r.get("fcita_repr",""))
-        if _tarde(r) and tiene_reprog:   grupo = 0
-        elif _tarde(r):                  grupo = 1
-        elif cc == "Sin fecha":          grupo = 2
-        elif ok:                         grupo = 3
-        else:                            grupo = 4
+        if _tarde(r) and tiene_reprog and not _pendiente(r):  grupo = 0
+        elif _tarde(r) and not _pendiente(r):                 grupo = 1
+        elif cc == "Sin fecha" or _pendiente(r): grupo = 2
+        elif ok:                               grupo = 3
+        else:                                  grupo = 4
 
         # Separador de grupo
         if grupo != prev_grupo:
@@ -661,12 +667,6 @@ def build_html(datos, interno=False):
 
   <!-- ═══ ALERTAS OPERATIVAS AYER (solo correo interno) ═══════════════════ -->
   {"<tr><td bgcolor='#f8fafc' style='background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0'>" + SEC('Alertas operativas · ' + dia_label[:20], '#d97706' if n_alertas else '#16a34a') + alertas_items + "</td></tr>" if interno else ""}
-
-  <!-- ═══ INCUMPLIMIENTOS AYER ════════════════════════════════════════════ -->
-  {"<tr><td bgcolor='#ffffff' style='background:#fff;padding:0 32px 20px;border-top:1px solid #e2e8f0'>" + SEC("Incumplimientos de ayer", "#dc2626") + "<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #f1f5f9;border-radius:8px;overflow:hidden'><thead><tr><th " + TH_S + ">Pedido</th><th " + TH_S + ">Contenedor</th><th " + TH_S + ">Resp.</th><th " + TH_S + ">Cita</th><th " + TH_S + ">Nueva cita</th><th " + TH_S + ">Resp. reprog.</th><th " + TH_S + ">Resultado</th><th " + TH_S + ">Motivo</th><th " + TH_S + ">Observación</th></tr></thead><tbody>" + dia_inc + "</tbody></table></td></tr>" if dia_inc else "<tr><td bgcolor='#ffffff' style='background:#fff;padding:12px 32px;border-top:1px solid #e2e8f0'><table cellpadding='0' cellspacing='0'><tr><td bgcolor='#dcfce7' style='background:#dcfce7;border-radius:8px;padding:10px 14px;border:1px solid #86efac'><span style='font-size:12px;color:#15803d;font-weight:600'>&#10003; Sin incumplimientos ayer</span></td></tr></table></td></tr>"}
-
-  <!-- ═══ CITAS PERDIDAS AYER ══════════════════════════════════════════════ -->
-  {"<tr><td bgcolor='#ffffff' style='background:#fff;padding:0 32px 20px;border-top:1px solid #e2e8f0'>" + SEC("Citas perdidas de ayer — " + str(len(dia_repr)), "#d97706") + "<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #f1f5f9;border-radius:8px;overflow:hidden'><thead><tr><th " + TH_S + ">Pedido</th><th " + TH_S + ">Contenedor</th><th " + TH_S + ">Cita original</th><th " + TH_S + ">Nueva cita</th><th " + TH_S + ">Responsable</th><th " + TH_S + ">Motivo</th><th " + TH_S + ">Observación</th></tr></thead><tbody>" + repr_ayer + "</tbody></table></td></tr>" if dia_repr else ""}
 
   <!-- ═══ TODOS LOS CONTENEDORES AYER ═════════════════════════════════════ -->
   <tr><td bgcolor="#ffffff" style="background:#fff;padding:0 32px 24px;border-top:1px solid #e2e8f0">
