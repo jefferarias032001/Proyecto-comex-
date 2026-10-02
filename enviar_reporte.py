@@ -3,7 +3,7 @@ Reporte diario Ajover EXPO Llenos
 Outlook-safe: bgcolor/height/width en <td>, sin divs con background
 .env: EMAIL_FROM, EMAIL_PASSWORD, EMAIL_TO, EMAIL_CC (opcional)
 """
-import os, json, smtplib, sys
+import os, json, smtplib, sys, base64
 from collections import Counter, defaultdict
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -13,6 +13,47 @@ from dotenv import load_dotenv
 
 BASE = Path(__file__).parent
 load_dotenv(BASE / ".env")
+
+# ── Firma: imágenes embebidas como base64 ─────────────────────────────────────
+_SIG_DIR = Path(os.environ.get("APPDATA","")) / "Microsoft" / "Signatures" / "jeffer arias1_archivos"
+
+def _sig_b64(name):
+    try: return base64.b64encode((_SIG_DIR / name).read_bytes()).decode()
+    except: return ""
+
+def _imgtag(b64, w, h, alt=""):
+    if not b64: return f'<span style="display:inline-block;width:{w}px;height:{h}px"></span>'
+    return f'<img src="data:image/png;base64,{b64}" width="{w}" height="{h}" alt="{alt}" style="display:block;border:0">'
+
+_b64_logo = _sig_b64("image001.png")
+_b64_li   = _sig_b64("image002.png")
+_b64_ig   = _sig_b64("image003.png")
+_b64_fb   = _sig_b64("image004.png")
+
+FIRMA_HTML = f"""
+<table cellpadding="0" cellspacing="0" style="margin:0">
+  <tr>
+    <td style="padding-right:14px;border-right:2px solid #F5811E;vertical-align:top">
+      {_imgtag(_b64_logo, 120, 120, "TC Logistix")}
+    </td>
+    <td style="padding-left:14px;vertical-align:top">
+      <p style="margin:0 0 2px;font-family:Helvetica,Arial,sans-serif;font-weight:700;color:#ED7D31;font-size:13px">Jeffer Antonio Arias Ordosgoitia</p>
+      <p style="margin:0 0 2px;font-family:Arial,sans-serif;font-weight:700;font-style:italic;color:#002060;font-size:10px">Analista de Datos</p>
+      <p style="margin:0;font-family:Arial,sans-serif;font-style:italic;color:#002060;font-size:9px">Dirección: Manga Cra. 25 No. 24A-16 Piso 17</p>
+      <p style="margin:0;font-family:Arial,sans-serif;font-style:italic;color:#002060;font-size:9px">Edificio Twin Bays, Torre Bancolombia</p>
+      <p style="margin:0;font-family:Arial,sans-serif;font-style:italic;color:#091140;font-size:10px">Tel: 3115993117</p>
+      <p style="margin:0;font-family:Arial,sans-serif;font-style:italic;color:#091140;font-size:10px">Cartagena, Colombia</p>
+      <p style="margin:0;font-size:10px;font-family:Arial,sans-serif">Email: <a href="mailto:jarias@tractocar.com" style="color:blue;font-style:italic">jarias@tractocar.com</a></p>
+      <p style="margin:0"><a href="http://www.tractocar.com/" style="font-family:Arial,sans-serif;font-weight:700;font-style:italic;color:#002060;font-size:10px;text-decoration:none">www.tractocar.com</a></p>
+      <table cellpadding="0" cellspacing="0" style="margin-top:5px"><tr>
+        <td style="padding-right:5px"><a href="https://www.linkedin.com/company/tractocar-logistics-sas/">{_imgtag(_b64_li, 19, 19, "LinkedIn")}</a></td>
+        <td style="padding-right:5px">{_imgtag(_b64_ig, 21, 21, "Instagram")}</td>
+        <td>{_imgtag(_b64_fb, 10, 21, "Facebook")}</td>
+      </tr></table>
+    </td>
+  </tr>
+</table>
+"""
 
 EMAIL_FROM     = os.environ.get("EMAIL_FROM", "jarias@tractocar.com")
 EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD", "")
@@ -633,6 +674,12 @@ def build_html(datos, interno=False):
     {"<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #f1f5f9;border-radius:8px;overflow:hidden'><thead><tr><th " + TH_S + ">Pedido</th><th " + TH_S + ">Contenedor</th><th " + TH_S + ">Terminal</th><th " + TH_S + ">Cita puerto</th><th " + TH_S + ">Llegada</th><th " + TH_S + ">Nueva cita</th><th " + TH_S + ">Resp. reprog.</th><th " + TH_S + ">Cumplimiento</th><th " + TH_S + ">Motivo</th><th " + TH_S + ">Observación</th></tr></thead><tbody>" + det_ayer + "</tbody></table>" if det_ayer else "<p style='margin:0;font-size:12px;color:#94a3b8;text-align:center;padding:12px'>Sin registros para este día</p>"}
   </td></tr>
 
+  <!-- ═══ FIRMA ═══════════════════════════════════════════════════════════ -->
+  <tr><td bgcolor="#ffffff" style="background:#fff;padding:20px 32px 24px;border-top:1px solid #e2e8f0">
+    <p style="margin:0 0 16px;font-family:Calibri,Arial,sans-serif;font-size:12pt;font-style:italic;font-weight:700;color:#1e293b">Cordialmente,</p>
+    {FIRMA_HTML}
+  </td></tr>
+
   <!-- ═══ FOOTER ════════════════════════════════════════════════════════════ -->
   <tr><td bgcolor="#f8fafc" style="background:#f8fafc;border-radius:0 0 12px 12px;padding:13px 32px;border-top:1px solid #e2e8f0">
     <table width="100%" cellpadding="0" cellspacing="0"><tr>
@@ -648,6 +695,7 @@ def build_html(datos, interno=False):
 
 
 EMAIL_TO_INTERNO = [e.strip() for e in os.environ.get("EMAIL_TO_INTERNO", EMAIL_FROM).split(",") if e.strip()]
+EMAIL_CC_INTERNO = [e.strip() for e in os.environ.get("EMAIL_CC_INTERNO","").split(",") if e.strip()]
 
 
 def send_report(interno=False):
@@ -660,18 +708,24 @@ def send_report(interno=False):
         print("[ERROR] Falta EMAIL_PASSWORD en .env"); sys.exit(1)
 
     html      = build_html(datos, interno=interno)
-    dest_to   = EMAIL_TO_INTERNO if interno else EMAIL_TO
-    tag       = "[TC-Interno]" if interno else "[TC]"
-    subject   = f"{tag} Indicador Cumplimiento Citas Llenos — {datos.get('generado','')[:10]}"
+    if interno:
+        dest_to  = EMAIL_TO_INTERNO
+        dest_cc  = EMAIL_CC_INTERNO
+        tag      = "[TC-Interno]"
+    else:
+        dest_to  = EMAIL_TO
+        dest_cc  = EMAIL_CC
+        tag      = "[TC]"
+    subject = f"{tag} Indicador Cumplimiento Citas Llenos — {datos.get('generado','')[:10]}"
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"]    = EMAIL_FROM
     msg["To"]      = ", ".join(dest_to)
-    if EMAIL_CC and not interno: msg["Cc"] = ", ".join(EMAIL_CC)
+    if dest_cc: msg["Cc"] = ", ".join(dest_cc)
     msg.attach(MIMEText(html, "html", "utf-8"))
 
-    dest_all = dest_to + (EMAIL_CC if EMAIL_CC and not interno else [])
+    dest_all = dest_to + dest_cc
     try:
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as smtp:
             smtp.ehlo(); smtp.starttls()
