@@ -10,6 +10,7 @@ from email.mime.text import MIMEText
 from datetime import datetime, timedelta
 from pathlib import Path
 from dotenv import load_dotenv
+import anthropic
 
 BASE = Path(__file__).parent
 load_dotenv(BASE / ".env")
@@ -173,6 +174,78 @@ def _resp_pill(resp):
     r = RESP_L.get(resp, {"fg":"#64748b","bg":"#f1f5f9","border":"#e2e8f0","text":"#334155"})
     return f'<span style="background:{r["bg"]};color:{r["text"]};padding:2px 10px;border-radius:6px;font-size:10px;font-weight:700;border:1px solid {r["border"]}">{resp}</span>'
 
+def _generar_analisis_ia(pct_dia, total_dia, a_tiempo, n_tarde, n_perdidas,
+                         n_tc, n_ajv, n_ext, pct_mes, dia_label, motivos_dia, interno=False):
+    """Genera bullets de resumen + recomendaciones usando Claude. Devuelve lista de dicts."""
+    try:
+        client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY",""))
+        motivos_txt = ", ".join(f"{m} ({c})" for m,c in motivos_dia.items()) or "ninguno"
+        prompt = f"""Eres analista logístico. Con estos datos del día ({dia_label}):
+- Cumplimiento: {pct_dia}% ({a_tiempo} a tiempo, {n_tarde} tarde, {n_perdidas} citas perdidas de {total_dia} total)
+- Responsabilidad: Tractocar {n_tc} incumplimiento(s), Ajover {n_ajv}, Externo {n_ext}
+- Motivos: {motivos_txt}
+- Cumplimiento mes actual: {pct_mes}%
+
+Genera exactamente este JSON (sin markdown, sin texto extra):
+{{
+  "resumen": "una frase de max 12 palabras que diga cómo quedó el día",
+  "bullets": [
+    {{"actor": "Ajover", "texto": "recomendación corta max 10 palabras"}},
+    {{"actor": "Tractocar", "texto": "recomendación corta max 10 palabras"}}
+  ]
+}}
+Si un actor tiene 0 incumplimientos, su recomendación debe ser positiva/de refuerzo.
+Responde SOLO el JSON."""
+        msg = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=250,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        raw = msg.content[0].text.strip()
+        # Quitar bloque markdown si el modelo lo incluye
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        return json.loads(raw.strip())
+    except Exception:
+        return None
+
+ACTOR_COLOR = {
+    "Ajover":    {"dot":"#f87171","bg":"#fee2e2","text":"#b91c1c"},
+    "Tractocar": {"dot":"#60a5fa","bg":"#eff6ff","text":"#1d4ed8"},
+    "Externo":   {"dot":"#34d399","bg":"#dcfce7","text":"#15803d"},
+}
+
+def _bloque_ia(data):
+    if not data: return ""
+    resumen = data.get("resumen","")
+    bullets = data.get("bullets", [])
+    filas = ""
+    for b in bullets:
+        actor = b.get("actor","")
+        texto = b.get("texto","")
+        c = ACTOR_COLOR.get(actor, {"dot":"#94a3b8","bg":"#f1f5f9","text":"#334155"})
+        filas += f'''<tr>
+          <td style="padding:3px 0">
+            <table cellpadding="0" cellspacing="0"><tr>
+              <td width="8" height="8" bgcolor="{c['dot']}" style="background:{c['dot']};border-radius:50%;font-size:0"> </td>
+              <td style="padding-left:8px">
+                <span style="font-size:10px;font-weight:700;color:{c['text']};background:{c['bg']};padding:1px 6px;border-radius:4px">{actor}</span>
+                <span style="font-size:11px;color:#cbd5e1;padding-left:6px">{texto}</span>
+              </td>
+            </tr></table>
+          </td>
+        </tr>'''
+    return f'''<tr><td bgcolor="#0f2d4a" style="background:#0f2d4a;padding:12px 32px;border-bottom:1px solid #1e3a5f">
+    <table cellpadding="0" cellspacing="0" width="100%">
+      <tr><td style="padding-bottom:6px">
+        <span style="font-size:11px;color:#f8fafc;font-weight:700">&#129302; {resumen}</span>
+      </td></tr>
+      {filas}
+    </table>
+  </td></tr>'''
+
 # ─────────────────────────────────────────────────────────────────────────────
 def build_html(datos, interno=False):
     rows    = datos["ajover"]["llenos"]["rows"]
@@ -199,16 +272,17 @@ def build_html(datos, interno=False):
     total_m  = len(mes_rows)
     sf_m     = sum(1 for r in mes_rows if (r.get("cumpl_cita","") or "") == "Sin fecha" or _pendiente(r))
     cumpl_m  = sum(1 for r in mes_rows if _cumple(r))
-    tarde_m  = [r for r in mes_rows if _tarde(r) and not _pendiente(r)]
+    tarde_m      = [r for r in mes_rows if _tarde(r) and not _pendiente(r)]
+    tarde_m_resp = [r for r in mes_rows if _tarde(r) or _pendiente(r)]
     repr_m   = [r for r in mes_rows if r.get("fcita_repr")]
     base_m   = total_m - sf_m
     pct_m    = _pct(cumpl_m, base_m)
     col_m    = _col(pct_m)
 
     inc_resp = defaultdict(list)
-    for r in tarde_m: inc_resp[_resp_cat(r)].append(r)
+    for r in tarde_m_resp: inc_resp[_resp_cat(r)].append(r)
     mot_m = defaultdict(int)
-    for r in tarde_m: mot_m[(r.get("motivo_repr","") or "").strip() or "Sin motivo"] += 1
+    for r in tarde_m_resp: mot_m[(r.get("motivo_repr","") or "").strip() or "Sin motivo"] += 1
 
     # ── Tendencia últimos 7 meses (hasta el corte en el mes actual)
     meses_disp = sorted(set(r["mes_iso"] for r in rows if r.get("mes_iso")))[-7:]
@@ -251,6 +325,15 @@ def build_html(datos, interno=False):
     n_tc  = len(dia_inc_resp.get("Tractocar", []))
     n_ajv = len(dia_inc_resp.get("Ajover", []))
     n_ext = len(dia_inc_resp.get("Externo", []))
+
+    # Análisis IA
+    dia_atime = sum(1 for r in dia_rows if _cumple(r) and not _tarde(r))
+    mot_dia = defaultdict(int)
+    for r in dia_tarde_resp: mot_dia[(r.get("motivo_repr","") or "").strip() or "Sin motivo"] += 1
+    analisis_ia = _generar_analisis_ia(
+        dia_pct, dia_total, dia_atime, len(dia_tarde), len(dia_repr),
+        n_tc, n_ajv, n_ext, pct_m, dia_label, dict(mot_dia), interno
+    )
 
     # Alertas operativas del día
     dia_sin_llegada    = [r for r in dia_rows
@@ -548,6 +631,9 @@ def build_html(datos, interno=False):
       <td align="right" valign="top" style="font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap;padding-left:16px">{generado}</td>
     </tr></table>
   </td></tr>
+
+  <!-- ═══ ANÁLISIS IA ════════════════════════════════════════════════════ -->
+  {_bloque_ia(analisis_ia)}
 
   <!-- ═══ 4 KPI CARDS (como el tablero) ═══════════════════════════════════ -->
   <tr><td bgcolor="#0d2137" style="background:#0d2137;padding:0 32px 24px">
