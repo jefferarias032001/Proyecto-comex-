@@ -139,7 +139,7 @@ def build_html(datos):
     inc_resp = defaultdict(list)
     for r in tarde_m: inc_resp[_resp_cat(r)].append(r)
     mot_m = defaultdict(int)
-    for r in tarde_m: mot_m[_norm_mot(r.get("motivo","") or r.get("motivo_repr",""))] += 1
+    for r in tarde_m: mot_m[_norm_mot(r.get("motivo_repr","") or r.get("motivo",""))] += 1
 
     # ── Tendencia últimos 7 meses
     meses_disp = sorted(set(r["mes_iso"] for r in rows if r.get("mes_iso")))[-7:]
@@ -206,7 +206,7 @@ def build_html(datos):
     for resp in ["Tractocar","Ajover","Externo"]:
         lst = inc_resp.get(resp, [])
         if not lst: continue
-        mots = Counter(_norm_mot(r.get("motivo","") or r.get("motivo_repr","")) for r in lst)
+        mots = Counter(_norm_mot(r.get("motivo_repr","") or r.get("motivo","")) for r in lst)
         top  = "; ".join(f"{m} ({c})" for m,c in mots.most_common(3))
         r_   = RESP_L[resp]
         inc_mes += f'''<tr>
@@ -245,7 +245,7 @@ def build_html(datos):
     for resp in ["Tractocar","Ajover","Externo"]:
         for r in dia_inc_resp.get(resp, []):
             cc  = r.get("cumpl_cita","") or ""
-            mot = _norm_mot(r.get("motivo","") or r.get("motivo_repr",""))
+            mot = _norm_mot(r.get("motivo_repr","") or r.get("motivo",""))
             dia_inc += f'''<tr>
               <td style="padding:7px 12px;font-size:11px;font-family:monospace;color:#1e293b;border-bottom:1px solid #f1f5f9">{r.get("cont","—")}</td>
               <td style="padding:7px 12px;border-bottom:1px solid #f1f5f9">{_resp_pill(resp)}</td>
@@ -271,7 +271,7 @@ def build_html(datos):
     for r in sorted(dia_rows, key=lambda r: r.get("fcita","") or ""):
         cc  = r.get("cumpl_cita","") or ""
         ok  = _cumple(r)
-        mot = _norm_mot(r.get("motivo","") or r.get("motivo_repr","")) if (not ok and cc) else "—"
+        mot = _norm_mot(r.get("motivo_repr","") or r.get("motivo","")) if (not ok and cc) else "—"
         det_ayer += f'''<tr>
           <td style="padding:7px 12px;font-size:11px;font-family:monospace;color:#1e293b;border-bottom:1px solid #f1f5f9">{r.get("cont","—")}</td>
           <td style="padding:7px 12px;font-size:11px;color:#64748b;border-bottom:1px solid #f1f5f9">{r.get("terminal","—")}</td>
