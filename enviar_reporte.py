@@ -145,11 +145,12 @@ def build_html(datos):
     meses_disp = sorted(set(r["mes_iso"] for r in rows if r.get("mes_iso")))[-7:]
     tend = []
     for mes in meses_disp:
-        mr   = [r for r in rows if r.get("mes_iso") == mes]
-        sf   = sum(1 for r in mr if (r.get("cumpl_cita","") or "") == "Sin fecha")
-        base = len(mr) - sf
-        nc   = sum(1 for r in mr if _tarde(r))
-        tend.append({"mes":mes,"total":len(mr),"pct":_pct(base-nc, base),"nc":nc})
+        mr    = [r for r in rows if r.get("mes_iso") == mes]
+        sf    = sum(1 for r in mr if (r.get("cumpl_cita","") or "") == "Sin fecha")
+        base  = len(mr) - sf
+        cumpl = sum(1 for r in mr if _cumple(r))   # misma lógica que el KPI principal
+        nc    = sum(1 for r in mr if _tarde(r))
+        tend.append({"mes":mes,"total":len(mr),"pct":_pct(cumpl, base),"nc":nc})
 
     # ── Ayer
     dia_rows, dia_dt = [], None
