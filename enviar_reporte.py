@@ -1,5 +1,6 @@
 """
-Reporte diario Ajover EXPO Llenos — tema claro, gráficos CSS/tabla (compatible Outlook)
+Reporte diario Ajover EXPO Llenos
+Outlook-safe: bgcolor/height/width en <td>, sin divs con background
 .env: EMAIL_FROM, EMAIL_PASSWORD, EMAIL_TO, EMAIL_CC (opcional)
 """
 import os, json, smtplib, sys
@@ -25,30 +26,47 @@ MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
 MESES_C  = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
-def _mes_label(iso, corto=False):
+def _ml(iso, c=False):
     try:
         p = iso.split("-")
-        return f"{(MESES_C if corto else MESES_ES)[int(p[1])-1]} {p[0]}"
+        n = int(p[1])-1
+        return f"{(MESES_C if c else MESES_ES)[n]} {p[0]}"
     except: return iso
 
 def _pct(a, b): return round(a/b*100, 1) if b else 0.0
 
+def _col(pct):
+    if pct >= 90: return {"bar":"#22c55e","light":"#dcfce7","text":"#15803d","dark":"#14532d"}
+    if pct >= 75: return {"bar":"#f59e0b","light":"#fef3c7","text":"#b45309","dark":"#78350f"}
+    return              {"bar":"#ef4444","light":"#fee2e2","text":"#b91c1c","dark":"#7f1d1d"}
+
+RESP = {
+    "Tractocar": {"fg":"#60a5fa","bg":"#1e3a5f","text":"#93c5fd"},
+    "Ajover":    {"fg":"#f87171","bg":"#450a0a","text":"#fca5a5"},
+    "Externo":   {"fg":"#34d399","bg":"#064e3b","text":"#6ee7b7"},
+}
+RESP_L = {  # versión clara para fondo blanco
+    "Tractocar": {"fg":"#2563eb","bg":"#eff6ff","border":"#bfdbfe","text":"#1d4ed8"},
+    "Ajover":    {"fg":"#dc2626","bg":"#fee2e2","border":"#fca5a5","text":"#b91c1c"},
+    "Externo":   {"fg":"#16a34a","bg":"#dcfce7","border":"#86efac","text":"#15803d"},
+}
+
 def _norm_mot(mot):
     m = (mot or "").lower()
     if not m: return "Sin motivo"
-    if "escolta" in m:             return "Problema de escolta"
-    if "sello" in m:               return "Demoras en sello"
-    if "diferencia de peso" in m or "contenedor con diferencia" in m or "peso" in m: return "Diferencia de peso"
+    if "escolta" in m:   return "Problema de escolta"
+    if "sello" in m:     return "Demoras en sello"
+    if "peso" in m or "diferencia" in m: return "Diferencia de peso"
     if "lluvia" in m or "clima" in m: return "Condiciones climáticas"
-    if "tráfico" in m or "trafico" in m or "vía cerrada" in m or "via cerrada" in m: return "Tráfico / vía cerrada"
+    if "tráfico" in m or "trafico" in m or "vía" in m or "via" in m: return "Tráfico / vía cerrada"
     if "báscula" in m or "bascula" in m: return "Daños en báscula"
-    if "mecán" in m or "mecan" in m or "llanta" in m or "falla mec" in m: return "Falla mecánica"
-    if "motonave" in m or "buque" in m:  return "Cambio fecha motonave"
-    if "programac" in m:                 return "Cambio en programación"
-    if "rndc" in m or "manifest" in m:   return "Trámites RNDC"
-    if "seguridad" in m:                 return "Retrasos con seguridad"
+    if "mecán" in m or "mecan" in m or "llanta" in m: return "Falla mecánica"
+    if "motonave" in m or "buque" in m: return "Cambio fecha motonave"
+    if "programac" in m: return "Cambio en programación"
+    if "rndc" in m or "manifest" in m: return "Trámites RNDC"
+    if "seguridad" in m: return "Retrasos con seguridad"
     if "solicitud" in m or "cliente" in m: return "Solicitud del cliente"
-    return mot[:38] + ("…" if len(mot) > 38 else "")
+    return mot[:36] + ("…" if len(mot) > 36 else "")
 
 def _cumple(r):
     cc = r.get("cumpl_cita","") or ""
@@ -63,79 +81,44 @@ def _resp_cat(r):
     if "reprog Ajover" in cc: return "Ajover"
     return r.get("resp_repr") or "Tractocar"
 
-# ── Colores por umbral ────────────────────────────────────────────────────────
-def _pct_col(pct):
-    if pct >= 90: return {"bar":"#16a34a","text":"#15803d","bg":"#dcfce7","border":"#86efac"}
-    if pct >= 75: return {"bar":"#d97706","text":"#b45309","bg":"#fef3c7","border":"#fcd34d"}
-    return {"bar":"#dc2626","text":"#b91c1c","bg":"#fee2e2","border":"#fca5a5"}
+# ── Barra vertical (Outlook-safe: bgcolor + height en td) ─────────────────────
+def _vbar(pct, col, active, max_h=110, w=38):
+    bh = max(4, int(pct / 100 * max_h))
+    sh = max_h - bh
+    border = f'border-left:2px solid {col};border-right:2px solid {col};border-top:2px solid {col};' if active else ''
+    return f'''<table cellpadding="0" cellspacing="0" align="center" style="margin:0 auto">
+      <tr><td width="{w}" height="{sh}" style="font-size:0;line-height:0"> </td></tr>
+      <tr><td width="{w}" height="{bh}" bgcolor="{col}" style="background:{col};{border}font-size:0;line-height:0"> </td></tr>
+    </table>'''
 
-RESP_COL = {"Tractocar":"#2563eb","Ajover":"#dc2626","Externo":"#16a34a"}
-RESP_BG  = {"Tractocar":"#eff6ff","Ajover":"#fee2e2","Externo":"#dcfce7"}
-RESP_BORDER = {"Tractocar":"#bfdbfe","Ajover":"#fca5a5","Externo":"#86efac"}
-
-# ── Gráfico de barras verticales (CSS tabla — compatible Outlook) ─────────────
-def html_trend_chart(tend, mes_actual, max_h=140):
-    if not tend: return ""
-    cells = ""
-    for t in tend:
-        c      = _pct_col(t["pct"])
-        bh     = max(4, int(t["pct"] / 100 * max_h))
-        active = t["mes"] == mes_actual
-        lbl    = _mes_label(t["mes"], True)
-        parts  = lbl.split(" ")
-        mes_c  = parts[0]
-        anio   = "'" + parts[1][2:] if len(parts) > 1 else ""
-        border = f'border:2px solid {c["bar"]};' if active else "border:2px solid transparent;"
-        bg_cell = f'background:{c["bg"]};' if active else ""
-        cells += f'''<td style="text-align:center;vertical-align:bottom;padding:0 3px;width:70px">
-          <div style="font-size:{"11" if active else "10"}px;font-weight:{"800" if active else "600"};color:{c["text"]};margin-bottom:4px">{t["pct"]}%</div>
-          <div style="width:42px;height:{bh}px;background:{c["bar"]};border-radius:4px 4px 0 0;margin:0 auto;opacity:{"1" if active else "0.75"}"></div>
-          <div style="border-top:2px solid #e2e8f0;padding-top:5px;margin-top:0">
-            <div style="font-size:{"10" if active else "9"}px;font-weight:{"700" if active else "400"};color:{"#1e293b" if active else "#64748b"}">{mes_c}&#39;{anio}</div>
-            <div style="font-size:9px;color:#94a3b8">{t["total"]}</div>
-          </div>
-        </td>'''
-    return f'''<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%">
-  <tr style="vertical-align:bottom">{cells}</tr>
-</table>'''
-
-# ── Barra horizontal de progreso ──────────────────────────────────────────────
-def progress_bar(val, total, col, width=260):
-    pct = val / total * 100 if total else 0
-    bw  = max(0, min(width, int(pct / 100 * width)))
+# ── Barra horizontal (Outlook-safe) ──────────────────────────────────────────
+def _hbar(val, total, col, W=200):
+    p = val/total*100 if total else 0
+    f = max(0, min(W, int(p/100*W)))
+    e = W - f
+    empty_td = f'<td width="{e}" height="8" bgcolor="#e2e8f0" style="background:#e2e8f0;font-size:0"> </td>' if e > 0 else ""
     return f'''<table cellpadding="0" cellspacing="0"><tr>
-      <td><div style="background:#e2e8f0;border-radius:4px;height:10px;width:{width}px;overflow:hidden">
-        <div style="background:{col};width:{bw}px;height:10px;border-radius:4px"></div>
-      </div></td>
-      <td style="padding-left:8px;font-size:11px;font-weight:700;color:{col};white-space:nowrap">{val} <span style="color:#94a3b8;font-weight:400">({pct:.0f}%)</span></td>
-    </tr></table>'''
-
-# ── KPI card ──────────────────────────────────────────────────────────────────
-def kpi_card(label, val, col, sub=""):
-    return f'''<td style="padding:0 8px;text-align:center;border-right:1px solid #e2e8f0">
-      <div style="font-size:32px;font-weight:800;color:{col};line-height:1">{val}</div>
-      <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-top:3px">{label}</div>
-      {"<div style='font-size:9px;color:#94a3b8;margin-top:1px'>" + sub + "</div>" if sub else ""}
-    </td>'''
+      <td width="{f}" height="8" bgcolor="{col}" style="background:{col};font-size:0"> </td>
+      {empty_td}
+    </tr></table>
+    <span style="font-size:11px;font-weight:700;color:{col}">{val}</span>
+    <span style="font-size:10px;color:#94a3b8"> ({p:.0f}%)</span>'''
 
 # ── Pill estado ───────────────────────────────────────────────────────────────
-def pill(txt, ok=None):
+def _pill(txt, ok=None):
     if not txt or txt == "Sin fecha":
-        return '<span style="background:#f1f5f9;color:#94a3b8;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:600;border:1px solid #e2e8f0">Sin fecha</span>'
+        return '<span style="background:#f1f5f9;color:#94a3b8;padding:2px 8px;border-radius:6px;font-size:10px;border:1px solid #e2e8f0">Sin fecha</span>'
     if ok is None:
         ok = txt.startswith("A tiempo") or "externo" in txt or "reprog Ajover" in txt
     if ok:
-        return f'<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700;border:1px solid #86efac">✓ {txt}</span>'
-    return f'<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700;border:1px solid #fca5a5">✗ {txt}</span>'
+        return f'<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;border:1px solid #86efac">&#10003; {txt}</span>'
+    return f'<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;border:1px solid #fca5a5">&#10007; {txt}</span>'
 
-# ── Section header ────────────────────────────────────────────────────────────
-def sec(label, col="#2563eb"):
-    return f'<div style="font-size:9px;font-weight:700;color:{col};text-transform:uppercase;letter-spacing:.14em;padding:0 0 10px">{label}</div>'
+def _resp_pill(resp):
+    r = RESP_L.get(resp, {"fg":"#64748b","bg":"#f1f5f9","border":"#e2e8f0","text":"#334155"})
+    return f'<span style="background:{r["bg"]};color:{r["text"]};padding:2px 10px;border-radius:6px;font-size:10px;font-weight:700;border:1px solid {r["border"]}">{resp}</span>'
 
-TH = 'style="padding:8px 14px;font-size:9px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em;text-align:left;border-bottom:2px solid #f1f5f9;background:#f8fafc"'
-TD = 'style="padding:8px 14px;font-size:11px;color:#334155;border-bottom:1px solid #f1f5f9"'
-
-# ── Build HTML ────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
 def build_html(datos):
     rows       = datos["ajover"]["llenos"]["rows"]
     hoy        = datetime.now()
@@ -151,14 +134,12 @@ def build_html(datos):
     repr_m   = [r for r in mes_rows if r.get("fcita_repr")]
     base_m   = total_m - sf_m
     pct_m    = _pct(cumpl_m, base_m)
-    col_m    = _pct_col(pct_m)
+    col_m    = _col(pct_m)
 
     inc_resp = defaultdict(list)
     for r in tarde_m: inc_resp[_resp_cat(r)].append(r)
-
     mot_m = defaultdict(int)
-    for r in tarde_m:
-        mot_m[_norm_mot(r.get("motivo","") or r.get("motivo_repr",""))] += 1
+    for r in tarde_m: mot_m[_norm_mot(r.get("motivo","") or r.get("motivo_repr",""))] += 1
 
     # ── Tendencia últimos 7 meses
     meses_disp = sorted(set(r["mes_iso"] for r in rows if r.get("mes_iso")))[-7:]
@@ -170,7 +151,7 @@ def build_html(datos):
         nc   = sum(1 for r in mr if _tarde(r))
         tend.append({"mes":mes,"total":len(mr),"pct":_pct(base-nc, base),"nc":nc})
 
-    # ── Ayer (último día con datos, hasta 8 días atrás)
+    # ── Ayer
     dia_rows, dia_dt = [], None
     for delta in range(1, 9):
         dt  = hoy - timedelta(days=delta)
@@ -187,246 +168,298 @@ def build_html(datos):
     dia_tarde = [r for r in dia_rows if _tarde(r)]
     dia_repr  = [r for r in dia_rows if r.get("fcita_repr")]
     dia_pct   = _pct(dia_cumpl, dia_total - dia_sf)
-    col_d     = _pct_col(dia_pct)
+    col_d     = _col(dia_pct)
 
     dia_inc_resp = defaultdict(list)
     for r in dia_tarde: dia_inc_resp[_resp_cat(r)].append(r)
 
-    # ── HTML de secciones ─────────────────────────────────────────────────────
+    # ── Gráfico de tendencia ──────────────────────────────────────────────────
+    # Fila 1: porcentajes
+    f_pct = ""
+    # Fila 2: barras (usando _vbar)
+    f_bar = ""
+    # Fila 3: etiquetas mes + cantidad
+    f_lbl = ""
+    for t in tend:
+        c      = _col(t["pct"])
+        active = t["mes"] == mes_actual
+        lbl    = _ml(t["mes"], True).split(" ")
+        mes_c  = lbl[0] + ("'" + lbl[1][2:] if len(lbl) > 1 else "")
+        fw_a   = "font-weight:800;" if active else "font-weight:600;"
+        f_pct += f'<td width="76" style="text-align:center;padding-bottom:6px;font-size:{"11" if active else "10"}px;{fw_a}color:{c["text"]}">{t["pct"]}%</td>'
+        f_bar += f'<td width="76" style="text-align:center;vertical-align:bottom">{_vbar(t["pct"], c["bar"], active)}</td>'
+        f_lbl += f'<td width="76" style="text-align:center;padding-top:6px;border-top:2px solid #e2e8f0"><span style="font-size:{"11" if active else "9"}px;{fw_a}color:{"#1e293b" if active else "#64748b"}">{mes_c}</span><br><span style="font-size:9px;color:#94a3b8">{t["total"]} llenos</span></td>'
 
-    # Barras responsables mes
-    resp_bars = ""
-    for resp in ["Tractocar","Ajover","Externo"]:
-        lst = inc_resp.get(resp, [])
-        if not lst: continue
-        resp_bars += f'''<tr>
-          <td style="padding:5px 0;font-size:11px;color:#334155;width:90px;white-space:nowrap">
-            <span style="background:{RESP_BG[resp]};color:{RESP_COL[resp]};padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700;border:1px solid {RESP_BORDER[resp]}">{resp}</span>
-          </td>
-          <td style="padding:5px 0 5px 10px">{progress_bar(len(lst), len(tarde_m), RESP_COL[resp], 200)}</td>
-        </tr>'''
+    chart_html = f'''<table cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse">
+      <tr>{f_pct}</tr>
+      <tr>{f_bar}</tr>
+      <tr>{f_lbl}</tr>
+    </table>'''
 
-    # Motivos mes
-    mot_bars = ""
-    max_mot = max(mot_m.values()) if mot_m else 1
-    for mot, cnt in sorted(mot_m.items(), key=lambda x: -x[1])[:7]:
-        bw = int(cnt / max_mot * 220)
-        mot_bars += f'''<tr>
-          <td style="padding:5px 0;font-size:11px;color:#475569;width:165px;white-space:nowrap;overflow:hidden">{mot}</td>
-          <td style="padding:5px 8px">
-            <div style="background:#fee2e2;border-radius:4px;height:10px;width:220px;overflow:hidden">
-              <div style="background:#dc2626;width:{bw}px;height:10px;border-radius:4px"></div>
-            </div>
-          </td>
-          <td style="padding:5px 0;font-size:11px;font-weight:700;color:#dc2626;white-space:nowrap">{cnt}</td>
-        </tr>'''
+    # ── Tablas de detalle ─────────────────────────────────────────────────────
+    TH_S = 'style="padding:8px 12px;font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.06em;text-align:left;background:#f8fafc;border-bottom:2px solid #e2e8f0"'
+    TD_S = 'style="padding:8px 12px;font-size:11px;color:#334155;border-bottom:1px solid #f1f5f9"'
 
-    # Incumplimientos mes — tabla
-    inc_mes_rows = ""
+    # Incumplimientos mes
+    inc_mes = ""
     for resp in ["Tractocar","Ajover","Externo"]:
         lst = inc_resp.get(resp, [])
         if not lst: continue
         mots = Counter(_norm_mot(r.get("motivo","") or r.get("motivo_repr","")) for r in lst)
         top  = "; ".join(f"{m} ({c})" for m,c in mots.most_common(3))
-        inc_mes_rows += f'''<tr style="border-bottom:1px solid #f1f5f9">
-          <td {TD}><span style="background:{RESP_BG[resp]};color:{RESP_COL[resp]};padding:3px 10px;border-radius:8px;font-size:10px;font-weight:700;border:1px solid {RESP_BORDER[resp]}">{resp}</span></td>
-          <td style="padding:8px 14px;font-size:20px;font-weight:800;color:{RESP_COL[resp]};text-align:center;border-bottom:1px solid #f1f5f9">{len(lst)}</td>
-          <td style="padding:8px 14px;font-size:10px;color:#64748b;border-bottom:1px solid #f1f5f9">{top or "—"}</td>
+        r_   = RESP_L[resp]
+        inc_mes += f'''<tr>
+          <td {TD_S}>{_resp_pill(resp)}</td>
+          <td style="padding:8px 12px;font-size:22px;font-weight:800;color:{r_["text"]};text-align:center;border-bottom:1px solid #f1f5f9">{len(lst)}</td>
+          <td style="padding:8px 12px;font-size:10px;color:#64748b;border-bottom:1px solid #f1f5f9">{top or "—"}</td>
         </tr>'''
 
-    # Reprog mes
-    repr_mes_html = ""
+    # Motivos mes
+    mot_rows = ""
+    max_mot = max(mot_m.values()) if mot_m else 1
+    for mot, cnt in sorted(mot_m.items(), key=lambda x:-x[1])[:8]:
+        bw = max(4, int(cnt/max_mot*220))
+        ew = 220 - bw
+        empty_td = f'<td width="{ew}" height="8" bgcolor="#fee2e2" style="background:#fee2e2;font-size:0"> </td>' if ew > 0 else ""
+        mot_rows += f'''<tr>
+          <td style="padding:5px 10px 5px 0;font-size:10px;color:#475569;width:150px;vertical-align:middle">{mot}</td>
+          <td style="padding:5px 0;vertical-align:middle">
+            <table cellpadding="0" cellspacing="0"><tr>
+              <td width="{bw}" height="8" bgcolor="#dc2626" style="background:#dc2626;font-size:0"> </td>
+              {empty_td}
+            </tr></table>
+          </td>
+          <td style="padding:5px 0 5px 10px;font-size:11px;font-weight:700;color:#dc2626;white-space:nowrap;vertical-align:middle">{cnt}</td>
+        </tr>'''
+
+    # Reprog mes pills
+    repr_mes = ""
     if repr_m:
-        repr_resp = Counter(r.get("resp_repr") or "Sin resp." for r in repr_m)
-        for resp, cnt in repr_resp.most_common():
-            col_r = RESP_COL.get(resp,"#64748b"); bg_r = RESP_BG.get(resp,"#f1f5f9"); bd_r = RESP_BORDER.get(resp,"#e2e8f0")
-            repr_mes_html += f'<span style="display:inline-block;margin:3px;background:{bg_r};color:{col_r};padding:4px 12px;border-radius:10px;font-size:11px;font-weight:600;border:1px solid {bd_r}">{resp} — {cnt}</span>'
+        for resp, cnt in Counter(r.get("resp_repr") or "Sin resp." for r in repr_m).most_common():
+            r_ = RESP_L.get(resp, {"bg":"#f1f5f9","border":"#e2e8f0","text":"#334155"})
+            repr_mes += f'<span style="display:inline-block;margin:3px;background:{r_["bg"]};color:{r_["text"]};padding:4px 12px;border-radius:8px;font-size:11px;font-weight:600;border:1px solid {r_["border"]}">{resp} — {cnt}</span>'
 
     # Incumplimientos ayer
-    dia_inc_rows = ""
+    dia_inc = ""
     for resp in ["Tractocar","Ajover","Externo"]:
         for r in dia_inc_resp.get(resp, []):
             cc  = r.get("cumpl_cita","") or ""
             mot = _norm_mot(r.get("motivo","") or r.get("motivo_repr",""))
-            dia_inc_rows += f'''<tr style="border-bottom:1px solid #f1f5f9">
-              <td {TD} style="font-family:monospace;padding:8px 14px;font-size:11px;color:#334155;border-bottom:1px solid #f1f5f9">{r.get("cont","—")}</td>
-              <td style="padding:8px 14px;border-bottom:1px solid #f1f5f9"><span style="background:{RESP_BG[resp]};color:{RESP_COL[resp]};padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700;border:1px solid {RESP_BORDER[resp]}">{resp}</span></td>
-              <td style="padding:8px 14px;font-size:11px;color:#64748b;border-bottom:1px solid #f1f5f9">{r.get("fcita","—") or "—"}</td>
-              <td style="padding:8px 14px;font-size:10px;color:#dc2626;border-bottom:1px solid #f1f5f9">{cc}</td>
-              <td style="padding:8px 14px;font-size:10px;color:#64748b;border-bottom:1px solid #f1f5f9">{mot}</td>
+            dia_inc += f'''<tr>
+              <td style="padding:7px 12px;font-size:11px;font-family:monospace;color:#1e293b;border-bottom:1px solid #f1f5f9">{r.get("cont","—")}</td>
+              <td style="padding:7px 12px;border-bottom:1px solid #f1f5f9">{_resp_pill(resp)}</td>
+              <td style="padding:7px 12px;font-size:11px;color:#64748b;border-bottom:1px solid #f1f5f9">{r.get("fcita","—") or "—"}</td>
+              <td style="padding:7px 12px;font-size:10px;color:#b91c1c;border-bottom:1px solid #f1f5f9">{cc}</td>
+              <td style="padding:7px 12px;font-size:10px;color:#64748b;border-bottom:1px solid #f1f5f9">{mot}</td>
             </tr>'''
 
     # Reprog ayer
-    repr_ayer_rows = ""
+    repr_ayer = ""
     for r in dia_repr:
-        resp_r = r.get("resp_repr") or "Sin responsable"
-        col_r  = RESP_COL.get(resp_r,"#64748b"); bg_r = RESP_BG.get(resp_r,"#f1f5f9"); bd_r = RESP_BORDER.get(resp_r,"#e2e8f0")
-        repr_ayer_rows += f'''<tr style="border-bottom:1px solid #f1f5f9">
-          <td {TD} style="font-family:monospace;padding:8px 14px;font-size:11px;color:#334155;border-bottom:1px solid #f1f5f9">{r.get("cont","—")}</td>
-          <td style="padding:8px 14px;font-size:11px;color:#64748b;border-bottom:1px solid #f1f5f9">{r.get("fcita","—") or "—"}</td>
-          <td style="padding:8px 14px;font-size:11px;color:#2563eb;font-weight:600;border-bottom:1px solid #f1f5f9">{r.get("fcita_repr","—") or "—"}</td>
-          <td style="padding:8px 14px;border-bottom:1px solid #f1f5f9"><span style="background:{bg_r};color:{col_r};padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700;border:1px solid {bd_r}">{resp_r}</span></td>
-          <td style="padding:8px 14px;font-size:10px;color:#64748b;border-bottom:1px solid #f1f5f9">{_norm_mot(r.get("motivo_repr",""))}</td>
+        rr = r.get("resp_repr") or "Sin responsable"
+        repr_ayer += f'''<tr>
+          <td style="padding:7px 12px;font-size:11px;font-family:monospace;color:#1e293b;border-bottom:1px solid #f1f5f9">{r.get("cont","—")}</td>
+          <td style="padding:7px 12px;font-size:11px;color:#64748b;border-bottom:1px solid #f1f5f9">{r.get("fcita","—") or "—"}</td>
+          <td style="padding:7px 12px;font-size:11px;color:#2563eb;font-weight:600;border-bottom:1px solid #f1f5f9">{r.get("fcita_repr","—") or "—"}</td>
+          <td style="padding:7px 12px;border-bottom:1px solid #f1f5f9">{_resp_pill(rr)}</td>
+          <td style="padding:7px 12px;font-size:10px;color:#64748b;border-bottom:1px solid #f1f5f9">{_norm_mot(r.get("motivo_repr",""))}</td>
         </tr>'''
 
-    # Detalle contenedores ayer
-    det_ayer_rows = ""
+    # Detalle ayer completo
+    det_ayer = ""
     for r in sorted(dia_rows, key=lambda r: r.get("fcita","") or ""):
         cc  = r.get("cumpl_cita","") or ""
         ok  = _cumple(r)
-        mot = _norm_mot(r.get("motivo","") or r.get("motivo_repr","")) if not ok and cc else "—"
-        det_ayer_rows += f'''<tr style="border-bottom:1px solid #f1f5f9">
-          <td {TD} style="font-family:monospace;padding:8px 14px;font-size:11px;color:#334155;border-bottom:1px solid #f1f5f9">{r.get("cont","—")}</td>
-          <td style="padding:8px 14px;font-size:11px;color:#64748b;border-bottom:1px solid #f1f5f9">{r.get("terminal","—")}</td>
-          <td style="padding:8px 14px;font-size:11px;color:#64748b;border-bottom:1px solid #f1f5f9">{r.get("fcita","—") or "—"}</td>
-          <td style="padding:8px 14px;font-size:11px;color:#64748b;border-bottom:1px solid #f1f5f9">{r.get("fllpuerto","—") or "—"}</td>
-          <td style="padding:8px 14px;border-bottom:1px solid #f1f5f9">{pill(cc, ok)}</td>
-          <td style="padding:8px 14px;font-size:10px;color:#64748b;border-bottom:1px solid #f1f5f9">{mot}</td>
+        mot = _norm_mot(r.get("motivo","") or r.get("motivo_repr","")) if (not ok and cc) else "—"
+        det_ayer += f'''<tr>
+          <td style="padding:7px 12px;font-size:11px;font-family:monospace;color:#1e293b;border-bottom:1px solid #f1f5f9">{r.get("cont","—")}</td>
+          <td style="padding:7px 12px;font-size:11px;color:#64748b;border-bottom:1px solid #f1f5f9">{r.get("terminal","—")}</td>
+          <td style="padding:7px 12px;font-size:11px;color:#64748b;border-bottom:1px solid #f1f5f9">{r.get("fcita","—") or "—"}</td>
+          <td style="padding:7px 12px;font-size:11px;color:#64748b;border-bottom:1px solid #f1f5f9">{r.get("fllpuerto","—") or "—"}</td>
+          <td style="padding:7px 12px;border-bottom:1px solid #f1f5f9">{_pill(cc, ok)}</td>
+          <td style="padding:7px 12px;font-size:10px;color:#64748b;border-bottom:1px solid #f1f5f9">{mot}</td>
         </tr>'''
 
-    trend_html = html_trend_chart(tend, mes_actual)
-
     # ─────────────────────────────────────────────────────────────────────────
+    # Barras responsables mes
+    resp_bars = ""
+    for resp in ["Tractocar","Ajover","Externo"]:
+        lst = inc_resp.get(resp, [])
+        if not lst: continue
+        r_ = RESP_L[resp]
+        resp_bars += f'''<tr>
+          <td style="padding:5px 12px 5px 0;white-space:nowrap">{_resp_pill(resp)}</td>
+          <td style="padding:5px 0">{_hbar(len(lst), len(tarde_m), r_["fg"], 180)}</td>
+        </tr>'''
+
+    # =========================================================================
+    # HTML EMAIL
+    # =========================================================================
+    SEC = lambda label, col="#2563eb": f'<p style="margin:0 0 12px;font-size:8px;font-weight:700;color:{col};text-transform:uppercase;letter-spacing:.18em">{label}</p>'
+
     return f"""<!DOCTYPE html>
 <html lang="es">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Indicador Cumplimiento Citas — Llenos</title></head>
+<head><meta charset="UTF-8"><title>Indicador Cumplimiento Citas — Llenos</title></head>
 <body style="margin:0;padding:20px 0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif">
-<div style="max-width:680px;margin:0 auto">
+<table width="660" cellpadding="0" cellspacing="0" align="center" style="max-width:660px">
 
-  <!-- ═══ HEADER ══════════════════════════════════════════════════════════════ -->
-  <div style="background:linear-gradient(135deg,#0f172a 0%,#1e3a6e 60%,#1d4ed8 100%);border-radius:14px 14px 0 0;padding:28px 32px 24px">
+  <!-- ═══ HEADER ═══════════════════════════════════════════════════════════ -->
+  <tr><td bgcolor="#0d2137" style="background:#0d2137;border-radius:12px 12px 0 0;padding:26px 32px 22px">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td>
+        <table cellpadding="0" cellspacing="0"><tr>
+          <td bgcolor="#ffffff22" style="background:rgba(255,255,255,0.12);border-radius:7px;padding:5px 12px">
+            <span style="font-size:15px;font-weight:900;color:#fff;letter-spacing:-0.5px">TC</span>
+            <span style="font-size:9px;color:rgba(255,255,255,0.5);margin-left:7px">TRACTOCAR LOGISTICS</span>
+          </td>
+        </tr></table>
+        <p style="margin:14px 0 2px;font-size:8px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:.2em">Reporte Ejecutivo · Ajover EXPO</p>
+        <p style="margin:0 0 4px;font-size:22px;font-weight:800;color:#fff;line-height:1.2">Indicador de Cumplimiento de Citas — Llenos</p>
+        <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.45)">{_ml(mes_actual)} &nbsp;·&nbsp; {total_m} contenedores</p>
+      </td>
+      <td align="right" valign="top" style="font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap;padding-left:16px">{generado}</td>
+    </tr></table>
+  </td></tr>
+
+  <!-- ═══ 4 KPI CARDS (como el tablero) ═══════════════════════════════════ -->
+  <tr><td bgcolor="#0d2137" style="background:#0d2137;padding:0 32px 24px">
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
-        <td>
-          <div style="display:inline-block;background:rgba(255,255,255,0.15);border-radius:8px;padding:6px 13px">
-            <span style="font-size:17px;font-weight:900;color:#fff;letter-spacing:-0.5px">TC</span>
-            <span style="font-size:10px;color:rgba(255,255,255,0.6);margin-left:6px;vertical-align:middle">TRACTOCAR LOGISTICS</span>
-          </div>
-        </td>
-        <td align="right" style="font-size:10px;color:rgba(255,255,255,0.45)">{generado}</td>
-      </tr>
-    </table>
-    <div style="margin-top:18px">
-      <div style="font-size:8px;font-weight:700;color:#93c5fd;text-transform:uppercase;letter-spacing:.2em;margin-bottom:5px">Reporte Ejecutivo · Ajover EXPO</div>
-      <div style="font-size:22px;font-weight:800;color:#fff;line-height:1.2">Indicador de Cumplimiento<br>de Citas — Llenos</div>
-      <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:7px">{_mes_label(mes_actual)} &nbsp;·&nbsp; {total_m} contenedores</div>
-    </div>
-  </div>
-
-  <!-- ═══ KPIs MES ACTUAL ══════════════════════════════════════════════════════ -->
-  <div style="background:#fff;padding:24px 32px;border-bottom:1px solid #e2e8f0">
-    <div style="font-size:8px;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:.16em;margin-bottom:18px">Mes actual — {_mes_label(mes_actual)}</div>
-    <table width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <!-- Indicador principal -->
-        <td width="160" style="vertical-align:middle;text-align:center;border-right:1px solid #f1f5f9;padding-right:24px">
-          <div style="background:{col_m["bg"]};border-radius:12px;padding:18px 12px;border:2px solid {col_m["border"]}">
-            <div style="font-size:38px;font-weight:900;color:{col_m["text"]};line-height:1">{pct_m}%</div>
-            <div style="font-size:8px;font-weight:700;color:{col_m["text"]};text-transform:uppercase;letter-spacing:.12em;margin-top:5px;opacity:.7">Cumplimiento</div>
-            <!-- Barra de progreso -->
-            <div style="background:rgba(0,0,0,0.08);border-radius:4px;height:6px;margin-top:10px;overflow:hidden">
-              <div style="background:{col_m["bar"]};width:{min(100,pct_m):.0f}%;height:6px;border-radius:4px"></div>
-            </div>
-            <div style="font-size:9px;color:{col_m["text"]};opacity:.6;margin-top:5px">{cumpl_m} de {base_m} con fecha</div>
-          </div>
-        </td>
-        <!-- KPIs numéricos -->
-        <td style="vertical-align:middle;padding-left:24px">
+        <!-- Total -->
+        <td width="25%" style="padding-right:6px">
           <table width="100%" cellpadding="0" cellspacing="0">
-            <tr>
-              {kpi_card("Total", total_m, "#1e293b")}
-              {kpi_card("A tiempo", cumpl_m, "#16a34a")}
-              {kpi_card("Incumpl.", len(tarde_m), "#dc2626")}
-              <td style="padding:0 0 0 8px;text-align:center">
-                <div style="font-size:32px;font-weight:800;color:#d97706;line-height:1">{len(repr_m)}</div>
-                <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-top:3px">Reprog.</div>
-              </td>
-            </tr>
+            <tr><td bgcolor="#0f2d4a" style="background:#0f2d4a;border-radius:10px;padding:16px 14px;border:1px solid #1e3a5f">
+              <p style="margin:0 0 4px;font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:.1em">Total Llenos</p>
+              <p style="margin:0;font-size:30px;font-weight:800;color:#f8fafc;line-height:1">{total_m}</p>
+              <p style="margin:6px 0 0;font-size:9px;color:#475569">registros</p>
+            </td></tr>
           </table>
-          <!-- Responsables -->
-          {"<div style='margin-top:18px;padding-top:14px;border-top:1px solid #f1f5f9'><div style='font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px'>Incumplimientos por responsable</div><table cellpadding='0' cellspacing='4'>" + resp_bars + "</table></div>" if tarde_m else "<div style='margin-top:18px;padding:10px 14px;background:#dcfce7;border-radius:8px;border:1px solid #86efac'><span style='font-size:12px;color:#15803d;font-weight:600'>&#10003; Sin incumplimientos en el mes</span></div>"}
+        </td>
+        <!-- Cumplen cita -->
+        <td width="25%" style="padding:0 3px">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr><td bgcolor="#0a2e1a" style="background:#0a2e1a;border-radius:10px;padding:16px 14px;border:1px solid #14532d">
+              <p style="margin:0 0 4px;font-size:8px;color:#16a34a;text-transform:uppercase;letter-spacing:.1em">Cumplen Cita</p>
+              <p style="margin:0;font-size:30px;font-weight:900;color:{col_m["bar"]};line-height:1">{pct_m}%</p>
+              <table cellpadding="0" cellspacing="0" style="margin-top:8px"><tr>
+                <td width="{min(80,int(pct_m/100*80))}" height="4" bgcolor="{col_m["bar"]}" style="background:{col_m["bar"]};font-size:0"> </td>
+                {"<td width='" + str(80-min(80,int(pct_m/100*80))) + "' height='4' bgcolor='#14532d' style='background:#14532d;font-size:0'> </td>" if int(pct_m/100*80) < 80 else ""}
+              </tr></table>
+              <p style="margin:6px 0 0;font-size:9px;color:#166534">{cumpl_m} ok &nbsp;/&nbsp; {len(tarde_m)} no cumple</p>
+            </td></tr>
+          </table>
+        </td>
+        <!-- Reprog -->
+        <td width="25%" style="padding:0 3px">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr><td bgcolor="#2d1b00" style="background:#2d1b00;border-radius:10px;padding:16px 14px;border:1px solid #78350f">
+              <p style="margin:0 0 4px;font-size:8px;color:#d97706;text-transform:uppercase;letter-spacing:.1em">Reprogramaciones</p>
+              <p style="margin:0;font-size:30px;font-weight:800;color:#f59e0b;line-height:1">{len(repr_m)}</p>
+              <p style="margin:6px 0 0;font-size:9px;color:#92400e">del mes actual</p>
+            </td></tr>
+          </table>
+        </td>
+        <!-- Sin fecha -->
+        <td width="25%" style="padding-left:6px">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr><td bgcolor="#1e1b2e" style="background:#1e1b2e;border-radius:10px;padding:16px 14px;border:1px solid #312e6e">
+              <p style="margin:0 0 4px;font-size:8px;color:#818cf8;text-transform:uppercase;letter-spacing:.1em">Sin Fecha Cita</p>
+              <p style="margin:0;font-size:30px;font-weight:800;color:#a5b4fc;line-height:1">{sf_m}</p>
+              <p style="margin:6px 0 0;font-size:9px;color:#4c1d95">contenedores</p>
+            </td></tr>
+          </table>
         </td>
       </tr>
     </table>
-  </div>
+  </td></tr>
 
-  <!-- ═══ TENDENCIA MES A MES ══════════════════════════════════════════════════ -->
-  <div style="background:#fff;padding:24px 32px 20px;border-bottom:1px solid #e2e8f0;margin-top:2px">
-    <div style="font-size:8px;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:.16em;margin-bottom:4px">Cumplimiento de cita — mes a mes</div>
-    <div style="font-size:10px;color:#94a3b8;margin-bottom:18px">Últimos {len(tend)} meses &nbsp;·&nbsp; barra destacada = mes actual</div>
-    <div style="background:#f8fafc;border-radius:10px;padding:16px 8px 8px;border:1px solid #e2e8f0">
-      {trend_html}
-    </div>
-    <div style="margin-top:10px;font-size:9px;color:#94a3b8">
-      <span style="display:inline-block;width:10px;height:10px;background:#16a34a;border-radius:2px;vertical-align:middle;margin-right:4px"></span>&#8805; 90%&nbsp;&nbsp;
-      <span style="display:inline-block;width:10px;height:10px;background:#d97706;border-radius:2px;vertical-align:middle;margin-right:4px"></span>75–90%&nbsp;&nbsp;
-      <span style="display:inline-block;width:10px;height:10px;background:#dc2626;border-radius:2px;vertical-align:middle;margin-right:4px"></span>&lt; 75%
-    </div>
-  </div>
+  <!-- ═══ TENDENCIA MES A MES ═════════════════════════════════════════════ -->
+  <tr><td bgcolor="#ffffff" style="background:#fff;padding:24px 32px;border-top:1px solid #e2e8f0;margin-top:4px">
+    {SEC("Cumplimiento de cita — mes a mes")}
+    <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#f8fafc" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px">
+      <tr><td style="padding:16px 8px 10px">
+        {chart_html}
+      </td></tr>
+    </table>
+    <p style="margin:10px 0 0;font-size:9px;color:#94a3b8">
+      <span style="color:#22c55e">&#9646;</span> &ge;90%&nbsp;&nbsp;
+      <span style="color:#f59e0b">&#9646;</span> 75–90%&nbsp;&nbsp;
+      <span style="color:#ef4444">&#9646;</span> &lt;75%&nbsp;&nbsp;&nbsp;
+      Barra más resaltada = mes actual
+    </p>
+  </td></tr>
 
-  <!-- ═══ INCUMPLIMIENTOS MES ══════════════════════════════════════════════════ -->
-  {"<div style='background:#fff;padding:24px 32px;border-bottom:1px solid #e2e8f0;margin-top:2px'>" + sec("Incumplimientos " + _mes_label(mes_actual,True) + " — responsables y motivos", "#dc2626") + "<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #f1f5f9;border-radius:8px;overflow:hidden;margin-bottom:18px'><thead><tr><th " + TH + ">Responsable</th><th " + TH + " style='text-align:center'>Casos</th><th " + TH + ">Principales motivos</th></tr></thead><tbody>" + inc_mes_rows + "</tbody></table><div style='font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px'>Distribución de motivos</div><table cellpadding='0' cellspacing='2'>" + mot_bars + "</table></div>" if tarde_m else ""}
+  <!-- ═══ INCUMPLIMIENTOS MES ══════════════════════════════════════════════ -->
+  {"<tr><td bgcolor='#ffffff' style='background:#fff;padding:20px 32px;border-top:1px solid #e2e8f0'>" + SEC("Incumplimientos " + _ml(mes_actual,True) + " — responsables y motivos", "#dc2626") + "<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #f1f5f9;border-radius:8px;overflow:hidden;margin-bottom:18px'><thead><tr><th " + TH_S + ">Responsable</th><th " + TH_S + " style='text-align:center'>Casos</th><th " + TH_S + ">Principales motivos</th></tr></thead><tbody>" + inc_mes + "</tbody></table>" + SEC("Distribución de motivos", "#dc2626") + "<table cellpadding='0' cellspacing='4'>" + mot_rows + "</table></td></tr>" if tarde_m else ""}
 
-  <!-- ═══ REPROGRAMACIONES MES ════════════════════════════════════════════════ -->
-  {"<div style='background:#fff;padding:18px 32px;border-bottom:1px solid #e2e8f0;margin-top:2px'>" + sec("Reprogramaciones " + _mes_label(mes_actual,True) + " — " + str(len(repr_m)) + " en total", "#d97706") + "<div>" + repr_mes_html + "</div></div>" if repr_m else ""}
+  <!-- ═══ REPROGRAMACIONES MES ════════════════════════════════════════════ -->
+  {"<tr><td bgcolor='#ffffff' style='background:#fff;padding:16px 32px;border-top:1px solid #e2e8f0'>" + SEC("Reprogramaciones " + _ml(mes_actual,True) + " — " + str(len(repr_m)) + " en total", "#d97706") + repr_mes + "</td></tr>" if repr_m else ""}
 
-  <!-- ═══ DIVIDER AYER ════════════════════════════════════════════════════════ -->
-  <div style="background:linear-gradient(90deg,#1e3a6e,#2563eb);padding:11px 32px;margin-top:2px">
-    <div style="font-size:8px;font-weight:700;color:#bfdbfe;text-transform:uppercase;letter-spacing:.18em">Detalle del día anterior</div>
-    <div style="font-size:14px;font-weight:700;color:#fff;margin-top:2px">{dia_label}</div>
-  </div>
+  <!-- ═══ DIVIDER AYER ════════════════════════════════════════════════════ -->
+  <tr><td bgcolor="#1e3a6e" style="background:#1e3a6e;padding:11px 32px;margin-top:4px">
+    <p style="margin:0 0 2px;font-size:8px;font-weight:700;color:#93c5fd;text-transform:uppercase;letter-spacing:.2em">Detalle del día anterior</p>
+    <p style="margin:0;font-size:14px;font-weight:700;color:#fff">{dia_label}</p>
+  </td></tr>
 
-  <!-- ═══ KPIs AYER ════════════════════════════════════════════════════════════ -->
-  <div style="background:#fff;padding:20px 32px;border-bottom:1px solid #e2e8f0">
-    <table cellpadding="0" cellspacing="0">
+  <!-- ═══ KPIs AYER ════════════════════════════════════════════════════════ -->
+  <tr><td bgcolor="#ffffff" style="background:#fff;padding:20px 32px;border-top:1px solid #e2e8f0">
+    <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
-        <td width="120" style="text-align:center;padding-right:20px;border-right:1px solid #f1f5f9;vertical-align:middle">
-          <div style="background:{col_d["bg"]};border-radius:10px;padding:14px 10px;border:2px solid {col_d["border"]}">
-            <div style="font-size:28px;font-weight:900;color:{col_d["text"]};line-height:1">{dia_pct}%</div>
-            <div style="font-size:7px;font-weight:700;color:{col_d["text"]};text-transform:uppercase;letter-spacing:.1em;margin-top:4px;opacity:.7">Cumplimiento</div>
-          </div>
+        <td style="text-align:center;padding-right:12px;border-right:1px solid #f1f5f9;vertical-align:middle">
+          <table cellpadding="0" cellspacing="0" align="center">
+            <tr><td bgcolor="{col_d["light"]}" style="background:{col_d["light"]};border-radius:10px;padding:14px 18px;border:2px solid {col_d["bar"]}">
+              <p style="margin:0;font-size:28px;font-weight:900;color:{col_d["text"]};line-height:1;text-align:center">{dia_pct}%</p>
+              <p style="margin:4px 0 0;font-size:7px;font-weight:700;color:{col_d["text"]};text-transform:uppercase;letter-spacing:.1em;opacity:.7;text-align:center">cumplimiento</p>
+            </td></tr>
+          </table>
         </td>
-        <td style="vertical-align:middle;padding-left:20px">
+        <td style="padding-left:20px;vertical-align:middle">
           <table cellpadding="0" cellspacing="0"><tr>
-            {kpi_card("Total", dia_total, "#1e293b")}
-            {kpi_card("A tiempo", dia_cumpl, "#16a34a")}
-            {kpi_card("Tarde", len(dia_tarde), "#dc2626")}
-            <td style="padding:0 0 0 8px;text-align:center">
-              <div style="font-size:28px;font-weight:800;color:#d97706;line-height:1">{len(dia_repr)}</div>
-              <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-top:3px">Reprog.</div>
+            <td style="padding:0 16px 0 0;text-align:center;border-right:1px solid #e2e8f0">
+              <p style="margin:0;font-size:26px;font-weight:800;color:#1e293b;line-height:1">{dia_total}</p>
+              <p style="margin:3px 0 0;font-size:8px;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em">Total</p>
+            </td>
+            <td style="padding:0 16px;text-align:center;border-right:1px solid #e2e8f0">
+              <p style="margin:0;font-size:26px;font-weight:800;color:#16a34a;line-height:1">{dia_cumpl}</p>
+              <p style="margin:3px 0 0;font-size:8px;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em">A tiempo</p>
+            </td>
+            <td style="padding:0 16px;text-align:center;border-right:1px solid #e2e8f0">
+              <p style="margin:0;font-size:26px;font-weight:800;color:#dc2626;line-height:1">{len(dia_tarde)}</p>
+              <p style="margin:3px 0 0;font-size:8px;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em">Tarde</p>
+            </td>
+            <td style="padding:0 0 0 16px;text-align:center">
+              <p style="margin:0;font-size:26px;font-weight:800;color:#d97706;line-height:1">{len(dia_repr)}</p>
+              <p style="margin:3px 0 0;font-size:8px;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em">Reprog.</p>
             </td>
           </tr></table>
         </td>
       </tr>
     </table>
-  </div>
+  </td></tr>
 
-  <!-- ═══ INCUMPLIMIENTOS AYER ════════════════════════════════════════════════ -->
-  {"<div style='background:#fff;padding:20px 32px;border-bottom:1px solid #e2e8f0;margin-top:2px'>" + sec("Incumplimientos de ayer", "#dc2626") + "<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #f1f5f9;border-radius:8px;overflow:hidden'><thead><tr><th " + TH + ">Contenedor</th><th " + TH + ">Responsable</th><th " + TH + ">Cita</th><th " + TH + ">Resultado</th><th " + TH + ">Motivo</th></tr></thead><tbody>" + dia_inc_rows + "</tbody></table></div>" if dia_inc_rows else "<div style='background:#fff;padding:14px 32px;border-bottom:1px solid #e2e8f0;margin-top:2px'><div style='background:#dcfce7;border-radius:8px;padding:10px 14px;border:1px solid #86efac'><span style='font-size:12px;color:#15803d;font-weight:600'>&#10003; Sin incumplimientos ayer</span></div></div>"}
+  <!-- ═══ INCUMPLIMIENTOS AYER ════════════════════════════════════════════ -->
+  {"<tr><td bgcolor='#ffffff' style='background:#fff;padding:0 32px 20px;border-top:1px solid #e2e8f0'>" + SEC("Incumplimientos de ayer", "#dc2626") + "<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #f1f5f9;border-radius:8px;overflow:hidden'><thead><tr><th " + TH_S + ">Contenedor</th><th " + TH_S + ">Responsable</th><th " + TH_S + ">Cita</th><th " + TH_S + ">Resultado</th><th " + TH_S + ">Motivo</th></tr></thead><tbody>" + dia_inc + "</tbody></table></td></tr>" if dia_inc else "<tr><td bgcolor='#ffffff' style='background:#fff;padding:12px 32px;border-top:1px solid #e2e8f0'><table cellpadding='0' cellspacing='0'><tr><td bgcolor='#dcfce7' style='background:#dcfce7;border-radius:8px;padding:10px 14px;border:1px solid #86efac'><span style='font-size:12px;color:#15803d;font-weight:600'>&#10003; Sin incumplimientos ayer</span></td></tr></table></td></tr>"}
 
-  <!-- ═══ REPROGRAMACIONES AYER ════════════════════════════════════════════════ -->
-  {"<div style='background:#fff;padding:20px 32px;border-bottom:1px solid #e2e8f0;margin-top:2px'>" + sec("Reprogramaciones de ayer — " + str(len(dia_repr)), "#d97706") + "<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #f1f5f9;border-radius:8px;overflow:hidden'><thead><tr><th " + TH + ">Contenedor</th><th " + TH + ">Cita original</th><th " + TH + ">Nueva cita</th><th " + TH + ">Responsable</th><th " + TH + ">Motivo</th></tr></thead><tbody>" + repr_ayer_rows + "</tbody></table></div>" if dia_repr else ""}
+  <!-- ═══ REPROGRAMACIONES AYER ════════════════════════════════════════════ -->
+  {"<tr><td bgcolor='#ffffff' style='background:#fff;padding:0 32px 20px;border-top:1px solid #e2e8f0'>" + SEC("Reprogramaciones de ayer — " + str(len(dia_repr)), "#d97706") + "<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #f1f5f9;border-radius:8px;overflow:hidden'><thead><tr><th " + TH_S + ">Contenedor</th><th " + TH_S + ">Cita original</th><th " + TH_S + ">Nueva cita</th><th " + TH_S + ">Responsable</th><th " + TH_S + ">Motivo</th></tr></thead><tbody>" + repr_ayer + "</tbody></table></td></tr>" if dia_repr else ""}
 
-  <!-- ═══ DETALLE CONTENEDORES AYER ════════════════════════════════════════════ -->
-  <div style="background:#fff;padding:20px 32px;border-bottom:1px solid #e2e8f0;margin-top:2px">
-    {sec("Todos los contenedores de ayer")}
-    {"<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #f1f5f9;border-radius:8px;overflow:hidden'><thead><tr><th " + TH + ">Contenedor</th><th " + TH + ">Terminal</th><th " + TH + ">Cita puerto</th><th " + TH + ">Llegada</th><th " + TH + ">Cumplimiento</th><th " + TH + ">Motivo</th></tr></thead><tbody>" + det_ayer_rows + "</tbody></table>" if det_ayer_rows else "<div style='font-size:12px;color:#94a3b8;text-align:center;padding:12px'>Sin registros para este día</div>"}
-  </div>
+  <!-- ═══ TODOS LOS CONTENEDORES AYER ═════════════════════════════════════ -->
+  <tr><td bgcolor="#ffffff" style="background:#fff;padding:0 32px 24px;border-top:1px solid #e2e8f0">
+    {SEC("Todos los contenedores de ayer")}
+    {"<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #f1f5f9;border-radius:8px;overflow:hidden'><thead><tr><th " + TH_S + ">Contenedor</th><th " + TH_S + ">Terminal</th><th " + TH_S + ">Cita puerto</th><th " + TH_S + ">Llegada</th><th " + TH_S + ">Cumplimiento</th><th " + TH_S + ">Motivo</th></tr></thead><tbody>" + det_ayer + "</tbody></table>" if det_ayer else "<p style='margin:0;font-size:12px;color:#94a3b8;text-align:center;padding:12px'>Sin registros para este día</p>"}
+  </td></tr>
 
-  <!-- ═══ FOOTER ════════════════════════════════════════════════════════════════ -->
-  <div style="background:#f8fafc;border-radius:0 0 14px 14px;padding:14px 32px;border-top:1px solid #e2e8f0">
-    <table width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td style="font-size:10px;color:#94a3b8">
-          <span style="color:#1d4ed8;font-weight:700">TC</span> Tractocar Logistics &nbsp;·&nbsp; Reporte automático diario
-        </td>
-        <td align="right" style="font-size:10px;color:#94a3b8">Generado {generado}</td>
-      </tr>
-    </table>
-  </div>
+  <!-- ═══ FOOTER ════════════════════════════════════════════════════════════ -->
+  <tr><td bgcolor="#f8fafc" style="background:#f8fafc;border-radius:0 0 12px 12px;padding:13px 32px;border-top:1px solid #e2e8f0">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td style="font-size:10px;color:#94a3b8">
+        <span style="color:#1d4ed8;font-weight:700">TC</span> Tractocar Logistics &nbsp;·&nbsp; Reporte automático diario
+      </td>
+      <td align="right" style="font-size:10px;color:#94a3b8">Generado {generado}</td>
+    </tr></table>
+  </td></tr>
 
-</div>
+</table>
 </body></html>"""
 
 
