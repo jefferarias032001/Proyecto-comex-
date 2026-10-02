@@ -119,7 +119,7 @@ def _resp_pill(resp):
     return f'<span style="background:{r["bg"]};color:{r["text"]};padding:2px 10px;border-radius:6px;font-size:10px;font-weight:700;border:1px solid {r["border"]}">{resp}</span>'
 
 # ─────────────────────────────────────────────────────────────────────────────
-def build_html(datos):
+def build_html(datos, interno=False):
     rows    = datos["ajover"]["llenos"]["rows"]
     hoy     = datetime.now()
     generado = datos.get("generado","")[:10]
@@ -562,8 +562,8 @@ def build_html(datos):
   <!-- ═══ INCUMPLIMIENTOS MES ══════════════════════════════════════════════ -->
   {"<tr><td bgcolor='#ffffff' style='background:#fff;padding:20px 32px;border-top:1px solid #e2e8f0'>" + SEC("Incumplimientos " + _ml(mes_actual,True) + " — responsables y motivos", "#dc2626") + "<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #f1f5f9;border-radius:8px;overflow:hidden;margin-bottom:18px'><thead><tr><th " + TH_S + ">Responsable</th><th " + TH_S + " style='text-align:center'>Casos</th><th " + TH_S + ">Principales motivos</th></tr></thead><tbody>" + inc_mes + "</tbody></table>" + SEC("Distribución de motivos", "#dc2626") + "<table cellpadding='0' cellspacing='4'>" + mot_rows + "</table></td></tr>" if tarde_m else ""}
 
-  <!-- ═══ REPROGRAMACIONES MES ════════════════════════════════════════════ -->
-  {"<tr><td bgcolor='#ffffff' style='background:#fff;padding:16px 32px;border-top:1px solid #e2e8f0'>" + SEC("Reprogramaciones " + _ml(mes_actual,True) + " — " + str(len(repr_m)) + " en total", "#d97706") + repr_mes + "</td></tr>" if repr_m else ""}
+  <!-- ═══ CITAS PERDIDAS MES ══════════════════════════════════════════════ -->
+  {"<tr><td bgcolor='#ffffff' style='background:#fff;padding:16px 32px;border-top:1px solid #e2e8f0'>" + SEC("Citas perdidas " + _ml(mes_actual,True) + " — " + str(len(repr_m)) + " en total", "#d97706") + repr_mes + "</td></tr>" if repr_m else ""}
 
   <!-- ═══ DIVIDER AYER ════════════════════════════════════════════════════ -->
   <tr><td bgcolor="#1e3a6e" style="background:#1e3a6e;padding:11px 32px;margin-top:4px">
@@ -599,7 +599,7 @@ def build_html(datos):
             </td>
             <td style="padding:0 0 0 16px;text-align:center">
               <p style="margin:0;font-size:26px;font-weight:800;color:#d97706;line-height:1">{len(dia_repr)}</p>
-              <p style="margin:3px 0 0;font-size:8px;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em">Reprog.</p>
+              <p style="margin:3px 0 0;font-size:8px;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em">C. perdidas</p>
             </td>
           </tr></table>
         </td>
@@ -618,17 +618,14 @@ def build_html(datos):
     {resp_split_bar}
   </td></tr>
 
-  <!-- ═══ ALERTAS OPERATIVAS AYER ═════════════════════════════════════════ -->
-  <tr><td bgcolor="#f8fafc" style="background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0">
-    {SEC("Alertas operativas · " + dia_label[:20], "#d97706" if n_alertas else "#16a34a")}
-    {alertas_items}
-  </td></tr>
+  <!-- ═══ ALERTAS OPERATIVAS AYER (solo correo interno) ═══════════════════ -->
+  {"<tr><td bgcolor='#f8fafc' style='background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0'>" + SEC('Alertas operativas · ' + dia_label[:20], '#d97706' if n_alertas else '#16a34a') + alertas_items + "</td></tr>" if interno else ""}
 
   <!-- ═══ INCUMPLIMIENTOS AYER ════════════════════════════════════════════ -->
   {"<tr><td bgcolor='#ffffff' style='background:#fff;padding:0 32px 20px;border-top:1px solid #e2e8f0'>" + SEC("Incumplimientos de ayer", "#dc2626") + "<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #f1f5f9;border-radius:8px;overflow:hidden'><thead><tr><th " + TH_S + ">Pedido</th><th " + TH_S + ">Contenedor</th><th " + TH_S + ">Resp.</th><th " + TH_S + ">Cita</th><th " + TH_S + ">Nueva cita</th><th " + TH_S + ">Resp. reprog.</th><th " + TH_S + ">Resultado</th><th " + TH_S + ">Motivo</th><th " + TH_S + ">Observación</th></tr></thead><tbody>" + dia_inc + "</tbody></table></td></tr>" if dia_inc else "<tr><td bgcolor='#ffffff' style='background:#fff;padding:12px 32px;border-top:1px solid #e2e8f0'><table cellpadding='0' cellspacing='0'><tr><td bgcolor='#dcfce7' style='background:#dcfce7;border-radius:8px;padding:10px 14px;border:1px solid #86efac'><span style='font-size:12px;color:#15803d;font-weight:600'>&#10003; Sin incumplimientos ayer</span></td></tr></table></td></tr>"}
 
-  <!-- ═══ REPROGRAMACIONES AYER ════════════════════════════════════════════ -->
-  {"<tr><td bgcolor='#ffffff' style='background:#fff;padding:0 32px 20px;border-top:1px solid #e2e8f0'>" + SEC("Reprogramaciones de ayer — " + str(len(dia_repr)), "#d97706") + "<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #f1f5f9;border-radius:8px;overflow:hidden'><thead><tr><th " + TH_S + ">Pedido</th><th " + TH_S + ">Contenedor</th><th " + TH_S + ">Cita original</th><th " + TH_S + ">Nueva cita</th><th " + TH_S + ">Responsable</th><th " + TH_S + ">Motivo</th><th " + TH_S + ">Observación</th></tr></thead><tbody>" + repr_ayer + "</tbody></table></td></tr>" if dia_repr else ""}
+  <!-- ═══ CITAS PERDIDAS AYER ══════════════════════════════════════════════ -->
+  {"<tr><td bgcolor='#ffffff' style='background:#fff;padding:0 32px 20px;border-top:1px solid #e2e8f0'>" + SEC("Citas perdidas de ayer — " + str(len(dia_repr)), "#d97706") + "<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #f1f5f9;border-radius:8px;overflow:hidden'><thead><tr><th " + TH_S + ">Pedido</th><th " + TH_S + ">Contenedor</th><th " + TH_S + ">Cita original</th><th " + TH_S + ">Nueva cita</th><th " + TH_S + ">Responsable</th><th " + TH_S + ">Motivo</th><th " + TH_S + ">Observación</th></tr></thead><tbody>" + repr_ayer + "</tbody></table></td></tr>" if dia_repr else ""}
 
   <!-- ═══ TODOS LOS CONTENEDORES AYER ═════════════════════════════════════ -->
   <tr><td bgcolor="#ffffff" style="background:#fff;padding:0 32px 24px;border-top:1px solid #e2e8f0">
@@ -650,7 +647,10 @@ def build_html(datos):
 </body></html>"""
 
 
-def send_report():
+EMAIL_TO_INTERNO = [e.strip() for e in os.environ.get("EMAIL_TO_INTERNO", EMAIL_FROM).split(",") if e.strip()]
+
+
+def send_report(interno=False):
     datos_path = BASE / "datos_bot.json"
     if not datos_path.exists():
         print("[ERROR] No existe datos_bot.json"); sys.exit(1)
@@ -659,23 +659,38 @@ def send_report():
     if not EMAIL_PASSWORD:
         print("[ERROR] Falta EMAIL_PASSWORD en .env"); sys.exit(1)
 
-    html = build_html(datos)
-    msg  = MIMEMultipart("alternative")
-    msg["Subject"] = f"[TC] Indicador Cumplimiento Citas Llenos — {datos.get('generado','')[:10]}"
+    html      = build_html(datos, interno=interno)
+    dest_to   = EMAIL_TO_INTERNO if interno else EMAIL_TO
+    tag       = "[TC-Interno]" if interno else "[TC]"
+    subject   = f"{tag} Indicador Cumplimiento Citas Llenos — {datos.get('generado','')[:10]}"
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
     msg["From"]    = EMAIL_FROM
-    msg["To"]      = ", ".join(EMAIL_TO)
-    if EMAIL_CC: msg["Cc"] = ", ".join(EMAIL_CC)
+    msg["To"]      = ", ".join(dest_to)
+    if EMAIL_CC and not interno: msg["Cc"] = ", ".join(EMAIL_CC)
     msg.attach(MIMEText(html, "html", "utf-8"))
 
+    dest_all = dest_to + (EMAIL_CC if EMAIL_CC and not interno else [])
     try:
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as smtp:
             smtp.ehlo(); smtp.starttls()
             smtp.login(EMAIL_FROM, EMAIL_PASSWORD)
-            smtp.sendmail(EMAIL_FROM, EMAIL_TO + EMAIL_CC, msg.as_string())
-        print(f"[OK] Correo enviado a {', '.join(EMAIL_TO + EMAIL_CC)}")
+            smtp.sendmail(EMAIL_FROM, dest_all, msg.as_string())
+        modo = "INTERNO (con alertas)" if interno else "CLIENTE (sin alertas)"
+        print(f"[OK] {modo} — enviado a {', '.join(dest_all)}")
     except Exception as e:
         print(f"[ERROR] {e}"); sys.exit(1)
 
 
 if __name__ == "__main__":
-    send_report()
+    modo = sys.argv[1] if len(sys.argv) > 1 else "--cliente"
+    if modo == "--interno":
+        send_report(interno=True)
+    elif modo == "--cliente":
+        send_report(interno=False)
+    else:
+        print(f"Uso: python enviar_reporte.py [--interno | --cliente]")
+        print("  --interno  8:30 AM → equipo COMEX (incluye alertas operativas)")
+        print("  --cliente  9:00 AM → cliente Ajover (sin alertas operativas)")
+        sys.exit(1)
