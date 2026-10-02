@@ -120,13 +120,27 @@ def _resp_pill(resp):
 
 # ─────────────────────────────────────────────────────────────────────────────
 def build_html(datos):
-    rows       = datos["ajover"]["llenos"]["rows"]
-    hoy        = datetime.now()
-    mes_actual = hoy.strftime("%Y-%m")
-    generado   = datos.get("generado","")[:10]
+    rows    = datos["ajover"]["llenos"]["rows"]
+    hoy     = datetime.now()
+    generado = datos.get("generado","")[:10]
 
-    # ── Mes actual
-    mes_rows = [r for r in rows if r.get("mes_iso") == mes_actual]
+    # Fecha de corte: siempre ayer
+    corte      = hoy - timedelta(days=1)
+    mes_actual = corte.strftime("%Y-%m")
+    corte_label = corte.strftime("%d de %B de %Y").lstrip("0")
+
+    def _r_fecha(r):
+        """Parsea r['fecha'] (DD-MM-YYYY ...) a date, o None."""
+        try:
+            f = (r.get("fecha","") or "").strip().split(" ")[0]
+            d, m, y = f.split("-")
+            return datetime(int(y), int(m), int(d)).date()
+        except: return None
+
+    # ── Mes actual — solo filas hasta el corte (ayer)
+    mes_rows = [r for r in rows
+                if r.get("mes_iso") == mes_actual
+                and (_r_fecha(r) is None or _r_fecha(r) <= corte.date())]
     total_m  = len(mes_rows)
     sf_m     = sum(1 for r in mes_rows if (r.get("cumpl_cita","") or "") == "Sin fecha")
     cumpl_m  = sum(1 for r in mes_rows if _cumple(r))
@@ -141,14 +155,17 @@ def build_html(datos):
     mot_m = defaultdict(int)
     for r in tarde_m: mot_m[_norm_mot(r.get("motivo_repr","") or r.get("motivo",""))] += 1
 
-    # ── Tendencia últimos 7 meses
+    # ── Tendencia últimos 7 meses (hasta el corte en el mes actual)
     meses_disp = sorted(set(r["mes_iso"] for r in rows if r.get("mes_iso")))[-7:]
     tend = []
     for mes in meses_disp:
-        mr    = [r for r in rows if r.get("mes_iso") == mes]
+        if mes == mes_actual:
+            mr = mes_rows          # ya filtrado hasta ayer
+        else:
+            mr = [r for r in rows if r.get("mes_iso") == mes]
         sf    = sum(1 for r in mr if (r.get("cumpl_cita","") or "") == "Sin fecha")
         base  = len(mr) - sf
-        cumpl = sum(1 for r in mr if _cumple(r))   # misma lógica que el KPI principal
+        cumpl = sum(1 for r in mr if _cumple(r))
         nc    = sum(1 for r in mr if _tarde(r))
         tend.append({"mes":mes,"total":len(mr),"pct":_pct(cumpl, base),"nc":nc})
 
@@ -316,7 +333,7 @@ def build_html(datos):
         </tr></table>
         <p style="margin:14px 0 2px;font-size:8px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:.2em">Reporte Ejecutivo · Ajover EXPO</p>
         <p style="margin:0 0 4px;font-size:22px;font-weight:800;color:#fff;line-height:1.2">Indicador de Cumplimiento de Citas — Llenos</p>
-        <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.45)">{_ml(mes_actual)} &nbsp;·&nbsp; {total_m} contenedores</p>
+        <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.45)">{_ml(mes_actual)} &nbsp;·&nbsp; A corte: {corte_label} &nbsp;·&nbsp; {total_m} contenedores</p>
       </td>
       <td align="right" valign="top" style="font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap;padding-left:16px">{generado}</td>
     </tr></table>
