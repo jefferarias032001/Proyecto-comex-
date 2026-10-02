@@ -65,6 +65,11 @@ SMTP_PORT      = int(os.environ.get("SMTP_PORT","587"))
 MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
             'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 MESES_C  = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+DIAS_ES  = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']
+
+def _fecha_es(dt):
+    """Fecha completa en español: 'Jueves 01 de octubre de 2026'"""
+    return f"{DIAS_ES[dt.weekday()]} {dt.day:02d} de {MESES_ES[dt.month-1].lower()} de {dt.year}"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def _ml(iso, c=False):
@@ -126,7 +131,10 @@ def _resp_cat(r):
     cc = r.get("cumpl_cita","") or ""
     if "externo" in cc:       return "Externo"
     if "reprog Ajover" in cc: return "Ajover"
-    return r.get("resp_repr") or "Tractocar"
+    resp = (r.get("resp_repr","") or "").strip().upper()
+    if resp == "AJOVER":   return "Ajover"
+    if resp == "EXTERNO":  return "Externo"
+    return "Tractocar"
 
 # ── Barra vertical (Outlook-safe: bgcolor + height en td) ─────────────────────
 def _vbar(pct, col, active, max_h=110, w=38):
@@ -174,7 +182,7 @@ def build_html(datos, interno=False):
     # Fecha de corte: siempre ayer
     corte      = hoy - timedelta(days=1)
     mes_actual = corte.strftime("%Y-%m")
-    corte_label = corte.strftime("%d de %B de %Y").lstrip("0")
+    corte_label = f"{corte.day} de {MESES_ES[corte.month-1].lower()} de {corte.year}"
 
     def _r_fecha(r):
         """Parsea r['fecha'] (DD-MM-YYYY ...) a date, o None."""
@@ -226,17 +234,19 @@ def build_html(datos, interno=False):
                  and ds[6:] in (r.get("fecha","") or "")]
         if found: dia_rows, dia_dt = found, dt; break
 
-    dia_label = dia_dt.strftime("%A %d de %B de %Y").capitalize() if dia_dt else "Sin datos recientes"
+    dia_label = _fecha_es(dia_dt) if dia_dt else "Sin datos recientes"
     dia_total = len(dia_rows)
     dia_sf    = sum(1 for r in dia_rows if (r.get("cumpl_cita","") or "") == "Sin fecha" or _pendiente(r))
     dia_cumpl = sum(1 for r in dia_rows if _cumple(r))
     dia_tarde = [r for r in dia_rows if _tarde(r) and not _cumple(r) and not _pendiente(r)]
+    # Para responsabilidad: incluye tardíos (incl. reprog Ajover) y pendientes (resp asignado, sin nueva cita)
+    dia_tarde_resp = [r for r in dia_rows if _tarde(r) or _pendiente(r)]
     dia_repr  = [r for r in dia_rows if r.get("fcita_repr")]
     dia_pct   = _pct(dia_cumpl, dia_total - dia_sf)
     col_d     = _col(dia_pct)
 
     dia_inc_resp = defaultdict(list)
-    for r in dia_tarde: dia_inc_resp[_resp_cat(r)].append(r)
+    for r in dia_tarde_resp: dia_inc_resp[_resp_cat(r)].append(r)
 
     n_tc  = len(dia_inc_resp.get("Tractocar", []))
     n_ajv = len(dia_inc_resp.get("Ajover", []))
@@ -401,8 +411,9 @@ def build_html(datos, interno=False):
             det_ayer += f'<tr><td colspan="{NCOLS}" bgcolor="{bg}" style="background:{bg};padding:5px 10px;font-size:9px;font-weight:700;color:{fg};text-transform:uppercase;letter-spacing:.1em;border-bottom:1px solid #e2e8f0">{lbl}</td></tr>'
             prev_grupo = grupo
 
-        mot  = ((r.get("motivo_repr","") or "").strip() or "—") if (not ok and cc) else "—"
-        obs  = (r.get("obs","") or r.get("motivo","") or "") if (not ok and cc) else ""
+        show_mot = (not ok and cc) or _tarde(r)
+        mot  = ((r.get("motivo_repr","") or "").strip() or "—") if show_mot else "—"
+        obs  = (r.get("obs","") or r.get("motivo","") or "") if show_mot else ""
         obs_s = obs[:55] + ("…" if len(obs) > 55 else "") if obs else "—"
         nrep  = r.get("fcita_repr","") or "—"
         rresp = r.get("resp_repr","") or "—"
