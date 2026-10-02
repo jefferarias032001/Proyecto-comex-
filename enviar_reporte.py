@@ -257,45 +257,71 @@ def build_html(datos):
             r_ = RESP_L.get(resp, {"bg":"#f1f5f9","border":"#e2e8f0","text":"#334155"})
             repr_mes += f'<span style="display:inline-block;margin:3px;background:{r_["bg"]};color:{r_["text"]};padding:4px 12px;border-radius:8px;font-size:11px;font-weight:600;border:1px solid {r_["border"]}">{resp} — {cnt}</span>'
 
+    # ── Helpers de celda para tablas densas
+    def _tc(val, mono=False, bold=False, col="#334155", wrap=True):
+        ff = "font-family:monospace;" if mono else ""
+        fw = "font-weight:700;" if bold else ""
+        ws = "" if wrap else "white-space:nowrap;"
+        return f'<td style="padding:5px 8px;font-size:10px;color:{col};border-bottom:1px solid #f1f5f9;vertical-align:top;{ff}{fw}{ws}">'
+
     # Incumplimientos ayer
     dia_inc = ""
     for resp in ["Tractocar","Ajover","Externo"]:
         for r in dia_inc_resp.get(resp, []):
-            cc  = r.get("cumpl_cita","") or ""
-            mot = _norm_mot(r.get("motivo_repr","") or r.get("motivo",""))
+            cc   = r.get("cumpl_cita","") or ""
+            mot  = _norm_mot(r.get("motivo_repr","") or r.get("motivo",""))
+            obs  = (r.get("obs","") or r.get("motivo","") or "—")[:60] + ("…" if len(r.get("obs","") or r.get("motivo","") or "") > 60 else "")
+            nrep = r.get("fcita_repr","") or "—"
+            rresp = r.get("resp_repr","") or "—"
             dia_inc += f'''<tr>
-              <td style="padding:7px 12px;font-size:11px;font-family:monospace;color:#1e293b;border-bottom:1px solid #f1f5f9">{r.get("cont","—")}</td>
-              <td style="padding:7px 12px;border-bottom:1px solid #f1f5f9">{_resp_pill(resp)}</td>
-              <td style="padding:7px 12px;font-size:11px;color:#64748b;border-bottom:1px solid #f1f5f9">{r.get("fcita","—") or "—"}</td>
-              <td style="padding:7px 12px;font-size:10px;color:#b91c1c;border-bottom:1px solid #f1f5f9">{cc}</td>
-              <td style="padding:7px 12px;font-size:10px;color:#64748b;border-bottom:1px solid #f1f5f9">{mot}</td>
+              {_tc(None,mono=True)}  {r.get("ob","—")}</td>
+              {_tc(None,mono=True)}  {r.get("cont","—")}</td>
+              {_tc(None)}            {_resp_pill(resp)}</td>
+              {_tc(None,col="#64748b",wrap=False)}{r.get("fcita","—") or "—"}</td>
+              {_tc(None,col="#2563eb",wrap=False)}{nrep}</td>
+              {_tc(None,col="#64748b")}           {_resp_pill(rresp) if rresp != "—" else "—"}</td>
+              {_tc(None,col="#b91c1c")}            {cc}</td>
+              {_tc(None,col="#475569")}            {mot}</td>
+              {_tc(None,col="#94a3b8")}            {obs}</td>
             </tr>'''
 
     # Reprog ayer
     repr_ayer = ""
     for r in dia_repr:
-        rr = r.get("resp_repr") or "Sin responsable"
+        rr  = r.get("resp_repr") or "Sin responsable"
+        mot = _norm_mot(r.get("motivo_repr","") or r.get("motivo",""))
+        obs = (r.get("obs","") or r.get("motivo","") or "—")[:60] + ("…" if len(r.get("obs","") or r.get("motivo","") or "") > 60 else "")
         repr_ayer += f'''<tr>
-          <td style="padding:7px 12px;font-size:11px;font-family:monospace;color:#1e293b;border-bottom:1px solid #f1f5f9">{r.get("cont","—")}</td>
-          <td style="padding:7px 12px;font-size:11px;color:#64748b;border-bottom:1px solid #f1f5f9">{r.get("fcita","—") or "—"}</td>
-          <td style="padding:7px 12px;font-size:11px;color:#2563eb;font-weight:600;border-bottom:1px solid #f1f5f9">{r.get("fcita_repr","—") or "—"}</td>
-          <td style="padding:7px 12px;border-bottom:1px solid #f1f5f9">{_resp_pill(rr)}</td>
-          <td style="padding:7px 12px;font-size:10px;color:#64748b;border-bottom:1px solid #f1f5f9">{_norm_mot(r.get("motivo_repr",""))}</td>
+          {_tc(None,mono=True)}   {r.get("ob","—")}</td>
+          {_tc(None,mono=True)}   {r.get("cont","—")}</td>
+          {_tc(None,col="#64748b",wrap=False)}{r.get("fcita","—") or "—"}</td>
+          {_tc(None,col="#2563eb",wrap=False,bold=True)}{r.get("fcita_repr","—") or "—"}</td>
+          {_tc(None)}              {_resp_pill(rr)}</td>
+          {_tc(None,col="#475569")}{mot}</td>
+          {_tc(None,col="#94a3b8")}{obs}</td>
         </tr>'''
 
     # Detalle ayer completo
     det_ayer = ""
     for r in sorted(dia_rows, key=lambda r: r.get("fcita","") or ""):
-        cc  = r.get("cumpl_cita","") or ""
-        ok  = _cumple(r)
-        mot = _norm_mot(r.get("motivo_repr","") or r.get("motivo","")) if (not ok and cc) else "—"
+        cc   = r.get("cumpl_cita","") or ""
+        ok   = _cumple(r)
+        mot  = _norm_mot(r.get("motivo_repr","") or r.get("motivo","")) if (not ok and cc) else "—"
+        obs  = (r.get("obs","") or r.get("motivo","") or "") if (not ok and cc) else ""
+        obs_s = obs[:55] + ("…" if len(obs) > 55 else "") if obs else "—"
+        nrep  = r.get("fcita_repr","") or "—"
+        rresp = r.get("resp_repr","") or "—"
         det_ayer += f'''<tr>
-          <td style="padding:7px 12px;font-size:11px;font-family:monospace;color:#1e293b;border-bottom:1px solid #f1f5f9">{r.get("cont","—")}</td>
-          <td style="padding:7px 12px;font-size:11px;color:#64748b;border-bottom:1px solid #f1f5f9">{r.get("terminal","—")}</td>
-          <td style="padding:7px 12px;font-size:11px;color:#64748b;border-bottom:1px solid #f1f5f9">{r.get("fcita","—") or "—"}</td>
-          <td style="padding:7px 12px;font-size:11px;color:#64748b;border-bottom:1px solid #f1f5f9">{r.get("fllpuerto","—") or "—"}</td>
-          <td style="padding:7px 12px;border-bottom:1px solid #f1f5f9">{_pill(cc, ok)}</td>
-          <td style="padding:7px 12px;font-size:10px;color:#64748b;border-bottom:1px solid #f1f5f9">{mot}</td>
+          {_tc(None,mono=True)}             {r.get("ob","—")}</td>
+          {_tc(None,mono=True)}             {r.get("cont","—")}</td>
+          {_tc(None,col="#64748b")}         {r.get("terminal","—")}</td>
+          {_tc(None,col="#64748b",wrap=False)}{r.get("fcita","—") or "—"}</td>
+          {_tc(None,col="#64748b",wrap=False)}{r.get("fllpuerto","—") or "—"}</td>
+          {_tc(None,col="#2563eb",wrap=False)}{nrep}</td>
+          {_tc(None)}                        {_resp_pill(rresp) if rresp != "—" else "—"}</td>
+          {_tc(None)}                        {_pill(cc, ok)}</td>
+          {_tc(None,col="#475569")}          {mot}</td>
+          {_tc(None,col="#94a3b8")}          {obs_s}</td>
         </tr>'''
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -319,7 +345,7 @@ def build_html(datos):
 <html lang="es">
 <head><meta charset="UTF-8"><title>Indicador Cumplimiento Citas — Llenos</title></head>
 <body style="margin:0;padding:20px 0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif">
-<table width="660" cellpadding="0" cellspacing="0" align="center" style="max-width:660px">
+<table width="760" cellpadding="0" cellspacing="0" align="center" style="max-width:760px">
 
   <!-- ═══ HEADER ═══════════════════════════════════════════════════════════ -->
   <tr><td bgcolor="#0d2137" style="background:#0d2137;border-radius:12px 12px 0 0;padding:26px 32px 22px">
@@ -456,15 +482,15 @@ def build_html(datos):
   </td></tr>
 
   <!-- ═══ INCUMPLIMIENTOS AYER ════════════════════════════════════════════ -->
-  {"<tr><td bgcolor='#ffffff' style='background:#fff;padding:0 32px 20px;border-top:1px solid #e2e8f0'>" + SEC("Incumplimientos de ayer", "#dc2626") + "<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #f1f5f9;border-radius:8px;overflow:hidden'><thead><tr><th " + TH_S + ">Contenedor</th><th " + TH_S + ">Responsable</th><th " + TH_S + ">Cita</th><th " + TH_S + ">Resultado</th><th " + TH_S + ">Motivo</th></tr></thead><tbody>" + dia_inc + "</tbody></table></td></tr>" if dia_inc else "<tr><td bgcolor='#ffffff' style='background:#fff;padding:12px 32px;border-top:1px solid #e2e8f0'><table cellpadding='0' cellspacing='0'><tr><td bgcolor='#dcfce7' style='background:#dcfce7;border-radius:8px;padding:10px 14px;border:1px solid #86efac'><span style='font-size:12px;color:#15803d;font-weight:600'>&#10003; Sin incumplimientos ayer</span></td></tr></table></td></tr>"}
+  {"<tr><td bgcolor='#ffffff' style='background:#fff;padding:0 32px 20px;border-top:1px solid #e2e8f0'>" + SEC("Incumplimientos de ayer", "#dc2626") + "<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #f1f5f9;border-radius:8px;overflow:hidden'><thead><tr><th " + TH_S + ">Pedido</th><th " + TH_S + ">Contenedor</th><th " + TH_S + ">Resp.</th><th " + TH_S + ">Cita</th><th " + TH_S + ">Nueva cita</th><th " + TH_S + ">Resp. reprog.</th><th " + TH_S + ">Resultado</th><th " + TH_S + ">Motivo</th><th " + TH_S + ">Observación</th></tr></thead><tbody>" + dia_inc + "</tbody></table></td></tr>" if dia_inc else "<tr><td bgcolor='#ffffff' style='background:#fff;padding:12px 32px;border-top:1px solid #e2e8f0'><table cellpadding='0' cellspacing='0'><tr><td bgcolor='#dcfce7' style='background:#dcfce7;border-radius:8px;padding:10px 14px;border:1px solid #86efac'><span style='font-size:12px;color:#15803d;font-weight:600'>&#10003; Sin incumplimientos ayer</span></td></tr></table></td></tr>"}
 
   <!-- ═══ REPROGRAMACIONES AYER ════════════════════════════════════════════ -->
-  {"<tr><td bgcolor='#ffffff' style='background:#fff;padding:0 32px 20px;border-top:1px solid #e2e8f0'>" + SEC("Reprogramaciones de ayer — " + str(len(dia_repr)), "#d97706") + "<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #f1f5f9;border-radius:8px;overflow:hidden'><thead><tr><th " + TH_S + ">Contenedor</th><th " + TH_S + ">Cita original</th><th " + TH_S + ">Nueva cita</th><th " + TH_S + ">Responsable</th><th " + TH_S + ">Motivo</th></tr></thead><tbody>" + repr_ayer + "</tbody></table></td></tr>" if dia_repr else ""}
+  {"<tr><td bgcolor='#ffffff' style='background:#fff;padding:0 32px 20px;border-top:1px solid #e2e8f0'>" + SEC("Reprogramaciones de ayer — " + str(len(dia_repr)), "#d97706") + "<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #f1f5f9;border-radius:8px;overflow:hidden'><thead><tr><th " + TH_S + ">Pedido</th><th " + TH_S + ">Contenedor</th><th " + TH_S + ">Cita original</th><th " + TH_S + ">Nueva cita</th><th " + TH_S + ">Responsable</th><th " + TH_S + ">Motivo</th><th " + TH_S + ">Observación</th></tr></thead><tbody>" + repr_ayer + "</tbody></table></td></tr>" if dia_repr else ""}
 
   <!-- ═══ TODOS LOS CONTENEDORES AYER ═════════════════════════════════════ -->
   <tr><td bgcolor="#ffffff" style="background:#fff;padding:0 32px 24px;border-top:1px solid #e2e8f0">
     {SEC("Todos los contenedores de ayer")}
-    {"<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #f1f5f9;border-radius:8px;overflow:hidden'><thead><tr><th " + TH_S + ">Contenedor</th><th " + TH_S + ">Terminal</th><th " + TH_S + ">Cita puerto</th><th " + TH_S + ">Llegada</th><th " + TH_S + ">Cumplimiento</th><th " + TH_S + ">Motivo</th></tr></thead><tbody>" + det_ayer + "</tbody></table>" if det_ayer else "<p style='margin:0;font-size:12px;color:#94a3b8;text-align:center;padding:12px'>Sin registros para este día</p>"}
+    {"<table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #f1f5f9;border-radius:8px;overflow:hidden'><thead><tr><th " + TH_S + ">Pedido</th><th " + TH_S + ">Contenedor</th><th " + TH_S + ">Terminal</th><th " + TH_S + ">Cita puerto</th><th " + TH_S + ">Llegada</th><th " + TH_S + ">Nueva cita</th><th " + TH_S + ">Resp. reprog.</th><th " + TH_S + ">Cumplimiento</th><th " + TH_S + ">Motivo</th><th " + TH_S + ">Observación</th></tr></thead><tbody>" + det_ayer + "</tbody></table>" if det_ayer else "<p style='margin:0;font-size:12px;color:#94a3b8;text-align:center;padding:12px'>Sin registros para este día</p>"}
   </td></tr>
 
   <!-- ═══ FOOTER ════════════════════════════════════════════════════════════ -->
