@@ -129,7 +129,84 @@ def pill(txt, ok=None):
         return f'<span style="background:#064e3b;color:#6ee7b7;padding:2px 9px;border-radius:10px;font-size:10px;font-weight:700">✓ {txt}</span>'
     return f'<span style="background:#450a0a;color:#fca5a5;padding:2px 9px;border-radius:10px;font-size:10px;font-weight:700">✗ {txt}</span>'
 
-# ── Tendencia SVG sparkline ───────────────────────────────────────────────────
+# ── SVG Gráfico de barras + línea (tendencia mes a mes) ───────────────────────
+def svg_trend_chart(tend, mes_actual, w=620, h=240):
+    """
+    Gráfico de barras con línea encima, igual al del tablero.
+    tend: lista de dicts {mes, total, pct, nc}
+    """
+    if not tend: return ""
+    n      = len(tend)
+    PAD_L  = 44   # eje Y
+    PAD_R  = 16
+    PAD_T  = 36   # espacio para etiquetas de %
+    PAD_B  = 52   # espacio para etiquetas mes + llenos
+    CHART_W = w - PAD_L - PAD_R
+    CHART_H = h - PAD_T - PAD_B
+    bar_w   = max(20, int(CHART_W / n * 0.55))
+    gap     = CHART_W / n
+
+    def cx(i): return PAD_L + gap * i + gap / 2   # centro de cada barra
+    def bar_y(pct): return PAD_T + CHART_H * (1 - pct / 100)
+
+    # Líneas de guía horizontales
+    guides = ""
+    for pct_g in [0, 25, 50, 75, 90, 100]:
+        y = bar_y(pct_g)
+        dash = "stroke-dasharray='4,4'" if pct_g not in (0, 100) else ""
+        col_g = "#1e3a5f" if pct_g not in (75, 90) else ("#f59e0b44" if pct_g == 75 else "#22c55e44")
+        guides += f'<line x1="{PAD_L}" y1="{y:.1f}" x2="{w-PAD_R}" y2="{y:.1f}" stroke="{col_g}" stroke-width="1" {dash}/>'
+        guides += f'<text x="{PAD_L-6}" y="{y+4:.1f}" text-anchor="end" font-size="9" fill="#475569" font-family="Arial">{pct_g}%</text>'
+
+    # Barras
+    bars = ""
+    for i, t in enumerate(tend):
+        x    = cx(i) - bar_w / 2
+        yb   = bar_y(t["pct"])
+        bar_h = PAD_T + CHART_H - yb
+        active = t["mes"] == mes_actual
+        col  = "#22c55e" if t["pct"] >= 90 else "#f59e0b" if t["pct"] >= 75 else "#ef4444"
+        alpha = "ff" if active else "99"
+        bars += f'<rect x="{x:.1f}" y="{yb:.1f}" width="{bar_w}" height="{bar_h:.1f}" rx="3" fill="{col}{alpha}"/>'
+        # Etiqueta % encima de la barra
+        lbl_col = col if active else (col + "cc")
+        fw = "800" if active else "700"
+        bars += f'<text x="{cx(i):.1f}" y="{yb-5:.1f}" text-anchor="middle" font-size="{"11" if active else "10"}" font-weight="{fw}" fill="{lbl_col}" font-family="Arial">{t["pct"]}%</text>'
+
+    # Línea de tendencia
+    pts = [(cx(i), bar_y(t["pct"])) for i, t in enumerate(tend)]
+    line_d = "M" + " L".join(f"{x:.1f},{y:.1f}" for x, y in pts)
+    last_col = "#22c55e" if tend[-1]["pct"] >= 90 else "#f59e0b" if tend[-1]["pct"] >= 75 else "#ef4444"
+    dots = ""
+    for i, (px, py) in enumerate(pts):
+        active = tend[i]["mes"] == mes_actual
+        r = 5 if active else 3.5
+        dots += f'<circle cx="{px:.1f}" cy="{py:.1f}" r="{r}" fill="{last_col}" stroke="#0a1628" stroke-width="1.5"/>'
+
+    # Etiquetas eje X
+    xlabels = ""
+    for i, t in enumerate(tend):
+        active = t["mes"] == mes_actual
+        lbl = _mes_label(t["mes"], True)          # "Oct 2026" → recortamos
+        parts = lbl.split(" ")
+        mes_c = parts[0]
+        anio  = "'" + parts[1][2:] if len(parts) > 1 else ""
+        fw = "700" if active else "400"
+        fc = "#e2e8f0" if active else "#64748b"
+        y_m = PAD_T + CHART_H + 16
+        xlabels += f'<text x="{cx(i):.1f}" y="{y_m}" text-anchor="middle" font-size="10" font-weight="{fw}" fill="{fc}" font-family="Arial">{mes_c}&#x2019;{anio}</text>'
+        xlabels += f'<text x="{cx(i):.1f}" y="{y_m+13}" text-anchor="middle" font-size="9" fill="#475569" font-family="Arial">{t["total"]} llenos</text>'
+
+    return f'''<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}" xmlns="http://www.w3.org/2000/svg">
+  {guides}
+  {bars}
+  <path d="{line_d}" stroke="{last_col}" stroke-width="2" fill="none" opacity="0.9"/>
+  {dots}
+  {xlabels}
+</svg>'''
+
+
+# ── SVG mini sparkline (cabecera tendencia) ───────────────────────────────────
 def sparkline(vals, w=200, h=40):
     if len(vals) < 2: return ""
     mn, mx = min(vals), max(vals)
@@ -179,7 +256,8 @@ def build_html(datos):
         nc   = sum(1 for r in mr if _tarde(r))
         pct  = _pct(len(mr)-sf-nc, base)
         tend.append({"mes":mes,"total":len(mr),"pct":pct,"nc":nc})
-    spark_vals = [t["pct"] for t in tend]
+    spark_vals   = [t["pct"] for t in tend]
+    trend_chart  = svg_trend_chart(tend, mes_actual)
 
     # Ayer
     dia_rows, dia_dt = [], None
@@ -385,23 +463,18 @@ def build_html(datos):
   </div>
 
   <!-- ═══ TENDENCIA ════════════════════════════════════════════════════════ -->
-  <div style="background:#080e1c;padding:24px 36px;border-bottom:1px solid #1e3a5f">
-    <table width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td>
-          <div style="font-size:9px;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:.15em;margin-bottom:4px">Tendencia de cumplimiento</div>
-          <div style="font-size:10px;color:#475569">Últimos {len(tend)} meses · ▶ = mes actual</div>
-        </td>
-        <td align="right" style="vertical-align:top">{spark_svg}</td>
-      </tr>
-    </table>
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:14px">
-      <thead><tr style="border-bottom:1px solid #1e3a5f">
-        <th {th}>Mes</th><th {th} style="text-align:center">Contenedores</th>
-        <th {th} style="text-align:center">Cumplimiento</th><th {th} style="text-align:center">Incumpl.</th>
-      </tr></thead>
-      <tbody>{tend_html}</tbody>
-    </table>
+  <div style="background:#080e1c;padding:24px 36px 20px;border-bottom:1px solid #1e3a5f">
+    <div style="font-size:9px;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:.15em;margin-bottom:2px">Cumplimiento de cita — mes a mes</div>
+    <div style="font-size:10px;color:#475569;margin-bottom:16px">Últimos {len(tend)} meses · barra resaltada = mes actual</div>
+    <div style="overflow:hidden;border-radius:8px;background:#060f1e;padding:10px 4px 4px">
+      {trend_chart}
+    </div>
+    <!-- leyenda -->
+    <div style="margin-top:10px;font-size:9px;color:#475569">
+      <span style="display:inline-block;width:10px;height:10px;background:#22c55e;border-radius:2px;vertical-align:middle;margin-right:4px"></span>≥ 90% &nbsp;&nbsp;
+      <span style="display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:2px;vertical-align:middle;margin-right:4px"></span>75–90% &nbsp;&nbsp;
+      <span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:2px;vertical-align:middle;margin-right:4px"></span>&lt; 75%
+    </div>
   </div>
 
   <!-- ═══ INCUMPLIMIENTOS MES ══════════════════════════════════════════════ -->
