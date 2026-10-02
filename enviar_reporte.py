@@ -183,7 +183,7 @@ def build_html(datos):
     dia_total = len(dia_rows)
     dia_sf    = sum(1 for r in dia_rows if (r.get("cumpl_cita","") or "") == "Sin fecha")
     dia_cumpl = sum(1 for r in dia_rows if _cumple(r))
-    dia_tarde = [r for r in dia_rows if _tarde(r)]
+    dia_tarde = [r for r in dia_rows if _tarde(r) and not _cumple(r)]
     dia_repr  = [r for r in dia_rows if r.get("fcita_repr")]
     dia_pct   = _pct(dia_cumpl, dia_total - dia_sf)
     col_d     = _col(dia_pct)
