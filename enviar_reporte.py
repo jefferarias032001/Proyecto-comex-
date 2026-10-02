@@ -191,6 +191,22 @@ def build_html(datos):
     dia_inc_resp = defaultdict(list)
     for r in dia_tarde: dia_inc_resp[_resp_cat(r)].append(r)
 
+    n_tc  = len(dia_inc_resp.get("Tractocar", []))
+    n_ajv = len(dia_inc_resp.get("Ajover", []))
+    n_ext = len(dia_inc_resp.get("Externo", []))
+
+    # Alertas operativas del día
+    dia_sin_llegada    = [r for r in dia_rows
+                          if not (r.get("fllpuerto","") or "").strip()
+                          and (r.get("fcita","") or "").strip()]
+    dia_repr_incompl   = [r for r in dia_rows
+                          if (r.get("fcita_repr","") or "").strip()
+                          and (not (r.get("resp_repr","") or "").strip()
+                               or not (r.get("motivo_repr","") or "").strip())]
+    dia_repr_sin_fecha = [r for r in dia_rows
+                          if (r.get("resp_repr","") or "").strip()
+                          and not (r.get("fcita_repr","") or "").strip()]
+
     # ── Gráfico de tendencia ──────────────────────────────────────────────────
     # Fila 1: porcentajes
     f_pct = ""
@@ -368,6 +384,84 @@ def build_html(datos):
           <td style="padding:5px 0">{_hbar(len(lst), len(tarde_m), r_["fg"], 180)}</td>
         </tr>'''
 
+    # ── HTML: responsabilidad ayer ────────────────────────────────────────────
+    total_inc_d = n_tc + n_ajv + n_ext
+    def _resp_card(label, n, fg, bg, border):
+        txt_n = str(n) if n else "0"
+        sub   = "incumplimiento" + ("s" if n != 1 else "") + " imputables"
+        return f'''<table width="100%" cellpadding="0" cellspacing="0">
+          <tr><td>
+            <table cellpadding="0" cellspacing="0" width="100%"><tr>
+              <td width="4" bgcolor="{fg}" style="background:{fg};border-radius:4px 0 0 4px;font-size:0"> </td>
+              <td bgcolor="{bg}" style="background:{bg};padding:12px 14px;border:1px solid {border};border-left:none;border-radius:0 8px 8px 0">
+                <p style="margin:0 0 4px;font-size:8px;font-weight:700;color:{fg};text-transform:uppercase;letter-spacing:.12em">{label}</p>
+                <p style="margin:0;font-size:32px;font-weight:900;color:{fg};line-height:1">{txt_n}</p>
+                <p style="margin:5px 0 0;font-size:9px;color:#64748b">{sub}</p>
+              </td>
+            </tr></table>
+          </td></tr>
+        </table>'''
+
+    _split_bar_w = 540
+    def _split_seg(n, col, label, total):
+        w = max(4, int(n / total * _split_bar_w)) if total else 0
+        return (f'<td width="{w}" height="12" bgcolor="{col}" style="background:{col};font-size:0"> </td>', w)
+
+    if total_inc_d:
+        seg_tc,  w_tc  = _split_seg(n_tc,  "#2563eb", "Tractocar", total_inc_d)
+        seg_ajv, w_ajv = _split_seg(n_ajv, "#dc2626", "Ajover",    total_inc_d)
+        seg_ext, w_ext = _split_seg(n_ext, "#16a34a", "Externo",   total_inc_d)
+        gap = _split_bar_w - w_tc - w_ajv - w_ext
+        gap_td = f'<td width="{gap}" height="12" bgcolor="#e2e8f0" style="background:#e2e8f0;font-size:0"> </td>' if gap > 0 else ""
+        resp_split_bar = f'<table cellpadding="0" cellspacing="0" style="margin-top:10px"><tr>{seg_tc}{seg_ajv}{seg_ext}{gap_td}</tr></table>'
+    else:
+        resp_split_bar = ""
+
+    # ── HTML: alertas operativas ──────────────────────────────────────────────
+    def _alerta_card(icon, label, n, desc, bg, fg, border, rows_list=None):
+        rows_html = ""
+        if rows_list:
+            for r in rows_list[:4]:
+                rows_html += f'<tr><td style="padding:2px 0 2px 12px;font-size:9px;color:#475569;font-family:monospace">{r.get("cont","—")} &nbsp;<span style="color:#94a3b8">{r.get("fcita","") or r.get("estado","")}</span></td></tr>'
+        rows_block = f'<table cellpadding="0" cellspacing="0" style="margin-top:4px">{rows_html}</table>' if rows_html else ""
+        return f'''<table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:8px">
+          <tr>
+            <td width="4" bgcolor="{fg}" style="background:{fg};border-radius:4px 0 0 4px;font-size:0"> </td>
+            <td bgcolor="{bg}" style="background:{bg};padding:10px 14px;border:1px solid {border};border-left:none;border-radius:0 8px 8px 0">
+              <table width="100%" cellpadding="0" cellspacing="0"><tr>
+                <td><span style="font-size:10px;font-weight:700;color:{fg}">{icon} {label}</span>
+                <p style="margin:2px 0 0;font-size:9px;color:#64748b">{desc}</p>{rows_block}</td>
+                <td align="right" valign="top"><span style="font-size:22px;font-weight:900;color:{fg}">{n}</span></td>
+              </tr></table>
+            </td>
+          </tr>
+        </table>'''
+
+    alertas_items = ""
+    n_alertas = 0
+    if dia_sin_llegada:
+        n_alertas += len(dia_sin_llegada)
+        alertas_items += _alerta_card("&#9888;", f"{len(dia_sin_llegada)} contenedor{'es' if len(dia_sin_llegada)!=1 else ''} sin fecha de llegada a puerto",
+                                      len(dia_sin_llegada), "Tienen cita registrada pero sin llegada al puerto.",
+                                      "#fee2e2","#dc2626","#fca5a5", dia_sin_llegada)
+    if dia_repr_incompl:
+        n_alertas += len(dia_repr_incompl)
+        miss = []
+        if any(not (r.get("resp_repr","") or "").strip() for r in dia_repr_incompl): miss.append(f"{sum(1 for r in dia_repr_incompl if not (r.get('resp_repr','') or '').strip())} responsable")
+        if any(not (r.get("motivo_repr","") or "").strip() for r in dia_repr_incompl): miss.append(f"{sum(1 for r in dia_repr_incompl if not (r.get('motivo_repr','') or '').strip())} motivo")
+        alertas_items += _alerta_card("&#9432;", f"{len(dia_repr_incompl)} reprogramaci{'ones' if len(dia_repr_incompl)!=1 else 'ón'} con datos incompletos",
+                                      len(dia_repr_incompl), f"Faltan: {' · '.join(miss)}.",
+                                      "#fef9c3","#b45309","#fde68a", dia_repr_incompl)
+    if dia_repr_sin_fecha:
+        n_alertas += len(dia_repr_sin_fecha)
+        alertas_items += _alerta_card("&#9432;", f"{len(dia_repr_sin_fecha)} reprogramaci{'ones' if len(dia_repr_sin_fecha)!=1 else 'ón'} sin nueva cita registrada",
+                                      len(dia_repr_sin_fecha), "Responsable asignado pero no se registró la nueva fecha de cita.",
+                                      "#fef9c3","#b45309","#fde68a", dia_repr_sin_fecha)
+    if not alertas_items:
+        alertas_items = _alerta_card("&#10003;", "Sin alertas operativas", "",
+                                     "Todos los registros tienen datos completos.",
+                                     "#dcfce7","#15803d","#86efac")
+
     # =========================================================================
     # HTML EMAIL
     # =========================================================================
@@ -511,6 +605,23 @@ def build_html(datos):
         </td>
       </tr>
     </table>
+  </td></tr>
+
+  <!-- ═══ RESPONSABILIDAD AYER ═══════════════════════════════════════════ -->
+  <tr><td bgcolor="#ffffff" style="background:#fff;padding:0 32px 16px;border-top:1px solid #f1f5f9">
+    {SEC("Análisis de responsabilidad — ayer")}
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td width="33%" style="padding-right:6px">{_resp_card("Tractocar", n_tc, "#2563eb", "#eff6ff", "#bfdbfe")}</td>
+      <td width="33%" style="padding:0 3px">   {_resp_card("Ajover",    n_ajv,"#dc2626","#fee2e2","#fca5a5")}</td>
+      <td width="33%" style="padding-left:6px">{_resp_card("Externo",   n_ext,"#16a34a","#dcfce7","#86efac")}</td>
+    </tr></table>
+    {resp_split_bar}
+  </td></tr>
+
+  <!-- ═══ ALERTAS OPERATIVAS AYER ═════════════════════════════════════════ -->
+  <tr><td bgcolor="#f8fafc" style="background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0">
+    {SEC("Alertas operativas · " + dia_label[:20], "#d97706" if n_alertas else "#16a34a")}
+    {alertas_items}
   </td></tr>
 
   <!-- ═══ INCUMPLIMIENTOS AYER ════════════════════════════════════════════ -->
