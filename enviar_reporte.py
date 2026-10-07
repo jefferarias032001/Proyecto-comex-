@@ -689,20 +689,27 @@ def build_html(datos, interno=False):
 <table width="760" cellpadding="0" cellspacing="0" align="center" style="max-width:760px">
 
   <!-- ═══ HEADER ═══════════════════════════════════════════════════════════ -->
-  <tr><td bgcolor="#0d2137" style="background:#0d2137;border-radius:12px 12px 0 0;padding:26px 32px 22px">
-    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+  <tr><td bgcolor="#071626" style="background:linear-gradient(160deg,#0a1f35 0%,#071626 60%,#050f1a 100%);border-radius:14px 14px 0 0;padding:28px 32px 0">
+    <!-- línea azul de acento arriba -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px"><tr>
       <td>
+        <!-- logo -->
         <table cellpadding="0" cellspacing="0"><tr>
-          <td bgcolor="#ffffff22" style="background:rgba(255,255,255,0.12);border-radius:7px;padding:5px 12px">
-            <span style="font-size:15px;font-weight:900;color:#fff;letter-spacing:-0.5px">TC</span>
-            <span style="font-size:9px;color:rgba(255,255,255,0.5);margin-left:7px">TRACTOCAR LOGISTICS</span>
+          <td bgcolor="#1e3a5f" style="background:#1e3a5f;border-radius:8px;padding:5px 14px;border:1px solid #2563eb22">
+            <span style="font-size:14px;font-weight:900;color:#fff;letter-spacing:-.5px">TC</span>
+            <span style="font-size:9px;color:#60a5fa;margin-left:8px;letter-spacing:.06em;font-weight:600">TRACTOCAR LOGISTICS</span>
           </td>
         </tr></table>
-        <p style="margin:14px 0 2px;font-size:8px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:.2em">Reporte Ejecutivo · Ajover EXPO</p>
-        <p style="margin:0 0 4px;font-size:22px;font-weight:800;color:#fff;line-height:1.2">Indicador de Cumplimiento de Citas — Llenos</p>
-        <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.45)">{_ml(mes_actual)} &nbsp;·&nbsp; A corte: {corte_label} &nbsp;·&nbsp; {total_m} contenedores</p>
+        <p style="margin:18px 0 4px;font-size:8px;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:.22em">Reporte Ejecutivo &nbsp;·&nbsp; Ajover EXPO</p>
+        <p style="margin:0 0 6px;font-size:24px;font-weight:900;color:#f8fafc;line-height:1.15;letter-spacing:-.03em">Indicador de Cumplimiento de Citas <span style="color:#60a5fa">—</span> Llenos</p>
+        <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.38);letter-spacing:.01em">{_ml(mes_actual)} &nbsp;·&nbsp; A corte: {corte_label} &nbsp;·&nbsp; {total_m} contenedores</p>
       </td>
-      <td align="right" valign="top" style="font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap;padding-left:16px">{generado}</td>
+      <td align="right" valign="top" style="font-size:10px;color:rgba(255,255,255,0.2);white-space:nowrap;padding-left:16px;padding-top:4px">{generado}</td>
+    </tr></table>
+    <!-- separador sutil -->
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td width="40" height="2" bgcolor="#2563eb" style="background:#2563eb;font-size:0;border-radius:2px"> </td>
+      <td height="2" bgcolor="#1e3a5f22" style="background:#1e3a5f22;font-size:0"> </td>
     </tr></table>
   </td></tr>
 
@@ -713,64 +720,61 @@ def build_html(datos, interno=False):
   {_bloque_ia(analisis_ia)}
 
   <!-- ═══ 5 KPI CARDS ═════════════════════════════════════════════════════ -->
-  <tr><td bgcolor="#0d2137" style="background:#0d2137;padding:0 32px 24px">
+  <tr><td bgcolor="#0d2137" style="background:#0d2137;padding:0 32px 28px">
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <!-- Total -->
-        <td width="20%" style="padding-right:5px">
+        <td width="20%" style="padding-right:5px;vertical-align:top">
           <table width="100%" cellpadding="0" cellspacing="0">
-            <tr><td bgcolor="#0f2d4a" style="background:#0f2d4a;border-radius:10px;padding:16px 12px;border:1px solid #1e3a5f">
-              <p style="margin:0 0 4px;font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:.1em">Total Llenos</p>
-              <p style="margin:0;font-size:28px;font-weight:800;color:#f8fafc;line-height:1">{total_m}</p>
-              <p style="margin:6px 0 0;font-size:9px;color:#475569">registros</p>
+            <tr><td height="3" bgcolor="#475569" style="background:#475569;border-radius:3px 3px 0 0;font-size:0"> </td></tr>
+            <tr><td bgcolor="#0f1e2e" style="background:#0f1e2e;padding:14px 14px 16px;border:1px solid #1e2d3d;border-top:none;border-radius:0 0 10px 10px">
+              <p style="margin:0 0 10px;font-size:8px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.12em">Total Llenos</p>
+              <p style="margin:0;font-size:34px;font-weight:900;color:#f1f5f9;line-height:1;letter-spacing:-.02em">{total_m}</p>
+              <p style="margin:10px 0 0;font-size:9px;color:#475569;border-top:1px solid #1e2d3d;padding-top:8px">registros del mes</p>
             </td></tr>
           </table>
         </td>
         <!-- Cumplen cita -->
-        <td width="20%" style="padding:0 3px">
+        <td width="20%" style="padding:0 3px;vertical-align:top">
           <table width="100%" cellpadding="0" cellspacing="0">
-            <tr><td bgcolor="#0a2e1a" style="background:#0a2e1a;border-radius:10px;padding:16px 12px;border:1px solid #14532d">
-              <p style="margin:0 0 4px;font-size:8px;color:#16a34a;text-transform:uppercase;letter-spacing:.1em">Cumplen Cita</p>
-              <p style="margin:0;font-size:28px;font-weight:900;color:{col_m["bar"]};line-height:1">{pct_m}%</p>
-              <table cellpadding="0" cellspacing="0" style="margin-top:8px"><tr>
-                <td width="{min(70,int(pct_m/100*70))}" height="4" bgcolor="{col_m["bar"]}" style="background:{col_m["bar"]};font-size:0"> </td>
-                {"<td width='" + str(70-min(70,int(pct_m/100*70))) + "' height='4' bgcolor='#14532d' style='background:#14532d;font-size:0'> </td>" if int(pct_m/100*70) < 70 else ""}
-              </tr></table>
-              <p style="margin:6px 0 0;font-size:9px;color:#166534">{cumpl_m} ok &nbsp;/&nbsp; {base_m - cumpl_m} no cumple</p>
+            <tr><td height="3" bgcolor="{col_m['bar']}" style="background:{col_m['bar']};border-radius:3px 3px 0 0;font-size:0"> </td></tr>
+            <tr><td bgcolor="#0a1f12" style="background:#0a1f12;padding:14px 14px 16px;border:1px solid #14532d;border-top:none;border-radius:0 0 10px 10px">
+              <p style="margin:0 0 10px;font-size:8px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:.12em">Cumplimiento</p>
+              <p style="margin:0;font-size:34px;font-weight:900;color:{col_m['bar']};line-height:1;letter-spacing:-.02em">{pct_m}%</p>
+              <p style="margin:10px 0 0;font-size:9px;color:#166534;border-top:1px solid #14532d;padding-top:8px">{cumpl_m} ok &nbsp;·&nbsp; {base_m - cumpl_m} no cumple</p>
             </td></tr>
           </table>
         </td>
         <!-- Eficiencia ±30min -->
-        <td width="20%" style="padding:0 3px">
+        <td width="20%" style="padding:0 3px;vertical-align:top">
           <table width="100%" cellpadding="0" cellspacing="0">
-            <tr><td bgcolor="#0c1f3d" style="background:#0c1f3d;border-radius:10px;padding:16px 12px;border:2px solid #2563eb">
-              <p style="margin:0 0 4px;font-size:8px;color:#60a5fa;text-transform:uppercase;letter-spacing:.1em">Eficiencia &#177;30min</p>
-              <p style="margin:0;font-size:28px;font-weight:900;color:{col_ef_mes["bar"]};line-height:1">{pct_ef_mes}%</p>
-              <table cellpadding="0" cellspacing="0" style="margin-top:8px"><tr>
-                <td width="{min(70,int(pct_ef_mes/100*70))}" height="4" bgcolor="{col_ef_mes["bar"]}" style="background:{col_ef_mes["bar"]};font-size:0"> </td>
-                {"<td width='" + str(70-min(70,int(pct_ef_mes/100*70))) + "' height='4' bgcolor='#1e3a5f' style='background:#1e3a5f;font-size:0'> </td>" if int(pct_ef_mes/100*70) < 70 else ""}
-              </tr></table>
-              <p style="margin:6px 0 0;font-size:9px;color:#3b82f6">{ef_mes_n} dentro &nbsp;/&nbsp; {len(ef_mes_rows)} con llegada</p>
+            <tr><td height="3" bgcolor="{col_ef_mes['bar']}" style="background:{col_ef_mes['bar']};border-radius:3px 3px 0 0;font-size:0"> </td></tr>
+            <tr><td bgcolor="#0c1929" style="background:#0c1929;padding:14px 14px 16px;border:1px solid #1e3a5f;border-top:none;border-radius:0 0 10px 10px">
+              <p style="margin:0 0 10px;font-size:8px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:.12em">Eficiencia &#177;30min</p>
+              <p style="margin:0;font-size:34px;font-weight:900;color:{col_ef_mes['bar']};line-height:1;letter-spacing:-.02em">{pct_ef_mes}%</p>
+              <p style="margin:10px 0 0;font-size:9px;color:#3b82f6;border-top:1px solid #1e3a5f;padding-top:8px">{ef_mes_n} dentro &nbsp;·&nbsp; {len(ef_mes_rows)} con llegada</p>
             </td></tr>
           </table>
         </td>
         <!-- Reprog -->
-        <td width="20%" style="padding:0 3px">
+        <td width="20%" style="padding:0 3px;vertical-align:top">
           <table width="100%" cellpadding="0" cellspacing="0">
-            <tr><td bgcolor="#2d1b00" style="background:#2d1b00;border-radius:10px;padding:16px 12px;border:1px solid #78350f">
-              <p style="margin:0 0 4px;font-size:8px;color:#d97706;text-transform:uppercase;letter-spacing:.1em">Reprogramaciones</p>
-              <p style="margin:0;font-size:28px;font-weight:800;color:#f59e0b;line-height:1">{len(repr_m)}</p>
-              <p style="margin:6px 0 0;font-size:9px;color:#92400e">del mes actual</p>
+            <tr><td height="3" bgcolor="#f59e0b" style="background:#f59e0b;border-radius:3px 3px 0 0;font-size:0"> </td></tr>
+            <tr><td bgcolor="#1a1000" style="background:#1a1000;padding:14px 14px 16px;border:1px solid #78350f;border-top:none;border-radius:0 0 10px 10px">
+              <p style="margin:0 0 10px;font-size:8px;font-weight:700;color:#d97706;text-transform:uppercase;letter-spacing:.12em">Reprogramaciones</p>
+              <p style="margin:0;font-size:34px;font-weight:900;color:#f59e0b;line-height:1;letter-spacing:-.02em">{len(repr_m)}</p>
+              <p style="margin:10px 0 0;font-size:9px;color:#92400e;border-top:1px solid #78350f;padding-top:8px">del mes actual</p>
             </td></tr>
           </table>
         </td>
         <!-- Sin fecha -->
-        <td width="20%" style="padding-left:5px">
+        <td width="20%" style="padding-left:5px;vertical-align:top">
           <table width="100%" cellpadding="0" cellspacing="0">
-            <tr><td bgcolor="#1e1b2e" style="background:#1e1b2e;border-radius:10px;padding:16px 12px;border:1px solid #312e6e">
-              <p style="margin:0 0 4px;font-size:8px;color:#818cf8;text-transform:uppercase;letter-spacing:.1em">Sin Fecha Cita</p>
-              <p style="margin:0;font-size:28px;font-weight:800;color:#a5b4fc;line-height:1">{sf_m}</p>
-              <p style="margin:6px 0 0;font-size:9px;color:#4c1d95">contenedores</p>
+            <tr><td height="3" bgcolor="#818cf8" style="background:#818cf8;border-radius:3px 3px 0 0;font-size:0"> </td></tr>
+            <tr><td bgcolor="#0f0d1f" style="background:#0f0d1f;padding:14px 14px 16px;border:1px solid #312e6e;border-top:none;border-radius:0 0 10px 10px">
+              <p style="margin:0 0 10px;font-size:8px;font-weight:700;color:#818cf8;text-transform:uppercase;letter-spacing:.12em">Sin Fecha Cita</p>
+              <p style="margin:0;font-size:34px;font-weight:900;color:#a5b4fc;line-height:1;letter-spacing:-.02em">{sf_m}</p>
+              <p style="margin:10px 0 0;font-size:9px;color:#4c1d95;border-top:1px solid #312e6e;padding-top:8px">contenedores</p>
             </td></tr>
           </table>
         </td>
