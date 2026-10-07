@@ -174,6 +174,43 @@ def _resp_pill(resp):
     r = RESP_L.get(resp, {"fg":"#64748b","bg":"#f1f5f9","border":"#e2e8f0","text":"#334155"})
     return f'<span style="background:{r["bg"]};color:{r["text"]};padding:2px 10px;border-radius:6px;font-size:10px;font-weight:700;border:1px solid {r["border"]}">{resp}</span>'
 
+def _fila_cont(r):
+    cont  = r.get("cont","—")
+    ob    = r.get("ob","—")
+    fcita = r.get("fcita","—") or "—"
+    return f'<tr><td style="padding:2px 8px;font-size:10px;color:#334155;font-family:monospace">{cont}</td><td style="padding:2px 8px;font-size:10px;color:#64748b">{ob}</td><td style="padding:2px 8px;font-size:10px;color:#64748b">{fcita}</td></tr>'
+
+def _bloque_alertas_mes(sin_llegada, repr_incompl, resp_sin_cita, mes_iso):
+    total = len(sin_llegada) + len(repr_incompl) + len(resp_sin_cita)
+    color_bg  = "#fff7ed" if total else "#f0fdf4"
+    color_brd = "#f97316" if total else "#16a34a"
+    color_txt = "#9a3412" if total else "#15803d"
+    icono     = "⚠️" if total else "✅"
+
+    if total == 0:
+        cuerpo = f'<p style="margin:4px 0 0;font-size:11px;color:#15803d">Todo el mes está al día. No hay datos pendientes por completar.</p>'
+    else:
+        cuerpo = ""
+        encabezado_tabla = '<table cellpadding="0" cellspacing="0" style="margin-top:4px;width:100%"><tr><th align="left" style="font-size:9px;color:#94a3b8;padding:2px 8px">CONTENEDOR</th><th align="left" style="font-size:9px;color:#94a3b8;padding:2px 8px">OB</th><th align="left" style="font-size:9px;color:#94a3b8;padding:2px 8px">CITA PUERTO</th></tr>'
+
+        if sin_llegada:
+            cuerpo += f'''<p style="margin:8px 0 2px;font-size:11px;font-weight:700;color:#b91c1c">&#9888; {len(sin_llegada)} contenedor{"es" if len(sin_llegada)!=1 else ""} sin fecha de llegada a puerto</p>
+            {encabezado_tabla}{"".join(_fila_cont(r) for r in sin_llegada)}</table>'''
+
+        if repr_incompl:
+            cuerpo += f'''<p style="margin:8px 0 2px;font-size:11px;font-weight:700;color:#b45309">&#9432; {len(repr_incompl)} reprogramaci{"ones" if len(repr_incompl)!=1 else "ón"} con datos incompletos (sin responsable o motivo)</p>
+            {encabezado_tabla}{"".join(_fila_cont(r) for r in repr_incompl)}</table>'''
+
+        if resp_sin_cita:
+            cuerpo += f'''<p style="margin:8px 0 2px;font-size:11px;font-weight:700;color:#b45309">&#9432; {len(resp_sin_cita)} contenedor{"es" if len(resp_sin_cita)!=1 else ""} con responsable asignado pero sin nueva cita registrada</p>
+            {encabezado_tabla}{"".join(_fila_cont(r) for r in resp_sin_cita)}</table>'''
+
+    return f'''<tr><td bgcolor="{color_bg}" style="background:{color_bg};padding:14px 32px;border-left:4px solid {color_brd};border-bottom:2px solid {color_brd}">
+    <p style="margin:0 0 2px;font-size:10px;font-weight:700;color:{color_txt};text-transform:uppercase;letter-spacing:.08em">{icono} Alertas del mes — Para: comex2@tractocar.com</p>
+    <p style="margin:0 0 4px;font-size:10px;color:#64748b">Por favor completar en la web app los siguientes registros de <b>Ajover EXPO Llenos</b> que tienen información pendiente:</p>
+    {cuerpo}
+  </td></tr>'''
+
 def _generar_analisis_ia(pct_dia, total_dia, a_tiempo, n_tarde, n_perdidas,
                          n_tc, n_ajv, n_ext, pct_mes, dia_label, motivos_dia, interno=False):
     """Genera bullets de resumen + recomendaciones usando Claude. Devuelve lista de dicts."""
@@ -335,14 +372,50 @@ def build_html(datos, interno=False):
         n_tc, n_ajv, n_ext, pct_m, dia_label, dict(mot_dia), interno
     )
 
+    # ── Eficiencia ±30min ────────────────────────────────────────────────────
+    def _parse_dt(s):
+        s = (s or "").strip()
+        if not s: return None
+        try: return datetime.strptime(s, "%d-%m-%Y %H:%M")
+        except: return None
+
+    def _eficiente(r):
+        fll = _parse_dt(r.get("fllpuerto",""))
+        if not fll: return None
+        cita = _parse_dt(r.get("fcita_repr","")) or _parse_dt(r.get("fcita",""))
+        if not cita: return None
+        delay = (fll - cita).total_seconds() / 60
+        return -30 <= delay <= 30
+
+    ef_mes_rows = [r for r in mes_rows if _eficiente(r) is not None]
+    ef_mes_n    = sum(1 for r in ef_mes_rows if _eficiente(r))
+    pct_ef_mes  = _pct(ef_mes_n, len(ef_mes_rows))
+
+    ef_dia_rows = [r for r in dia_rows if _eficiente(r) is not None]
+    ef_dia_n    = sum(1 for r in ef_dia_rows if _eficiente(r))
+    pct_ef_dia  = _pct(ef_dia_n, len(ef_dia_rows))
+
+    col_ef_mes = _col(pct_ef_mes)
+
+    # ── Alertas mensuales (solo interno) ────────────────────────────────────
+    mes_sin_llegada   = [r for r in mes_rows
+                         if not (r.get("fllpuerto","") or "").strip()
+                         and (r.get("fcita","") or "").strip()]
+    mes_repr_incompl  = [r for r in mes_rows
+                         if (r.get("resp_repr","") or "").strip()
+                         and not (r.get("motivo_repr","") or "").strip()]
+    mes_resp_sin_cita = [r for r in mes_rows
+                         if (r.get("resp_repr","") or "").strip()
+                         and not (r.get("fcita_repr","") or "").strip()
+                         and not _cumple(r)]
+
     # Alertas operativas del día
     dia_sin_llegada    = [r for r in dia_rows
                           if not (r.get("fllpuerto","") or "").strip()
                           and (r.get("fcita","") or "").strip()]
     dia_repr_incompl   = [r for r in dia_rows
-                          if (r.get("fcita_repr","") or "").strip()
-                          and (not (r.get("resp_repr","") or "").strip()
-                               or not (r.get("motivo_repr","") or "").strip())]
+                          if (r.get("resp_repr","") or "").strip()
+                          and not (r.get("motivo_repr","") or "").strip()]
     dia_repr_sin_fecha = [r for r in dia_rows
                           if (r.get("resp_repr","") or "").strip()
                           and not (r.get("fcita_repr","") or "").strip()]
@@ -494,7 +567,8 @@ def build_html(datos, interno=False):
             det_ayer += f'<tr><td colspan="{NCOLS}" bgcolor="{bg}" style="background:{bg};padding:5px 10px;font-size:9px;font-weight:700;color:{fg};text-transform:uppercase;letter-spacing:.1em;border-bottom:1px solid #e2e8f0">{lbl}</td></tr>'
             prev_grupo = grupo
 
-        show_mot = (not ok and cc) or _tarde(r)
+        tiene_resp = bool((r.get("resp_repr","") or "").strip())
+        show_mot = (not ok and cc) or _tarde(r) or tiene_resp
         mot  = ((r.get("motivo_repr","") or "").strip() or "—") if show_mot else "—"
         obs  = (r.get("obs","") or r.get("motivo","") or "") if show_mot else ""
         obs_s = obs[:55] + ("…" if len(obs) > 55 else "") if obs else "—"
@@ -632,53 +706,70 @@ def build_html(datos, interno=False):
     </tr></table>
   </td></tr>
 
+  <!-- ═══ ALERTAS MENSUALES COMEX (solo interno) ══════════════════════════ -->
+  {_bloque_alertas_mes(mes_sin_llegada, mes_repr_incompl, mes_resp_sin_cita, mes_actual) if interno else ""}
+
   <!-- ═══ ANÁLISIS IA ════════════════════════════════════════════════════ -->
   {_bloque_ia(analisis_ia)}
 
-  <!-- ═══ 4 KPI CARDS (como el tablero) ═══════════════════════════════════ -->
+  <!-- ═══ 5 KPI CARDS ═════════════════════════════════════════════════════ -->
   <tr><td bgcolor="#0d2137" style="background:#0d2137;padding:0 32px 24px">
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <!-- Total -->
-        <td width="25%" style="padding-right:6px">
+        <td width="20%" style="padding-right:5px">
           <table width="100%" cellpadding="0" cellspacing="0">
-            <tr><td bgcolor="#0f2d4a" style="background:#0f2d4a;border-radius:10px;padding:16px 14px;border:1px solid #1e3a5f">
+            <tr><td bgcolor="#0f2d4a" style="background:#0f2d4a;border-radius:10px;padding:16px 12px;border:1px solid #1e3a5f">
               <p style="margin:0 0 4px;font-size:8px;color:#64748b;text-transform:uppercase;letter-spacing:.1em">Total Llenos</p>
-              <p style="margin:0;font-size:30px;font-weight:800;color:#f8fafc;line-height:1">{total_m}</p>
+              <p style="margin:0;font-size:28px;font-weight:800;color:#f8fafc;line-height:1">{total_m}</p>
               <p style="margin:6px 0 0;font-size:9px;color:#475569">registros</p>
             </td></tr>
           </table>
         </td>
         <!-- Cumplen cita -->
-        <td width="25%" style="padding:0 3px">
+        <td width="20%" style="padding:0 3px">
           <table width="100%" cellpadding="0" cellspacing="0">
-            <tr><td bgcolor="#0a2e1a" style="background:#0a2e1a;border-radius:10px;padding:16px 14px;border:1px solid #14532d">
+            <tr><td bgcolor="#0a2e1a" style="background:#0a2e1a;border-radius:10px;padding:16px 12px;border:1px solid #14532d">
               <p style="margin:0 0 4px;font-size:8px;color:#16a34a;text-transform:uppercase;letter-spacing:.1em">Cumplen Cita</p>
-              <p style="margin:0;font-size:30px;font-weight:900;color:{col_m["bar"]};line-height:1">{pct_m}%</p>
+              <p style="margin:0;font-size:28px;font-weight:900;color:{col_m["bar"]};line-height:1">{pct_m}%</p>
               <table cellpadding="0" cellspacing="0" style="margin-top:8px"><tr>
-                <td width="{min(80,int(pct_m/100*80))}" height="4" bgcolor="{col_m["bar"]}" style="background:{col_m["bar"]};font-size:0"> </td>
-                {"<td width='" + str(80-min(80,int(pct_m/100*80))) + "' height='4' bgcolor='#14532d' style='background:#14532d;font-size:0'> </td>" if int(pct_m/100*80) < 80 else ""}
+                <td width="{min(70,int(pct_m/100*70))}" height="4" bgcolor="{col_m["bar"]}" style="background:{col_m["bar"]};font-size:0"> </td>
+                {"<td width='" + str(70-min(70,int(pct_m/100*70))) + "' height='4' bgcolor='#14532d' style='background:#14532d;font-size:0'> </td>" if int(pct_m/100*70) < 70 else ""}
               </tr></table>
-              <p style="margin:6px 0 0;font-size:9px;color:#166534">{cumpl_m} ok &nbsp;/&nbsp; {len(tarde_m)} no cumple</p>
+              <p style="margin:6px 0 0;font-size:9px;color:#166534">{cumpl_m} ok &nbsp;/&nbsp; {base_m - cumpl_m} no cumple</p>
+            </td></tr>
+          </table>
+        </td>
+        <!-- Eficiencia ±30min -->
+        <td width="20%" style="padding:0 3px">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr><td bgcolor="#0c1f3d" style="background:#0c1f3d;border-radius:10px;padding:16px 12px;border:2px solid #2563eb">
+              <p style="margin:0 0 4px;font-size:8px;color:#60a5fa;text-transform:uppercase;letter-spacing:.1em">Eficiencia &#177;30min</p>
+              <p style="margin:0;font-size:28px;font-weight:900;color:{col_ef_mes["bar"]};line-height:1">{pct_ef_mes}%</p>
+              <table cellpadding="0" cellspacing="0" style="margin-top:8px"><tr>
+                <td width="{min(70,int(pct_ef_mes/100*70))}" height="4" bgcolor="{col_ef_mes["bar"]}" style="background:{col_ef_mes["bar"]};font-size:0"> </td>
+                {"<td width='" + str(70-min(70,int(pct_ef_mes/100*70))) + "' height='4' bgcolor='#1e3a5f' style='background:#1e3a5f;font-size:0'> </td>" if int(pct_ef_mes/100*70) < 70 else ""}
+              </tr></table>
+              <p style="margin:6px 0 0;font-size:9px;color:#3b82f6">{ef_mes_n} dentro &nbsp;/&nbsp; {len(ef_mes_rows)} con llegada</p>
             </td></tr>
           </table>
         </td>
         <!-- Reprog -->
-        <td width="25%" style="padding:0 3px">
+        <td width="20%" style="padding:0 3px">
           <table width="100%" cellpadding="0" cellspacing="0">
-            <tr><td bgcolor="#2d1b00" style="background:#2d1b00;border-radius:10px;padding:16px 14px;border:1px solid #78350f">
+            <tr><td bgcolor="#2d1b00" style="background:#2d1b00;border-radius:10px;padding:16px 12px;border:1px solid #78350f">
               <p style="margin:0 0 4px;font-size:8px;color:#d97706;text-transform:uppercase;letter-spacing:.1em">Reprogramaciones</p>
-              <p style="margin:0;font-size:30px;font-weight:800;color:#f59e0b;line-height:1">{len(repr_m)}</p>
+              <p style="margin:0;font-size:28px;font-weight:800;color:#f59e0b;line-height:1">{len(repr_m)}</p>
               <p style="margin:6px 0 0;font-size:9px;color:#92400e">del mes actual</p>
             </td></tr>
           </table>
         </td>
         <!-- Sin fecha -->
-        <td width="25%" style="padding-left:6px">
+        <td width="20%" style="padding-left:5px">
           <table width="100%" cellpadding="0" cellspacing="0">
-            <tr><td bgcolor="#1e1b2e" style="background:#1e1b2e;border-radius:10px;padding:16px 14px;border:1px solid #312e6e">
+            <tr><td bgcolor="#1e1b2e" style="background:#1e1b2e;border-radius:10px;padding:16px 12px;border:1px solid #312e6e">
               <p style="margin:0 0 4px;font-size:8px;color:#818cf8;text-transform:uppercase;letter-spacing:.1em">Sin Fecha Cita</p>
-              <p style="margin:0;font-size:30px;font-weight:800;color:#a5b4fc;line-height:1">{sf_m}</p>
+              <p style="margin:0;font-size:28px;font-weight:800;color:#a5b4fc;line-height:1">{sf_m}</p>
               <p style="margin:6px 0 0;font-size:9px;color:#4c1d95">contenedores</p>
             </td></tr>
           </table>
