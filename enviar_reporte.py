@@ -180,30 +180,104 @@ def _fila_cont(r):
     fcita = r.get("fcita","—") or "—"
     return f'<tr><td style="padding:2px 8px;font-size:10px;color:#334155;font-family:monospace">{cont}</td><td style="padding:2px 8px;font-size:10px;color:#64748b">{ob}</td><td style="padding:2px 8px;font-size:10px;color:#64748b">{fcita}</td></tr>'
 
-def _bloque_alertas_mes(sin_llegada, repr_incompl, resp_sin_cita, mes_iso):
-    total = len(sin_llegada) + len(repr_incompl) + len(resp_sin_cita)
+def _analizar_cita_dudosa(r):
+    """Llama a Claude para razonar qué tiene mal la fecha y qué debería corregirse."""
+    try:
+        client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY",""))
+        cont       = r.get("cont","—")
+        ob         = r.get("ob","—")
+        fcita      = r.get("fcita","—")
+        fcita_repr = r.get("fcita_repr","—")
+        fllpuerto  = r.get("fllpuerto","") or ""
+        resp_repr  = r.get("resp_repr","") or "—"
+
+        prompt = f"""Eres analista logístico. Analiza este posible error de digitación y responde en español, sin markdown, en exactamente 2 frases cortas:
+- Frase 1: qué pasó (qué dato está mal y por qué es sospechoso)
+- Frase 2: qué corregir y a qué valor exacto
+
+Cita original: {fcita}
+Nueva cita (reprogramada): {fcita_repr}
+Llegada real: {fllpuerto or "Sin registro"}
+Responsable: {resp_repr}
+
+Máximo 25 palabras en total. Sin títulos, sin guiones, solo las 2 frases seguidas."""
+
+        msg = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=150,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return msg.content[0].text.strip()
+    except Exception:
+        return None
+
+
+def _bloque_alertas_mes(sin_llegada, repr_incompl, resp_sin_cita, cita_dudosa, mes_iso):
+    total = len(sin_llegada) + len(repr_incompl) + len(resp_sin_cita) + len(cita_dudosa)
     color_bg  = "#fff7ed" if total else "#f0fdf4"
     color_brd = "#f97316" if total else "#16a34a"
     color_txt = "#9a3412" if total else "#15803d"
     icono     = "⚠️" if total else "✅"
 
+    def _fila_cont_cita(r):
+        cont  = r.get("cont","—")
+        ob    = r.get("ob","—")
+        fcita = r.get("fcita","—") or "—"
+        fcita_repr = r.get("fcita_repr","—") or "—"
+        return (f'<tr><td style="padding:2px 8px;font-size:10px;font-family:monospace;color:#1e293b">{cont}</td>'
+                f'<td style="padding:2px 8px;font-size:10px;color:#475569">{ob}</td>'
+                f'<td style="padding:2px 8px;font-size:10px;color:#dc2626">{fcita}</td>'
+                f'<td style="padding:2px 8px;font-size:10px;color:#16a34a">{fcita_repr}</td></tr>')
+
     if total == 0:
-        cuerpo = f'<p style="margin:4px 0 0;font-size:11px;color:#15803d">Todo el mes está al día. No hay datos pendientes por completar.</p>'
+        cuerpo = '<p style="margin:4px 0 0;font-size:11px;color:#15803d">Todo el mes está al día. No hay datos pendientes por completar.</p>'
     else:
         cuerpo = ""
         encabezado_tabla = '<table cellpadding="0" cellspacing="0" style="margin-top:4px;width:100%"><tr><th align="left" style="font-size:9px;color:#94a3b8;padding:2px 8px">CONTENEDOR</th><th align="left" style="font-size:9px;color:#94a3b8;padding:2px 8px">OB</th><th align="left" style="font-size:9px;color:#94a3b8;padding:2px 8px">CITA PUERTO</th></tr>'
 
+        if cita_dudosa:
+            encab_cita = ('<table cellpadding="0" cellspacing="0" style="margin-top:4px;width:100%;border-collapse:collapse"><tr>'
+                         '<th align="left" style="font-size:9px;color:#94a3b8;padding:4px 8px;border-bottom:1px solid #e9d5ff">CONTENEDOR</th>'
+                         '<th align="left" style="font-size:9px;color:#94a3b8;padding:4px 8px;border-bottom:1px solid #e9d5ff">OB</th>'
+                         '<th align="left" style="font-size:9px;color:#dc2626;padding:4px 8px;border-bottom:1px solid #e9d5ff">CITA ORIGINAL</th>'
+                         '<th align="left" style="font-size:9px;color:#16a34a;padding:4px 8px;border-bottom:1px solid #e9d5ff">NUEVA CITA</th>'
+                         '<th align="left" style="font-size:9px;color:#7c3aed;padding:4px 8px;border-bottom:1px solid #e9d5ff">ANALISIS IA</th></tr>')
+            filas_cita = ""
+            for r in cita_dudosa:
+                cont      = r.get("cont","—")
+                ob        = r.get("ob","—")
+                fcita     = r.get("fcita","—") or "—"
+                fcita_r   = r.get("fcita_repr","—") or "—"
+                analisis  = _analizar_cita_dudosa(r) or "Sin análisis disponible"
+                filas_cita += (f'<tr>'
+                               f'<td style="padding:5px 8px;font-size:10px;font-family:monospace;color:#1e293b;vertical-align:top">{cont}</td>'
+                               f'<td style="padding:5px 8px;font-size:10px;color:#475569;vertical-align:top">{ob}</td>'
+                               f'<td style="padding:5px 8px;font-size:10px;color:#dc2626;vertical-align:top;white-space:nowrap">{fcita}</td>'
+                               f'<td style="padding:5px 8px;font-size:10px;color:#16a34a;vertical-align:top;white-space:nowrap">{fcita_r}</td>'
+                               f'<td style="padding:5px 8px;font-size:10px;color:#5b21b6;vertical-align:top;font-style:italic">{analisis}</td>'
+                               f'</tr>')
+            cuerpo += (f'<p style="margin:8px 0 2px;font-size:11px;font-weight:700;color:#7c3aed">&#9888; {len(cita_dudosa)} '
+                       f'contenedor{"es" if len(cita_dudosa)!=1 else ""} con fecha de cita original posterior a la nueva cita '
+                       f'— posible error de digitación</p>'
+                       f'<p style="margin:0 0 4px;font-size:10px;color:#6d28d9">&#128073; <b>@comex2@tractocar.com</b>: '
+                       f'por favor corregir la fecha de cita original en la web app para '
+                       f'{"estos contenedores" if len(cita_dudosa)!=1 else "este contenedor"}:</p>'
+                       f'{encab_cita}{filas_cita}</table>')
+
         if sin_llegada:
-            cuerpo += f'''<p style="margin:8px 0 2px;font-size:11px;font-weight:700;color:#b91c1c">&#9888; {len(sin_llegada)} contenedor{"es" if len(sin_llegada)!=1 else ""} sin fecha de llegada a puerto</p>
-            {encabezado_tabla}{"".join(_fila_cont(r) for r in sin_llegada)}</table>'''
+            cuerpo += (f'<p style="margin:8px 0 2px;font-size:11px;font-weight:700;color:#b91c1c">&#9888; {len(sin_llegada)} '
+                       f'contenedor{"es" if len(sin_llegada)!=1 else ""} sin fecha de llegada a puerto</p>'
+                       f'{encabezado_tabla}{"".join(_fila_cont(r) for r in sin_llegada)}</table>')
 
         if repr_incompl:
-            cuerpo += f'''<p style="margin:8px 0 2px;font-size:11px;font-weight:700;color:#b45309">&#9432; {len(repr_incompl)} reprogramaci{"ones" if len(repr_incompl)!=1 else "ón"} con datos incompletos (sin responsable o motivo)</p>
-            {encabezado_tabla}{"".join(_fila_cont(r) for r in repr_incompl)}</table>'''
+            cuerpo += (f'<p style="margin:8px 0 2px;font-size:11px;font-weight:700;color:#b45309">&#9432; {len(repr_incompl)} '
+                       f'reprogramaci{"ones" if len(repr_incompl)!=1 else "ón"} con datos incompletos (sin responsable o motivo)</p>'
+                       f'{encabezado_tabla}{"".join(_fila_cont(r) for r in repr_incompl)}</table>')
 
         if resp_sin_cita:
-            cuerpo += f'''<p style="margin:8px 0 2px;font-size:11px;font-weight:700;color:#b45309">&#9432; {len(resp_sin_cita)} contenedor{"es" if len(resp_sin_cita)!=1 else ""} con responsable asignado pero sin nueva cita registrada</p>
-            {encabezado_tabla}{"".join(_fila_cont(r) for r in resp_sin_cita)}</table>'''
+            cuerpo += (f'<p style="margin:8px 0 2px;font-size:11px;font-weight:700;color:#b45309">&#9432; {len(resp_sin_cita)} '
+                       f'contenedor{"es" if len(resp_sin_cita)!=1 else ""} con responsable asignado pero sin nueva cita registrada</p>'
+                       f'{encabezado_tabla}{"".join(_fila_cont(r) for r in resp_sin_cita)}</table>')
 
     return f'''<tr><td bgcolor="{color_bg}" style="background:{color_bg};padding:14px 32px;border-left:4px solid {color_brd};border-bottom:2px solid {color_brd}">
     <p style="margin:0 0 2px;font-size:10px;font-weight:700;color:{color_txt};text-transform:uppercase;letter-spacing:.08em">{icono} Alertas del mes — Para: comex2@tractocar.com</p>
@@ -319,7 +393,11 @@ def build_html(datos, interno=False):
     inc_resp = defaultdict(list)
     for r in tarde_m_resp: inc_resp[_resp_cat(r)].append(r)
     mot_m = defaultdict(int)
-    for r in tarde_m_resp: mot_m[(r.get("motivo_repr","") or "").strip() or "Sin motivo"] += 1
+    mot_m_resp = defaultdict(lambda: defaultdict(int))  # motivo -> {resp -> cnt}
+    for r in tarde_m_resp:
+        mot = (r.get("motivo_repr","") or "").strip() or "Sin motivo"
+        mot_m[mot] += 1
+        mot_m_resp[mot][_resp_cat(r)] += 1
 
     # ── Tendencia últimos 7 meses (hasta el corte en el mes actual)
     meses_disp = sorted(set(r["mes_iso"] for r in rows if r.get("mes_iso")))[-7:]
@@ -398,27 +476,41 @@ def build_html(datos, interno=False):
     col_ef_mes = _col(pct_ef_mes)
 
     # ── Alertas mensuales (solo interno) ────────────────────────────────────
+    def _fcita_repr_anterior(r):
+        """True si fcita_repr < fcita (nueva cita antes que la original — posible error de digitación)."""
+        fo = _parse_dt(r.get("fcita",""))
+        fr = _parse_dt(r.get("fcita_repr",""))
+        return bool(fo and fr and fr < fo)
+
     mes_sin_llegada   = [r for r in mes_rows
                          if not (r.get("fllpuerto","") or "").strip()
                          and (r.get("fcita","") or "").strip()]
     mes_repr_incompl  = [r for r in mes_rows
-                         if (r.get("resp_repr","") or "").strip()
-                         and not (r.get("motivo_repr","") or "").strip()]
+                         if (r.get("fcita_repr","") or "").strip()
+                         and (
+                             not (r.get("resp_repr","") or "").strip()
+                             or not (r.get("motivo_repr","") or "").strip()
+                         )]
     mes_resp_sin_cita = [r for r in mes_rows
                          if (r.get("resp_repr","") or "").strip()
                          and not (r.get("fcita_repr","") or "").strip()
                          and not _cumple(r)]
+    mes_cita_dudosa   = [r for r in mes_rows if _fcita_repr_anterior(r)]
 
     # Alertas operativas del día
     dia_sin_llegada    = [r for r in dia_rows
                           if not (r.get("fllpuerto","") or "").strip()
                           and (r.get("fcita","") or "").strip()]
     dia_repr_incompl   = [r for r in dia_rows
-                          if (r.get("resp_repr","") or "").strip()
-                          and not (r.get("motivo_repr","") or "").strip()]
+                          if (r.get("fcita_repr","") or "").strip()
+                          and (
+                              not (r.get("resp_repr","") or "").strip()
+                              or not (r.get("motivo_repr","") or "").strip()
+                          )]
     dia_repr_sin_fecha = [r for r in dia_rows
                           if (r.get("resp_repr","") or "").strip()
                           and not (r.get("fcita_repr","") or "").strip()]
+    dia_cita_dudosa    = [r for r in dia_rows if _fcita_repr_anterior(r)]
 
     # ── Gráfico de tendencia ──────────────────────────────────────────────────
     # Fila 1: porcentajes
@@ -461,22 +553,38 @@ def build_html(datos, interno=False):
           <td style="padding:8px 12px;font-size:10px;color:#64748b;border-bottom:1px solid #f1f5f9">{top or "—"}</td>
         </tr>'''
 
-    # Motivos mes
+    # Motivos mes — barras segmentadas por responsable
+    RESP_BAR = {"Tractocar": "#3b82f6", "Ajover": "#ef4444", "Externo": "#10b981"}
+    RESP_BG  = {"Tractocar": "#dbeafe", "Ajover": "#fee2e2", "Externo": "#d1fae5"}
     mot_rows = ""
     max_mot = max(mot_m.values()) if mot_m else 1
+    BAR_W = 200
     for mot, cnt in sorted(mot_m.items(), key=lambda x:-x[1])[:8]:
-        bw = max(4, int(cnt/max_mot*220))
-        ew = 220 - bw
-        empty_td = f'<td width="{ew}" height="8" bgcolor="#fee2e2" style="background:#fee2e2;font-size:0"> </td>' if ew > 0 else ""
+        resp_d = mot_m_resp[mot]
+        # segmentos de barra proporcionales
+        segs = ""
+        for resp in ["Tractocar", "Ajover", "Externo"]:
+            n = resp_d.get(resp, 0)
+            if n:
+                sw = max(3, int(n / max_mot * BAR_W))
+                col = RESP_BAR[resp]
+                segs += f'<td width="{sw}" height="9" bgcolor="{col}" style="background:{col};font-size:0"> </td>'
+        used = sum(max(3, int(resp_d.get(r,0)/max_mot*BAR_W)) for r in ["Tractocar","Ajover","Externo"] if resp_d.get(r,0))
+        if used < BAR_W:
+            segs += f'<td width="{BAR_W-used}" height="9" bgcolor="#f1f5f9" style="background:#f1f5f9;font-size:0"> </td>'
+        # pills de responsable
+        pills = ""
+        for resp in ["Tractocar","Ajover","Externo"]:
+            n = resp_d.get(resp, 0)
+            if n:
+                col = RESP_BAR[resp]; bg = RESP_BG[resp]
+                pills += f'<span style="display:inline-block;margin-left:5px;background:{bg};color:{col};padding:1px 6px;border-radius:10px;font-size:9px;font-weight:700;white-space:nowrap">{resp[0]} {n}</span>'
         mot_rows += f'''<tr>
-          <td style="padding:5px 10px 5px 0;font-size:10px;color:#475569;width:150px;vertical-align:middle">{mot}</td>
+          <td style="padding:5px 10px 5px 0;font-size:10px;color:#475569;width:140px;vertical-align:middle">{mot}</td>
           <td style="padding:5px 0;vertical-align:middle">
-            <table cellpadding="0" cellspacing="0"><tr>
-              <td width="{bw}" height="8" bgcolor="#dc2626" style="background:#dc2626;font-size:0"> </td>
-              {empty_td}
-            </tr></table>
+            <table cellpadding="0" cellspacing="0"><tr>{segs}</tr></table>
           </td>
-          <td style="padding:5px 0 5px 10px;font-size:11px;font-weight:700;color:#dc2626;white-space:nowrap;vertical-align:middle">{cnt}</td>
+          <td style="padding:5px 0 5px 8px;font-size:11px;font-weight:700;color:#334155;white-space:nowrap;vertical-align:middle">{cnt} {pills}</td>
         </tr>'''
 
     # Reprog mes pills
@@ -672,6 +780,11 @@ def build_html(datos, interno=False):
         alertas_items += _alerta_card("&#9432;", f"{len(dia_repr_sin_fecha)} reprogramaci{'ones' if len(dia_repr_sin_fecha)!=1 else 'ón'} sin nueva cita registrada",
                                       len(dia_repr_sin_fecha), "Responsable asignado pero no se registró la nueva fecha de cita.",
                                       "#fef9c3","#b45309","#fde68a", dia_repr_sin_fecha)
+    if dia_cita_dudosa:
+        n_alertas += len(dia_cita_dudosa)
+        alertas_items += _alerta_card("&#9888;", f"{len(dia_cita_dudosa)} contenedor{'es' if len(dia_cita_dudosa)!=1 else ''} con posible error en fecha de cita",
+                                      len(dia_cita_dudosa), "@comex2@tractocar.com: corregir fecha de cita original en web app — la nueva cita es anterior a la original.",
+                                      "#f3e8ff","#7c3aed","#c4b5fd", dia_cita_dudosa)
     if not alertas_items:
         alertas_items = _alerta_card("&#10003;", "Sin alertas operativas", "",
                                      "Todos los registros tienen datos completos.",
@@ -714,7 +827,7 @@ def build_html(datos, interno=False):
   </td></tr>
 
   <!-- ═══ ALERTAS MENSUALES COMEX (solo interno) ══════════════════════════ -->
-  {_bloque_alertas_mes(mes_sin_llegada, mes_repr_incompl, mes_resp_sin_cita, mes_actual) if interno else ""}
+  {_bloque_alertas_mes(mes_sin_llegada, mes_repr_incompl, mes_resp_sin_cita, mes_cita_dudosa, mes_actual) if interno else ""}
 
   <!-- ═══ ANÁLISIS IA ════════════════════════════════════════════════════ -->
   {_bloque_ia(analisis_ia)}
@@ -937,6 +1050,6 @@ if __name__ == "__main__":
         send_report(interno=False)
     else:
         print(f"Uso: python enviar_reporte.py [--interno | --cliente]")
-        print("  --interno  8:30 AM → equipo COMEX (incluye alertas operativas)")
-        print("  --cliente  9:00 AM → cliente Ajover (sin alertas operativas)")
+        print("  --interno  8:30 AM -> equipo COMEX (incluye alertas operativas)")
+        print("  --cliente  9:00 AM -> cliente Ajover (sin alertas operativas)")
         sys.exit(1)
