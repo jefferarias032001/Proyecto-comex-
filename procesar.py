@@ -650,8 +650,14 @@ def leer_ajover_webapp(stats):
                 d = (b - a).total_seconds() / 60
                 return None if d < 0 else round(d, 1)
 
-            d1 = _mins(pg, at);    d1 and dt1s.append(d1)
-            d2 = _mins(at, lpa);   d2 and dt2s.append(d2)
+            def _mins_signed(a, b):
+                if pd.isna(a) or pd.isna(b): return None
+                return round((b - a).total_seconds() / 60, 1)
+
+            # dt1: cita -> llegada vehículo (neg=temprano, pos=tarde)
+            d1 = _mins_signed(cit_r, lpa); d1 is not None and dt1s.append(d1)
+            # dt2: cita -> atención (neg=confirmado antes, pos=confirmado tarde)
+            d2 = _mins_signed(cit_r, at);  d2 is not None and dt2s.append(d2)
             d3 = _mins(lpa, slpa); d3 and dt3s.append(d3)
             d4 = _mins(slpa, llp); d4 and dt4s.append(d4)
 
@@ -690,8 +696,8 @@ def leer_ajover_webapp(stats):
             "patios": patio_ct, "lineas": linea_ct, "rows": va_rows_out,
             "prom": {
                 "total_h":      _avg(dt_totals),
-                "prog_aten":    _avg(dt1s),
-                "aten_llpatio": _avg(dt2s),
+                "cita_llegada": _avg(dt1s),
+                "cita_aten":    _avg(dt2s),
                 "en_patio":     _avg(dt3s),
                 "patio_planta": _avg(dt4s),
             }

@@ -1468,8 +1468,8 @@ const VAC_COLS=[
   {k:'cumpl_aten',   t:'s',l:'Cumpl. atención',  cell:(r,s)=>`<td style="${s}">${r.cumpl_aten?_pillCumpl(r.cumpl_aten):'—'}</td>`},
   {k:'motivo_incumpl',t:'s',l:'Motivo incumpl.', cell:(r,s)=>`<td style="${s};font-size:10px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(r.motivo_incumpl)}">${esc(r.motivo_incumpl)||'—'}</td>`},
   {k:'resp_incumpl', t:'s',l:'Resp. incumpl.',   cell:(r,s)=>`<td style="${s}">${esc(r.resp_incumpl)||'—'}</td>`},
-  {k:'dt1',          t:'n',l:'P->A',             cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt1)}</td>`},
-  {k:'dt2',          t:'n',l:'A->Patio',         cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt2)}</td>`},
+  {k:'dt1',t:'n',l:'Cita->Llegada',cell:(r,s)=>{const v=r.dt1;if(v==null)return`<td style="${s};color:var(--ink-3)">—</td>`;const col=v<=0?'#22c55e':v<=30?'#f59e0b':'#ef4444';const h=Math.floor(Math.abs(v)/60),mn=Math.round(Math.abs(v)%60);const txt=(v<=0?'-':'+')+(h>0?`${h}h ${mn}min`:`${mn}min`);return`<td style="${s};color:${col};font-weight:600">${txt}</td>`;}},
+  {k:'dt2',t:'n',l:'Cita->Aten',cell:(r,s)=>{const v=r.dt2;if(v==null)return`<td style="${s};color:var(--ink-3)">—</td>`;const col=v<=0?'#22c55e':v<=30?'#f59e0b':'#ef4444';const h=Math.floor(Math.abs(v)/60),mn=Math.round(Math.abs(v)%60);const txt=(v<=0?'-':'+')+(h>0?`${h}h ${mn}min`:`${mn}min`);return`<td style="${s};color:${col};font-weight:600">${txt}</td>`;}},
   {k:'dt3',          t:'n',l:'En patio',         cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt3)}</td>`},
   {k:'dt4',          t:'n',l:'Patio->Planta',    cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt4)}</td>`},
 ];
@@ -1915,7 +1915,7 @@ function renderAjoverVacios(){
   const fm=SAJ.vac.mes, fd=SAJ.vac.dia==='ayer'?_ayerKey():null;
   const filtVac=allVacRows.filter(r=>{
     if(fm&&r.mes!==fm)return false;
-    if(fd&&_dayKey(r.faten)!==fd)return false;
+    if(fd&&_dayKey(r.fprog)!==fd)return false;
     return true;
   });
   const fTotV=filtVac.length||1;
@@ -1978,24 +1978,25 @@ function renderAjoverVacios(){
   // tiempos promedio (desde filas filtradas)
   const _avg=arr=>arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:null;
   const _fmin=m=>{if(m==null)return '<span style="color:var(--ink-3)">—</span>';const h=Math.floor(m/60),mn=Math.round(m%60);return h>0?`<b>${h}h ${mn}min</b>`:`<b>${mn}min</b>`;};
+  const _fminSgn=m=>{if(m==null)return '<span style="color:var(--ink-3)">—</span>';const neg=m<0;const abs=Math.abs(m);const h=Math.floor(abs/60),mn=Math.round(abs%60);const txt=(neg?'-':'+')+(h>0?`${h}h ${mn}min`:`${mn}min`);const col=neg?'#22c55e':abs<=30?'#f59e0b':'#ef4444';return`<b style="color:${col}">${txt}</b>`;};
   const prF={
-    prog_aten:    _avg(filtVac.map(r=>r.dt1).filter(v=>v!=null)),
-    aten_llpatio: _avg(filtVac.map(r=>r.dt2).filter(v=>v!=null)),
+    cita_llegada: _avg(filtVac.map(r=>r.dt1).filter(v=>v!=null)),
+    cita_aten:    _avg(filtVac.map(r=>r.dt2).filter(v=>v!=null)),
     en_patio:     _avg(filtVac.map(r=>r.dt3).filter(v=>v!=null)),
     patio_planta: _avg(filtVac.map(r=>r.dt4).filter(v=>v!=null)),
   };
   $('ajVacPromedios').innerHTML=`
     <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;margin:10px 0 4px">
       <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:130px">
-        <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Programación → Atención</div>
-        <div style="font-size:16px">${_fmin(prF.prog_aten)}</div>
-        <div style="font-size:10px;color:var(--ink-3)">tiempo de respuesta</div>
+        <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Cita → Llegada prom.</div>
+        <div style="font-size:16px">${_fminSgn(prF.cita_llegada)}</div>
+        <div style="font-size:10px;color:var(--ink-3)">antes(-) / después(+) cita</div>
       </div>
       <div style="font-size:18px;color:var(--ink-3);padding:0 6px">›</div>
       <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:130px">
-        <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Atención → Llegada patio</div>
-        <div style="font-size:16px">${_fmin(prF.aten_llpatio)}</div>
-        <div style="font-size:10px;color:var(--ink-3)">transporte al patio</div>
+        <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Cita → Atención prom.</div>
+        <div style="font-size:16px">${_fminSgn(prF.cita_aten)}</div>
+        <div style="font-size:10px;color:var(--ink-3)">antes(-) / después(+) cita</div>
       </div>
       <div style="font-size:18px;color:var(--ink-3);padding:0 6px">›</div>
       <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:130px">
