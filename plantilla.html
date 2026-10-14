@@ -423,7 +423,10 @@
         <div id="ajVacDaily" style="margin:0 16px 14px"></div>
         <div id="ajVacKpis" style="margin:0 16px 14px"></div>
         <div id="ajVacAlertas" style="margin:0 16px 12px"></div>
-        <div id="ajVacTrend" style="margin:0 16px 14px"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 16px 14px">
+          <div id="ajVacTrend"></div>
+          <div id="ajVacTrendTot"></div>
+        </div>
         <div style="margin:0 16px 12px" id="ajVacPromedios"></div>
         <div style="display:flex;gap:16px;margin:0 16px 12px;flex-wrap:wrap">
           <div style="flex:1;min-width:200px"><div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px">Por Patio</div><div id="ajVacPatios"></div></div>
@@ -1862,30 +1865,48 @@ function renderAjoverVacios(){
   const allVacRows=va.rows||[];
   const mesesAll=[...new Set(allVacRows.map(r=>r.mes).filter(Boolean))].sort();
   (function(){
-    if(mesesAll.length<2){$('ajVacTrend').innerHTML='';return;}
+    // Agrupa por mes: tot_all=total vacíos, tot=con cita, ok=a tiempo
     const byMes={};
     allVacRows.forEach(r=>{
       if(!r.mes)return;
-      if(!byMes[r.mes])byMes[r.mes]={mes:r.mes,tot:0,ok:0};
-      // Solo contar filas con cita registrada (cumpl tiene comparacion real)
+      if(!byMes[r.mes])byMes[r.mes]={mes:r.mes,tot_all:0,tot:0,ok:0};
+      byMes[r.mes].tot_all++;
       if(!r.cumpl||r.cumpl==='Sin fecha'||r.cumpl==='Pendiente')return;
       byMes[r.mes].tot++;
       if(r.cumpl==='A tiempo')byMes[r.mes].ok++;
     });
-    // Excluir meses sin ninguna fila con cita
-    const mesesConCita=mesesAll.filter(m=>byMes[m]&&byMes[m].tot>0);
-    if(mesesConCita.length<1){$('ajVacTrend').innerHTML='';return;}
-    const tendVac=mesesConCita.map(m=>byMes[m]);
-    const _pctOk=t=>t.tot>0?Math.round(t.ok/t.tot*100):0;
-    $('ajVacTrend').innerHTML=_svgTend(tendVac,{
-      key:'pctOk', pct:true, maxV:100,
-      title:'% Cumplimiento cita en patio — mes a mes',
-      color:(t)=>_pctOk(t)>=80?'#22c55e':_pctOk(t)>=50?'#f59e0b':'#ef4444',
-      label:(t,v)=>_pctOk(t)+'%',
-      sub:(t)=>`${fN(t.ok)}/${fN(t.tot)} con cita`,
-      xLabel:(t)=>t.mes,
-      valFn:(t)=>_pctOk(t)
-    });
+    // Gráfica 1: % cumplimiento — solo meses con >= 5 registros con cita
+    const mesesConCita=mesesAll.filter(m=>byMes[m]&&byMes[m].tot>=5);
+    if(mesesConCita.length>=1){
+      const tendVac=mesesConCita.map(m=>{
+        const d=byMes[m];
+        d.pctOk=d.tot>0?Math.round(d.ok/d.tot*100):0;
+        return d;
+      });
+      $('ajVacTrend').innerHTML=_svgTend(tendVac,{
+        key:'pctOk', pct:true, maxV:100,
+        title:'% Cumplimiento cita en patio — mes a mes',
+        color:(t)=>t.pctOk>=80?'#22c55e':t.pctOk>=50?'#f59e0b':'#ef4444',
+        label:(t,v)=>t.pctOk+'%',
+        sub:(t)=>`${fN(t.ok)}/${fN(t.tot)} con cita`,
+        xLabel:(t)=>t.mes
+      });
+    } else { $('ajVacTrend').innerHTML=''; }
+    // Gráfica 2: cantidad total de vacíos colocados por mes
+    const mesesTot=mesesAll.filter(m=>byMes[m]&&byMes[m].tot_all>0);
+    if(mesesTot.length>=2){
+      const tendTot=mesesTot.map(m=>byMes[m]);
+      const maxTot=Math.max(...tendTot.map(t=>t.tot_all),1);
+      $('ajVacTrendTot').innerHTML=_svgTend(tendTot,{
+        key:'tot_all', pct:false, maxV:maxTot,
+        title:'Vaciós colocados — mes a mes',
+        color:()=>'#38bdf8',
+        label:(t,v)=>fN(v),
+        sub:(t)=>`${fN(t.tot_all)} vaciós`,
+        xLabel:(t)=>t.mes,
+        valFn:(t)=>t.tot_all
+      });
+    } else { $('ajVacTrendTot').innerHTML=''; }
   })();
 
   $('ajVacDaily').innerHTML='';
@@ -1900,8 +1921,10 @@ function renderAjoverVacios(){
   const fTotV=filtVac.length||1;
   const fOkV=filtVac.filter(r=>r.cumpl==='A tiempo').length;
   const fTardV=filtVac.filter(r=>r.cumpl&&r.cumpl.startsWith('Tarde')).length;
+  const fSinV=filtVac.filter(r=>!r.cumpl||r.cumpl==='Sin fecha'||r.cumpl==='Pendiente').length;
   const fOkA=filtVac.filter(r=>r.cumpl_aten==='A tiempo').length;
   const fTardA=filtVac.filter(r=>r.cumpl_aten&&r.cumpl_aten.startsWith('Tarde')).length;
+  const fSinA=filtVac.filter(r=>!r.cumpl_aten||r.cumpl_aten==='Sin fecha').length;
   const pctOk=((fOkV+fTardV)>0?(fOkV/(fOkV+fTardV)*100):0).toFixed(1);
   const pctOkA=((fOkA+fTardA)>0?(fOkA/(fOkA+fTardA)*100):0).toFixed(1);
   const cPct=+pctOk>=80?'#22c55e':+pctOk>=50?'#f59e0b':'#ef4444';
@@ -1910,7 +1933,7 @@ function renderAjoverVacios(){
   const ayerVacBtn=$('ajVacAyer');if(ayerVacBtn){const on=SAJ.vac.dia==='ayer';ayerVacBtn.style.background=on?'#3b82f6':'rgba(255,255,255,.06)';ayerVacBtn.style.color=on?'#fff':'#94a3b8';}
 
   const _cV=(v,cid,col='#f1f5f9')=>`<span id="${cid}" data-target="${v}" style="font-size:36px;font-weight:900;color:${col};line-height:1;letter-spacing:-.03em">0</span>`;
-  const _kpi=(title,sub,pct,cPct,ok,tard,cidOk,cidTard)=>`
+  const _kpi=(title,sub,pct,cPct,ok,tard,sinF,cidOk,cidTard,cidSin)=>`
     <div style="background:linear-gradient(135deg,#0d1f2d,#091520);border:1px solid rgba(56,189,248,.15);border-radius:14px;padding:16px 18px;box-shadow:0 4px 16px rgba(0,0,0,.18);animation:fadeUp .45s ease both">
       <div style="font-size:10px;font-weight:700;color:#7dd3fc;text-transform:uppercase;letter-spacing:.1em;margin-bottom:2px">${title}</div>
       <div style="font-size:10px;color:#475569;margin-bottom:10px">${sub}</div>
@@ -1918,23 +1941,27 @@ function renderAjoverVacios(){
         <div style="font-size:32px;font-weight:900;color:${cPct};line-height:1">${pct}%</div>
         <div style="flex:1;height:7px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${cPct};border-radius:4px;transition:width .6s ease"></div></div>
       </div>
-      <div style="display:flex;gap:10px">
-        <div style="flex:1;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:6px 10px;text-align:center">
-          <div style="font-size:9px;color:#86efac;font-weight:700;text-transform:uppercase;letter-spacing:.08em">A tiempo</div>
+      <div style="display:flex;gap:8px">
+        <div style="flex:1;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:6px 8px;text-align:center">
+          <div style="font-size:9px;color:#86efac;font-weight:700;text-transform:uppercase;letter-spacing:.06em">A tiempo</div>
           ${_cV(ok,cidOk,'#22c55e')}
         </div>
-        <div style="flex:1;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:6px 10px;text-align:center">
-          <div style="font-size:9px;color:#fca5a5;font-weight:700;text-transform:uppercase;letter-spacing:.08em">Tarde</div>
+        <div style="flex:1;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:6px 8px;text-align:center">
+          <div style="font-size:9px;color:#fca5a5;font-weight:700;text-transform:uppercase;letter-spacing:.06em">Tarde</div>
           ${_cV(tard,cidTard,'#ef4444')}
+        </div>
+        <div style="flex:1;background:rgba(148,163,184,.06);border:1px solid rgba(148,163,184,.15);border-radius:8px;padding:6px 8px;text-align:center">
+          <div style="font-size:9px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.06em">Sin fecha</div>
+          ${_cV(sinF,cidSin,'#94a3b8')}
         </div>
       </div>
     </div>`;
   $('ajVacKpis').innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
-    ${_kpi('Vehículo llegó a la cita','¿El camión llegó al patio antes de la hora agendada?',pctOk,cPct,fOkV,fTardV,'cnt_vac_ok','cnt_vac_tard')}
-    ${_kpi('Atención del pedido a tiempo','¿Confirmamos el retiro antes de la hora de cita?',pctOkA,cPctA,fOkA,fTardA,'cnt_vac_ok_a','cnt_vac_tard_a')}
+    ${_kpi('Vehículo llegó a la cita','¿El camión llegó al patio antes de la hora agendada?',pctOk,cPct,fOkV,fTardV,fSinV,'cnt_vac_ok','cnt_vac_tard','cnt_vac_sin')}
+    ${_kpi('Atención del pedido a tiempo','¿Confirmamos el retiro antes de la hora de cita?',pctOkA,cPctA,fOkA,fTardA,fSinA,'cnt_vac_ok_a','cnt_vac_tard_a','cnt_vac_sin_a')}
   </div>`;
   setTimeout(()=>{
-    ['cnt_vac_ok','cnt_vac_tard','cnt_vac_ok_a','cnt_vac_tard_a'].forEach(cid=>{
+    ['cnt_vac_ok','cnt_vac_tard','cnt_vac_sin','cnt_vac_ok_a','cnt_vac_tard_a','cnt_vac_sin_a'].forEach(cid=>{
       const ec=document.getElementById(cid);if(!ec)return;
       const target=+ec.dataset.target;let v=0;const s=performance.now();
       const tick=t=>{const p=Math.min(1,(t-s)/900);v=Math.round(p*target);ec.textContent=fN(v);if(p<1)requestAnimationFrame(tick);};requestAnimationFrame(tick);
