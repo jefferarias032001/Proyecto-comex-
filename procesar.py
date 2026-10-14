@@ -606,28 +606,45 @@ def leer_ajover_webapp(stats):
             try: return pd.Timestamp(str(v).strip()) if v and str(v).strip() not in ("", "nan", "None") else pd.NaT
             except: return pd.NaT
 
-        for r in vacios_rows:
-            pg   = _ts_va(r.get("Fecha y hora recibido de programacion"))
-            at   = _ts_va(r.get("Fecha y hora de atención de pedido del retiro de vacíos"))
-            lpa  = _ts_va(r.get("Fecha y hora de llegada de vehículo a patio"))
-            slpa = _ts_va(r.get("Fecha y hora de salida de vehículo de patio"))
-            llp  = _ts_va(r.get("Fecha y hora de llegada de contenedor vacio a planta"))
+        dt_totals = []
 
-            if pd.isna(pg) or pd.isna(at):
+        for r in vacios_rows:
+            pg    = _ts_va(r.get("Fecha y hora recibido de programacion"))
+            at    = _ts_va(r.get("Fecha y hora de atención de pedido del retiro de vacíos")
+                           or r.get("Fecha y Hora de atención de pedido del retiro de vacíos"))
+            cit_r = _ts_va(r.get("Fecha y hora de cita de retiro en patio"))
+            lpa   = _ts_va(r.get("Fecha y hora de llegada de vehículo a patio"))
+            slpa  = _ts_va(r.get("Fecha y hora de salida de vehículo de patio"))
+            llp   = _ts_va(r.get("Fecha y hora de llegada de contenedor vacio a planta"))
+            patio_cita = str(r.get("Patio con cita o sin cita") or "").strip().upper()
+
+            # Cumplimiento: fllpatio vs fcita_retiro (¿llegó el vehículo a la cita del patio?)
+            if pd.isna(cit_r):
                 cumpl = "Sin fecha"; sin_fecha += 1
-            elif at.date() <= pg.date():
+            elif pd.isna(lpa):
+                cumpl = "Pendiente"; sin_fecha += 1
+            elif lpa <= cit_r:
                 cumpl = "A tiempo"; a_tiempo += 1
             else:
-                horas = round((at - pg).total_seconds() / 3600, 1)
-                cumpl = f"Tarde +{horas}h"; tarde += 1
+                mins_tard = round((lpa - cit_r).total_seconds() / 60)
+                cumpl = f"Tarde +{mins_tard}min"; tarde += 1
+
+            # Tiempo total del ciclo fprog -> fplanta (informativo)
+            if not pd.isna(pg) and not pd.isna(llp):
+                dt_total = round((llp - pg).total_seconds() / 3600, 1)
+                dt_totals.append(dt_total)
+            else:
+                dt_total = None
+
+            cumpl_patio = ""  # campo reservado, cumpl ya refleja la cita del patio
 
             def _mins(a, b):
                 if pd.isna(a) or pd.isna(b): return None
                 d = (b - a).total_seconds() / 60
                 return None if d < 0 else round(d, 1)
 
-            d1 = _mins(pg, at);   d1 and dt1s.append(d1)
-            d2 = _mins(at, lpa);  d2 and dt2s.append(d2)
+            d1 = _mins(pg, at);    d1 and dt1s.append(d1)
+            d2 = _mins(at, lpa);   d2 and dt2s.append(d2)
             d3 = _mins(lpa, slpa); d3 and dt3s.append(d3)
             d4 = _mins(slpa, llp); d4 and dt4s.append(d4)
 
@@ -637,12 +654,14 @@ def leer_ajover_webapp(stats):
             if linea: linea_ct[linea] = linea_ct.get(linea, 0) + 1
 
             va_rows_out.append({
-                "mes":      pg.strftime("%Y-%m")          if not pd.isna(pg)   else "",
-                "fprog":    pg.strftime("%d-%m-%Y %H:%M")  if not pd.isna(pg)   else "",
-                "faten":    at.strftime("%d-%m-%Y %H:%M")  if not pd.isna(at)   else "",
-                "fllpatio": lpa.strftime("%d-%m-%Y %H:%M")  if not pd.isna(lpa)  else "",
-                "fslpatio": slpa.strftime("%d-%m-%Y %H:%M") if not pd.isna(slpa) else "",
-                "fplanta":  llp.strftime("%d-%m-%Y %H:%M")  if not pd.isna(llp)  else "",
+                "mes":          pg.strftime("%Y-%m")           if not pd.isna(pg)    else "",
+                "fprog":        pg.strftime("%d-%m-%Y %H:%M")   if not pd.isna(pg)    else "",
+                "faten":        at.strftime("%d-%m-%Y %H:%M")   if not pd.isna(at)    else "",
+                "fcita_retiro": cit_r.strftime("%d-%m-%Y %H:%M") if not pd.isna(cit_r) else "",
+                "patio_con_cita": patio_cita,
+                "fllpatio":     lpa.strftime("%d-%m-%Y %H:%M")  if not pd.isna(lpa)   else "",
+                "fslpatio":     slpa.strftime("%d-%m-%Y %H:%M") if not pd.isna(slpa)  else "",
+                "fplanta":      llp.strftime("%d-%m-%Y %H:%M")  if not pd.isna(llp)   else "",
                 "patio": patio, "linea": linea,
                 "cont": str(r.get("N° Contenedor") or "").strip(),
                 "man":  str(r.get("Manifiesto vacío") or "").strip(),
@@ -653,6 +672,8 @@ def leer_ajover_webapp(stats):
                 "motivo_incumpl": str(r.get("Motivo incumplimiento de la hora de retiro") or "").strip(),
                 "resp_incumpl":   str(r.get("Responsable incumplimiento de la hora de retiro") or "").strip(),
                 "cumpl": cumpl,
+                "cumpl_patio": cumpl_patio,
+                "dt_total": dt_total,
                 "dt1": d1, "dt2": d2, "dt3": d3, "dt4": d4,
             })
 
@@ -661,6 +682,7 @@ def leer_ajover_webapp(stats):
             "total": len(vacios_rows), "a_tiempo": a_tiempo, "tarde": tarde, "sin_fecha": sin_fecha,
             "patios": patio_ct, "lineas": linea_ct, "rows": va_rows_out,
             "prom": {
+                "total_h":      _avg(dt_totals),
                 "prog_aten":    _avg(dt1s),
                 "aten_llpatio": _avg(dt2s),
                 "en_patio":     _avg(dt3s),
@@ -1180,16 +1202,17 @@ def _suplementar_excel(result, stats):
                 slpa = slpa_s.iloc[i]
                 llp  = llpl_s.iloc[i]
 
-                if pd.isna(pg) or pd.isna(at):  cumpl = "Sin fecha"
-                elif at.date() <= pg.date():     cumpl = "A tiempo"
-                else:
-                    horas = round((at - pg).total_seconds() / 3600, 1)
-                    cumpl = f"Tarde +{horas}h"
+                # Cumplimiento Excel histórico: sin fcita_retiro disponible -> Sin fecha
+                cumpl = "Sin fecha"; dt_total = None
+                if not pd.isna(pg) and not pd.isna(llp):
+                    dt_total = round((llp - pg).total_seconds() / 3600, 1)
 
                 va_data["rows"].append({
                     "mes":      pg.strftime("%Y-%m")          if not pd.isna(pg)   else "",
                     "fprog":    pg.strftime("%d-%m-%Y %H:%M") if not pd.isna(pg)   else "",
                     "faten":    at.strftime("%d-%m-%Y %H:%M") if not pd.isna(at)   else "",
+                    "fcita_retiro": "",
+                    "patio_con_cita": "",
                     "fllpatio": lpa.strftime("%d-%m-%Y %H:%M")  if not pd.isna(lpa)  else "",
                     "fslpatio": slpa.strftime("%d-%m-%Y %H:%M") if not pd.isna(slpa) else "",
                     "fplanta":  llp.strftime("%d-%m-%Y %H:%M")  if not pd.isna(llp)  else "",
@@ -1204,6 +1227,8 @@ def _suplementar_excel(result, stats):
                     "motivo_incumpl": _sc2(va[c_mot_in].iloc[i]  if c_mot_in  else ""),
                     "resp_incumpl":   _sc2(va[c_resp_in].iloc[i] if c_resp_in else ""),
                     "cumpl": cumpl,
+                    "cumpl_patio": "",
+                    "dt_total": dt_total,
                     "dt1": _m2(pg, at), "dt2": _m2(at, lpa),
                     "dt3": _m2(lpa, slpa), "dt4": _m2(slpa, llp),
                 })
