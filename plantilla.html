@@ -2208,6 +2208,7 @@ function renderAjoverLlenos(){
   }
   const fExitosos=filtRows.filter(r=>r.estado==='EXITOSO'||r.estado==='COMPLETADA').length;
   const fFallidos=filtRows.filter(r=>r.estado==='FALLIDO').length;
+  const fEnProceso=filtRows.filter(r=>r.estado==='PROGRAMADO').length;
   const pctCumpl=((fCumpl/fConFecha)*100).toFixed(1);
   const pctEx=fTot?((fExitosos/fTot)*100).toFixed(1):'0';
   const _gL=(pct,color,gid)=>{const R=38,C=+(2*Math.PI*R).toFixed(1);return `<svg width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="${R}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="9"/><circle cx="50" cy="50" r="${R}" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round" stroke-dasharray="0 ${C}" stroke-dashoffset="${+(C*.25).toFixed(1)}" id="${gid}" style="transition:stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1)"/><text x="50" y="46" text-anchor="middle" fill="${color}" font-size="16" font-weight="800" font-family="inherit">${pct}%</text><text x="50" y="58" text-anchor="middle" fill="rgba(255,255,255,.45)" font-size="8" font-family="inherit">cumplimiento</text></svg>`;};
@@ -2223,6 +2224,7 @@ function renderAjoverLlenos(){
         <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
           <span style="font-size:10px;background:rgba(34,197,94,.15);color:#4ade80;padding:2px 8px;border-radius:20px">${fN(fExitosos)} exitosos</span>
           <span style="font-size:10px;background:rgba(239,68,68,.15);color:#f87171;padding:2px 8px;border-radius:20px">${fN(fFallidos)} fallidos</span>
+          ${fEnProceso?`<span style="font-size:10px;background:rgba(251,191,36,.15);color:#fbbf24;padding:2px 8px;border-radius:20px">${fN(fEnProceso)} en proceso</span>`:''}
         </div>
       </div>
       <div style="background:linear-gradient(135deg,#0f2720,#052e16);border:1px solid rgba(34,197,94,.15);border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeUp .45s ease both;animation-delay:.08s;display:flex;flex-direction:column;align-items:center">
@@ -2242,6 +2244,7 @@ function renderAjoverLlenos(){
           <span style="font-size:11px;color:#6ee7b7">${fN(fExitosos)} exitosos</span>
           <span style="font-size:11px;color:#475569;margin:0 4px">/</span>
           <span style="font-size:11px;color:#f87171">${fN(fFallidos)} fallidos</span>
+          ${fEnProceso?`<span style="font-size:11px;color:#475569;margin:0 4px">/</span><span style="font-size:11px;color:#fbbf24">${fN(fEnProceso)} en proceso</span>`:''}
         </div>
       </div>
       <div style="background:linear-gradient(135deg,#1c0a0a,#2d1010);border:1px solid rgba(239,68,68,.15);border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeUp .45s ease both;animation-delay:.24s">
