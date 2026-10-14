@@ -2087,6 +2087,14 @@ function renderAjoverLlenos(){
   const fNoCumpl=filtRows.filter(_isNoCumpl).length;
   const fExterno=filtRows.filter(_isExterno).length;
   const fReprogAjover=filtRows.filter(_isReprogAjover).length;
+  // Cumplimiento Ajover: reprog Ajover cuenta como incumplimiento para Ajover
+  const _isCumplAj=r=>SAJ.ll.modo==='eficiente'
+    ?((r.delta_min!=null&&r.delta_min<=_win)||_isExterno(r))
+    :(r.cumpl_cita==='A tiempo'||_isExterno(r));
+  const fCumplAj=filtRows.filter(_isCumplAj).length;
+  const fNoCumplAj=fConFecha-fCumplAj;
+  const pctCumplAj=((fCumplAj/fConFecha)*100).toFixed(1);
+  const cCumplAj=+pctCumplAj>=90?'#22c55e':+pctCumplAj>=70?'#f59e0b':'#ef4444';
   // ── Sunburst: anillo interior = responsable, anillo exterior = motivos ──
   const noCumplRows=filtRows.filter(_isNoCumpl);
   const allTardeRows=filtRows.filter(r=>SAJ.ll.modo==='eficiente'
@@ -2237,6 +2245,16 @@ function renderAjoverLlenos(){
         </div>
         <div style="font-size:10px;color:#475569;margin-top:2px">ventana de ${SAJ.ll.modo==='eficiente'?'30 min':'1 hora'}</div>
       </div>
+      <div style="background:linear-gradient(135deg,#1a1000,#2d1f00);border:1px solid rgba(251,191,36,.15);border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeUp .45s ease both;animation-delay:.12s;display:flex;flex-direction:column;align-items:center">
+        <div style="font-size:10px;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Cumplimiento Ajover</div>
+        ${_gL(pctCumplAj,cCumplAj,'gl_aj')}
+        <div style="text-align:center;margin-top:-2px">
+          <span style="font-size:11px;color:#86efac">${fN(fCumplAj)} ok</span>
+          <span style="font-size:11px;color:#475569;margin:0 4px">/</span>
+          <span style="font-size:11px;color:#f87171">${fN(fNoCumplAj)} no cumple</span>
+        </div>
+        <div style="font-size:10px;color:#475569;margin-top:2px">incl. reprog Ajover</div>
+      </div>
       <div style="background:linear-gradient(135deg,#0a1628,#0c1a3a);border:1px solid rgba(52,211,153,.15);border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeUp .45s ease both;animation-delay:.16s;display:flex;flex-direction:column;align-items:center">
         <div style="font-size:10px;font-weight:700;color:#34d399;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Exitosos op.</div>
         ${_gL(pctEx,cEx,'gl_exit')}
@@ -2268,7 +2286,7 @@ function renderAjoverLlenos(){
       </div>
     </div>`;
   setTimeout(()=>{
-    [[+pctCumpl,'gl_cita'],[+pctEx,'gl_exit']].forEach(([pct,gid])=>{
+    [[+pctCumpl,'gl_cita'],[+pctCumplAj,'gl_aj'],[+pctEx,'gl_exit']].forEach(([pct,gid])=>{
       const arcL=2*Math.PI*38*(pct/100);const totC=2*Math.PI*38;
       const eg=document.getElementById(gid);if(eg)eg.style.strokeDasharray=`${arcL.toFixed(1)} ${(totC-arcL).toFixed(1)}`;
     });
