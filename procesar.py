@@ -618,21 +618,21 @@ def leer_ajover_webapp(stats):
             llp   = _ts_va(r.get("Fecha y hora de llegada de contenedor vacio a planta"))
             patio_cita = str(r.get("Patio con cita o sin cita") or "").strip().upper()
 
-            # Cumplimiento A: fllpatio vs fcita_retiro (¿llegó el vehículo a tiempo?)
+            # Cumplimiento A: fllpatio vs fcita_retiro (tolerancia 30 min)
             if pd.isna(cit_r):
                 cumpl = "Sin fecha"; sin_fecha += 1
             elif pd.isna(lpa):
                 cumpl = "Pendiente"; sin_fecha += 1
-            elif lpa <= cit_r:
+            elif lpa <= cit_r + pd.Timedelta(minutes=30):
                 cumpl = "A tiempo"; a_tiempo += 1
             else:
                 mins_tard = round((lpa - cit_r).total_seconds() / 60)
                 cumpl = f"Tarde +{mins_tard}min"; tarde += 1
 
-            # Cumplimiento B: faten vs fcita_retiro (¿atendió Tractocar el pedido a tiempo?)
+            # Cumplimiento B: faten vs fcita_retiro (tolerancia 30 min)
             if pd.isna(cit_r) or pd.isna(at):
                 cumpl_aten = "Sin fecha"
-            elif at <= cit_r:
+            elif at <= cit_r + pd.Timedelta(minutes=30):
                 cumpl_aten = "A tiempo"
             else:
                 mins_at = round((at - cit_r).total_seconds() / 60)

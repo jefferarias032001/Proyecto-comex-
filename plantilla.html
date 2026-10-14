@@ -1867,17 +1867,22 @@ function renderAjoverVacios(){
     allVacRows.forEach(r=>{
       if(!r.mes)return;
       if(!byMes[r.mes])byMes[r.mes]={mes:r.mes,tot:0,ok:0};
+      // Solo contar filas con cita registrada (cumpl tiene comparacion real)
+      if(!r.cumpl||r.cumpl==='Sin fecha'||r.cumpl==='Pendiente')return;
       byMes[r.mes].tot++;
       if(r.cumpl==='A tiempo')byMes[r.mes].ok++;
     });
-    const tendVac=mesesAll.map(m=>byMes[m]);
+    // Excluir meses sin ninguna fila con cita
+    const mesesConCita=mesesAll.filter(m=>byMes[m]&&byMes[m].tot>0);
+    if(mesesConCita.length<1){$('ajVacTrend').innerHTML='';return;}
+    const tendVac=mesesConCita.map(m=>byMes[m]);
     const _pctOk=t=>t.tot>0?Math.round(t.ok/t.tot*100):0;
     $('ajVacTrend').innerHTML=_svgTend(tendVac,{
       key:'pctOk', pct:true, maxV:100,
       title:'% Cumplimiento cita en patio — mes a mes',
       color:(t)=>_pctOk(t)>=80?'#22c55e':_pctOk(t)>=50?'#f59e0b':'#ef4444',
       label:(t,v)=>_pctOk(t)+'%',
-      sub:(t)=>`${fN(t.ok)}/${fN(t.tot)} a tiempo`,
+      sub:(t)=>`${fN(t.ok)}/${fN(t.tot)} con cita`,
       xLabel:(t)=>t.mes,
       valFn:(t)=>_pctOk(t)
     });
