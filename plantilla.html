@@ -1835,9 +1835,13 @@ function _renderAlertas(rows,tipo,containerId){
       </div>
     </div>`;
   }).join('');
-  $(containerId).innerHTML=`<div style="background:var(--surface-2);border-radius:12px;padding:14px 16px;border-left:4px solid ${borderCol}">
-    <div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">⚡ Alertas operativas${resumen?' — '+resumen:''}</div>
-    <div style="display:flex;flex-direction:column;gap:10px">${cards}</div>
+  const togId=containerId+'_tog';
+  $(containerId).innerHTML=`<div style="background:var(--surface-2);border-radius:12px;border-left:4px solid ${borderCol}">
+    <div onclick="(function(el){const b=document.getElementById('${togId}');const open=b.style.display!=='none';b.style.display=open?'none':'flex';el.querySelector('.togArrow').textContent=open?'▶':'▼';})(this)" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;user-select:none">
+      <div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em">⚡ Alertas operativas${resumen?' — '+resumen:''}</div>
+      <span class="togArrow" style="font-size:10px;color:var(--ink-3)">▼</span>
+    </div>
+    <div id="${togId}" style="display:flex;flex-direction:column;gap:10px;padding:0 16px 14px">${cards}</div>
   </div>`;
 }
 
@@ -1893,10 +1897,10 @@ function renderAjoverVacios(){
   const fTardV=filtVac.filter(r=>r.cumpl&&r.cumpl.startsWith('Tarde')).length;
   const fOkA=filtVac.filter(r=>r.cumpl_aten==='A tiempo').length;
   const fTardA=filtVac.filter(r=>r.cumpl_aten&&r.cumpl_aten.startsWith('Tarde')).length;
-  const pctOk=Math.round((fOkV+fTardV)>0?fOkV/(fOkV+fTardV)*100:0);
-  const pctOkA=Math.round((fOkA+fTardA)>0?fOkA/(fOkA+fTardA)*100:0);
-  const cPct=pctOk>=80?'#22c55e':pctOk>=50?'#f59e0b':'#ef4444';
-  const cPctA=pctOkA>=80?'#22c55e':pctOkA>=50?'#f59e0b':'#ef4444';
+  const pctOk=((fOkV+fTardV)>0?(fOkV/(fOkV+fTardV)*100):0).toFixed(1);
+  const pctOkA=((fOkA+fTardA)>0?(fOkA/(fOkA+fTardA)*100):0).toFixed(1);
+  const cPct=+pctOk>=80?'#22c55e':+pctOk>=50?'#f59e0b':'#ef4444';
+  const cPctA=+pctOkA>=80?'#22c55e':+pctOkA>=50?'#f59e0b':'#ef4444';
   $('ajVacHint').textContent=`${fN(filtVac.length)} registros${fd?' · ayer ('+fd+')':fm?' · '+fm:''}`;
   const ayerVacBtn=$('ajVacAyer');if(ayerVacBtn){const on=SAJ.vac.dia==='ayer';ayerVacBtn.style.background=on?'#3b82f6':'rgba(255,255,255,.06)';ayerVacBtn.style.color=on?'#fff':'#94a3b8';}
 
