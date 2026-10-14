@@ -389,7 +389,7 @@
   <div id="panel-ajover" class="panel">
     <!-- VACIOS -->
     <div class="card" style="margin-bottom:16px">
-      <div class="card-h"><h3>📦 Vaciós Ajover — cumplimiento de fechas programadas</h3><span class="hint" id="ajVacHint"></span></div>
+      <div class="card-h"><h3>📦 Vaciós Ajover — cumplimiento de cita en patio</h3><span class="hint" id="ajVacHint"></span></div>
       <div class="card-b" style="padding:12px 0 0">
         <!-- FILTROS EXPO VACIOS (arriba) -->
         <div style="background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);border-radius:12px;padding:12px 16px;margin:0 16px 14px;box-shadow:0 4px 20px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.06)">
@@ -1450,21 +1450,25 @@ function init(){
    ============================================================ */
 const SAJ={vac:{q:'',cumpl:'',mes:'',dia:'',pg:1,colOrder:null,sortCol:'',sortDir:1,colW:{}},ll:{q:'',est:'',mes:'',dia:'',pg:1,colOrder:null,sortCol:'',sortDir:1,colW:{},modo:'real'}};
 const VAC_COLS=[
-  {k:'mes',     t:'s',l:'Mes',              cell:(r,s)=>`<td style="${s}">${esc(r.mes)}</td>`},
-  {k:'fprog',   t:'s',l:'Fecha programada', cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fprog)}</td>`},
-  {k:'faten',   t:'s',l:'Fecha atención',   cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.faten)}</td>`},
-  {k:'fllpatio',t:'s',l:'Llegada patio',    cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fllpatio)}</td>`},
-  {k:'fslpatio',t:'s',l:'Salida patio',     cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fslpatio)}</td>`},
-  {k:'fplanta', t:'s',l:'Llegada planta',   cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fplanta)}</td>`},
-  {k:'patio',   t:'s',l:'Patio',            cell:(r,s)=>`<td style="${s}">${esc(r.patio)}</td>`},
-  {k:'linea',   t:'s',l:'Línea',            cell:(r,s)=>`<td style="${s}">${esc(r.linea)}</td>`},
-  {k:'cont',    t:'s',l:'Contenedor',       cell:(r,s)=>`<td style="${s};font-family:monospace">${esc(r.cont)}</td>`},
-  {k:'man',     t:'s',l:'Manifiesto',       cell:(r,s)=>`<td style="${s};font-family:monospace">${esc(r.man)}</td>`},
-  {k:'cumpl',   t:'s',l:'Cumplimiento',     cell:(r,s)=>`<td style="${s}">${_pillCumpl(r.cumpl)}</td>`},
-  {k:'dt1',     t:'n',l:'P→A',              cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt1)}</td>`},
-  {k:'dt2',     t:'n',l:'A→Patio',          cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt2)}</td>`},
-  {k:'dt3',     t:'n',l:'En patio',         cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt3)}</td>`},
-  {k:'dt4',     t:'n',l:'Patio→Planta',     cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt4)}</td>`},
+  {k:'mes',          t:'s',l:'Mes',              cell:(r,s)=>`<td style="${s}">${esc(r.mes)}</td>`},
+  {k:'fprog',        t:'s',l:'F. Programada',    cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fprog)}</td>`},
+  {k:'faten',        t:'s',l:'F. Atención',      cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.faten)||'—'}</td>`},
+  {k:'fcita_retiro', t:'s',l:'Cita en patio',    cell:(r,s)=>`<td style="${s};white-space:nowrap;color:${r.fcita_retiro?'#f59e0b':'var(--ink-3)'};font-weight:${r.fcita_retiro?'600':'400'}">${esc(r.fcita_retiro)||'—'}</td>`},
+  {k:'fllpatio',     t:'s',l:'Llegada patio',    cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fllpatio)||'—'}</td>`},
+  {k:'fslpatio',     t:'s',l:'Salida patio',     cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fslpatio)||'—'}</td>`},
+  {k:'fplanta',      t:'s',l:'Llegada planta',   cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fplanta)||'—'}</td>`},
+  {k:'patio',        t:'s',l:'Patio',            cell:(r,s)=>`<td style="${s}">${esc(r.patio)}</td>`},
+  {k:'linea',        t:'s',l:'Línea',            cell:(r,s)=>`<td style="${s}">${esc(r.linea)}</td>`},
+  {k:'cont',         t:'s',l:'Contenedor',       cell:(r,s)=>`<td style="${s};font-family:monospace">${esc(r.cont)}</td>`},
+  {k:'man',          t:'s',l:'Manifiesto',       cell:(r,s)=>`<td style="${s};font-family:monospace">${esc(r.man)}</td>`},
+  {k:'cumpl',        t:'s',l:'Cumpl. vehículo',  cell:(r,s)=>`<td style="${s}">${_pillCumpl(r.cumpl)}</td>`},
+  {k:'cumpl_aten',   t:'s',l:'Cumpl. atención',  cell:(r,s)=>`<td style="${s}">${r.cumpl_aten?_pillCumpl(r.cumpl_aten):'—'}</td>`},
+  {k:'motivo_incumpl',t:'s',l:'Motivo incumpl.', cell:(r,s)=>`<td style="${s};font-size:10px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(r.motivo_incumpl)}">${esc(r.motivo_incumpl)||'—'}</td>`},
+  {k:'resp_incumpl', t:'s',l:'Resp. incumpl.',   cell:(r,s)=>`<td style="${s}">${esc(r.resp_incumpl)||'—'}</td>`},
+  {k:'dt1',          t:'n',l:'P->A',             cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt1)}</td>`},
+  {k:'dt2',          t:'n',l:'A->Patio',         cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt2)}</td>`},
+  {k:'dt3',          t:'n',l:'En patio',         cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt3)}</td>`},
+  {k:'dt4',          t:'n',l:'Patio->Planta',    cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt4)}</td>`},
 ];
 const LL_COLS=[
   {k:'fecha',       t:'s',l:'Fecha aten.',     cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fecha)}</td>`},
@@ -1852,21 +1856,26 @@ function renderAjoverVacios(){
 
   // ── Tendencia mensual (usa TODAS las filas, sin filtro de mes) ───────────
   const allVacRows=va.rows||[];
-  const _mesOrd=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
-  const mesesAll=[...new Set(allVacRows.map(r=>r.mes).filter(Boolean))].sort((a,b)=>(_mesOrd.indexOf(a.split(' ')[0])+12*(+(a.split(' ')[1]||0)))-(_mesOrd.indexOf(b.split(' ')[0])+12*(+(b.split(' ')[1]||0))));
+  const mesesAll=[...new Set(allVacRows.map(r=>r.mes).filter(Boolean))].sort();
   (function(){
     if(mesesAll.length<2){$('ajVacTrend').innerHTML='';return;}
     const byMes={};
-    allVacRows.forEach(r=>{if(!r.mes)return;if(!byMes[r.mes])byMes[r.mes]={mes:r.mes,tot:0};byMes[r.mes].tot++;});
+    allVacRows.forEach(r=>{
+      if(!r.mes)return;
+      if(!byMes[r.mes])byMes[r.mes]={mes:r.mes,tot:0,ok:0};
+      byMes[r.mes].tot++;
+      if(r.cumpl==='A tiempo')byMes[r.mes].ok++;
+    });
     const tendVac=mesesAll.map(m=>byMes[m]);
-    const maxTot=Math.max(...tendVac.map(t=>t.tot),1);
+    const _pctOk=t=>t.tot>0?Math.round(t.ok/t.tot*100):0;
     $('ajVacTrend').innerHTML=_svgTend(tendVac,{
-      key:'tot', pct:false, maxV:maxTot,
-      title:'Vaciós atendidos — mes a mes',
-      color:()=>'#0C4A5A',
-      label:(t,v)=>fN(v),
-      sub:(t)=>`${fN(t.tot)} vaciós`,
-      xLabel:(t)=>t.mes
+      key:'pctOk', pct:true, maxV:100,
+      title:'% Cumplimiento cita en patio — mes a mes',
+      color:(t)=>_pctOk(t)>=80?'#22c55e':_pctOk(t)>=50?'#f59e0b':'#ef4444',
+      label:(t,v)=>_pctOk(t)+'%',
+      sub:(t)=>`${fN(t.ok)}/${fN(t.tot)} a tiempo`,
+      xLabel:(t)=>t.mes,
+      valFn:(t)=>_pctOk(t)
     });
   })();
 
@@ -1882,29 +1891,45 @@ function renderAjoverVacios(){
   const fTotV=filtVac.length||1;
   const fOkV=filtVac.filter(r=>r.cumpl==='A tiempo').length;
   const fTardV=filtVac.filter(r=>r.cumpl&&r.cumpl.startsWith('Tarde')).length;
-  const fSinFV=filtVac.filter(r=>!r.cumpl||r.cumpl==='Sin fecha').length;
-  const pctOk=fTotV>0?((fOkV/fTotV)*100).toFixed(1):'0';
+  const fOkA=filtVac.filter(r=>r.cumpl_aten==='A tiempo').length;
+  const fTardA=filtVac.filter(r=>r.cumpl_aten&&r.cumpl_aten.startsWith('Tarde')).length;
+  const pctOk=Math.round((fOkV+fTardV)>0?fOkV/(fOkV+fTardV)*100:0);
+  const pctOkA=Math.round((fOkA+fTardA)>0?fOkA/(fOkA+fTardA)*100:0);
+  const cPct=pctOk>=80?'#22c55e':pctOk>=50?'#f59e0b':'#ef4444';
+  const cPctA=pctOkA>=80?'#22c55e':pctOkA>=50?'#f59e0b':'#ef4444';
   $('ajVacHint').textContent=`${fN(filtVac.length)} registros${fd?' · ayer ('+fd+')':fm?' · '+fm:''}`;
   const ayerVacBtn=$('ajVacAyer');if(ayerVacBtn){const on=SAJ.vac.dia==='ayer';ayerVacBtn.style.background=on?'#3b82f6':'rgba(255,255,255,.06)';ayerVacBtn.style.color=on?'#fff':'#94a3b8';}
 
   const _cV=(v,cid,col='#f1f5f9')=>`<span id="${cid}" data-target="${v}" style="font-size:36px;font-weight:900;color:${col};line-height:1;letter-spacing:-.03em">0</span>`;
-  $('ajVacKpis').innerHTML=`
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
-      <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeUp .45s ease both">
-        <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Total vaciós</div>
-        ${_cV(filtVac.length,'cnt_vac_tot')}
-        <div style="font-size:12px;color:#475569;margin-top:4px">registros</div>
+  const _kpi=(title,sub,pct,cPct,ok,tard,cidOk,cidTard)=>`
+    <div style="background:linear-gradient(135deg,#0d1f2d,#091520);border:1px solid rgba(56,189,248,.15);border-radius:14px;padding:16px 18px;box-shadow:0 4px 16px rgba(0,0,0,.18);animation:fadeUp .45s ease both">
+      <div style="font-size:10px;font-weight:700;color:#7dd3fc;text-transform:uppercase;letter-spacing:.1em;margin-bottom:2px">${title}</div>
+      <div style="font-size:10px;color:#475569;margin-bottom:10px">${sub}</div>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
+        <div style="font-size:32px;font-weight:900;color:${cPct};line-height:1">${pct}%</div>
+        <div style="flex:1;height:7px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${cPct};border-radius:4px;transition:width .6s ease"></div></div>
       </div>
-      <div style="background:linear-gradient(135deg,#1c0a0a,#2d1010);border:1px solid rgba(239,68,68,.15);border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(0,0,0,.12);animation:fadeUp .45s ease both;animation-delay:.08s">
-        <div style="font-size:10px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">Sin fecha</div>
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <span style="font-size:12px;color:#94a3b8">Registros incompletos</span>
-          <span style="font-size:26px;font-weight:800;color:#94a3b8">${fN(fSinFV)}</span>
+      <div style="display:flex;gap:10px">
+        <div style="flex:1;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:6px 10px;text-align:center">
+          <div style="font-size:9px;color:#86efac;font-weight:700;text-transform:uppercase;letter-spacing:.08em">A tiempo</div>
+          ${_cV(ok,cidOk,'#22c55e')}
+        </div>
+        <div style="flex:1;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:6px 10px;text-align:center">
+          <div style="font-size:9px;color:#fca5a5;font-weight:700;text-transform:uppercase;letter-spacing:.08em">Tarde</div>
+          ${_cV(tard,cidTard,'#ef4444')}
         </div>
       </div>
     </div>`;
+  $('ajVacKpis').innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+    ${_kpi('Vehículo llegó a la cita','¿El camión llegó al patio antes de la hora agendada?',pctOk,cPct,fOkV,fTardV,'cnt_vac_ok','cnt_vac_tard')}
+    ${_kpi('Atención del pedido a tiempo','¿Confirmamos el retiro antes de la hora de cita?',pctOkA,cPctA,fOkA,fTardA,'cnt_vac_ok_a','cnt_vac_tard_a')}
+  </div>`;
   setTimeout(()=>{
-    const ec=document.getElementById('cnt_vac_tot');if(ec){const target=+ec.dataset.target;let v=0;const s=performance.now();const tick=t=>{const p=Math.min(1,(t-s)/900);v=Math.round(p*target);ec.textContent=fN(v);if(p<1)requestAnimationFrame(tick);};requestAnimationFrame(tick);}
+    ['cnt_vac_ok','cnt_vac_tard','cnt_vac_ok_a','cnt_vac_tard_a'].forEach(cid=>{
+      const ec=document.getElementById(cid);if(!ec)return;
+      const target=+ec.dataset.target;let v=0;const s=performance.now();
+      const tick=t=>{const p=Math.min(1,(t-s)/900);v=Math.round(p*target);ec.textContent=fN(v);if(p<1)requestAnimationFrame(tick);};requestAnimationFrame(tick);
+    });
   },50);
   _renderAlertas(filtVac,'vacios','ajVacAlertas');
 
@@ -2013,6 +2038,7 @@ function renderAjoverLlenos(){
   const _win=SAJ.ll.modo==='eficiente'?30:60;
   const _isExterno=r=>r.cumpl_cita&&r.cumpl_cita.includes('externo');
   const _isReprogAjover=r=>r.cumpl_cita&&r.cumpl_cita.includes('reprog Ajover');
+  const _normResp=s=>{const u=(s||'').trim().toUpperCase();return u==='TRACTOCAR'?'Tractocar':u==='AJOVER'?'Ajover':u==='EXTERNO'?'Externo':s||'Tractocar';};
   const _isNoCumpl=r=>SAJ.ll.modo==='eficiente'
     ?(r.delta_min!=null&&r.delta_min>_win&&!_isExterno(r)&&!_isReprogAjover(r))
     :(r.cumpl_cita&&r.cumpl_cita.startsWith('Tarde')&&!r.cumpl_cita.includes('externo')&&!r.cumpl_cita.includes('reprog'));
@@ -2068,7 +2094,7 @@ function renderAjoverLlenos(){
     // Build groups: {responsable: {motivo: count}}
     const grp={};
     allTardeRows.forEach(r=>{
-      const resp=_isExterno(r)?'Externo':_isReprogAjover(r)?'Ajover':(r.resp_repr||'Tractocar');
+      const resp=_isExterno(r)?'Externo':_isReprogAjover(r)?'Ajover':_normResp(r.resp_repr);
       const mot=_normMot(r.motivo||r.motivo_repr||'');
       if(!grp[resp])grp[resp]={};
       grp[resp][mot]=(grp[resp][mot]||0)+1;
@@ -2329,7 +2355,7 @@ function renderAjoverLlenos(){
       const tdD='padding:5px 10px;border-bottom:1px solid var(--line-2);font-size:11px';
       const _val=r=>({
         fecha:r.fecha||'',cont:r.cont||'',
-        resp:_isExterno(r)?'Externo':_isReprogAjover(r)?'Ajover':(r.resp_repr||'Tractocar'),
+        resp:_isExterno(r)?'Externo':_isReprogAjover(r)?'Ajover':_normResp(r.resp_repr),
         fcita:r.fcita||'',fllpuerto:r.fllpuerto||'',
         delta:r.delta_min!==undefined&&r.delta_min!==null?r.delta_min:(r.cumpl_cita?parseInt(r.cumpl_cita.match(/\d+/)||[0])-0:0),
         terminal:r.terminal||'',placa:r.placa||'',motivo:r.motivo||'',obs:r.obs||''
@@ -2341,7 +2367,7 @@ function renderAjoverLlenos(){
       const tbody=document.getElementById('_ncTbody');
       if(!tbody)return;
       tbody.innerHTML=rows.map(r=>{
-        const resp=_isExterno(r)?'Externo':_isReprogAjover(r)?'Ajover':(r.resp_repr||'Tractocar');
+        const resp=_isExterno(r)?'Externo':_isReprogAjover(r)?'Ajover':_normResp(r.resp_repr);
         const respCol=_isExterno(r)?'#0c5460':_isReprogAjover(r)?'#5b2d8e':'#721c24';
         const respBg=_isExterno(r)?'#d1ecf1':_isReprogAjover(r)?'#e8d5f5':'#f8d7da';
         return `<tr>
