@@ -1450,21 +1450,25 @@ function init(){
    ============================================================ */
 const SAJ={vac:{q:'',cumpl:'',mes:'',dia:'',pg:1,colOrder:null,sortCol:'',sortDir:1,colW:{}},ll:{q:'',est:'',mes:'',dia:'',pg:1,colOrder:null,sortCol:'',sortDir:1,colW:{},modo:'real'}};
 const VAC_COLS=[
-  {k:'mes',     t:'s',l:'Mes',              cell:(r,s)=>`<td style="${s}">${esc(r.mes)}</td>`},
-  {k:'fprog',   t:'s',l:'Fecha programada', cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fprog)}</td>`},
-  {k:'faten',   t:'s',l:'Fecha atención',   cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.faten)}</td>`},
-  {k:'fllpatio',t:'s',l:'Llegada patio',    cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fllpatio)}</td>`},
-  {k:'fslpatio',t:'s',l:'Salida patio',     cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fslpatio)}</td>`},
-  {k:'fplanta', t:'s',l:'Llegada planta',   cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fplanta)}</td>`},
-  {k:'patio',   t:'s',l:'Patio',            cell:(r,s)=>`<td style="${s}">${esc(r.patio)}</td>`},
-  {k:'linea',   t:'s',l:'Línea',            cell:(r,s)=>`<td style="${s}">${esc(r.linea)}</td>`},
-  {k:'cont',    t:'s',l:'Contenedor',       cell:(r,s)=>`<td style="${s};font-family:monospace">${esc(r.cont)}</td>`},
-  {k:'man',     t:'s',l:'Manifiesto',       cell:(r,s)=>`<td style="${s};font-family:monospace">${esc(r.man)}</td>`},
-  {k:'cumpl',   t:'s',l:'Cumplimiento',     cell:(r,s)=>`<td style="${s}">${_pillCumpl(r.cumpl)}</td>`},
-  {k:'dt1',     t:'n',l:'P→A',              cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt1)}</td>`},
-  {k:'dt2',     t:'n',l:'A→Patio',          cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt2)}</td>`},
-  {k:'dt3',     t:'n',l:'En patio',         cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt3)}</td>`},
-  {k:'dt4',     t:'n',l:'Patio→Planta',     cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt4)}</td>`},
+  {k:'mes',          t:'s',l:'Mes',              cell:(r,s)=>`<td style="${s}">${esc(r.mes)}</td>`},
+  {k:'fprog',        t:'s',l:'F. Programada',    cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fprog)}</td>`},
+  {k:'faten',        t:'s',l:'F. Atención',      cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.faten)||'—'}</td>`},
+  {k:'fcita_retiro', t:'s',l:'Cita en patio',    cell:(r,s)=>`<td style="${s};white-space:nowrap;color:${r.fcita_retiro?'#f59e0b':'var(--ink-3)'};font-weight:${r.fcita_retiro?'600':'400'}">${esc(r.fcita_retiro)||'—'}</td>`},
+  {k:'fllpatio',     t:'s',l:'Llegada patio',    cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fllpatio)||'—'}</td>`},
+  {k:'fslpatio',     t:'s',l:'Salida patio',     cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fslpatio)||'—'}</td>`},
+  {k:'fplanta',      t:'s',l:'Llegada planta',   cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fplanta)||'—'}</td>`},
+  {k:'patio',        t:'s',l:'Patio',            cell:(r,s)=>`<td style="${s}">${esc(r.patio)}</td>`},
+  {k:'linea',        t:'s',l:'Línea',            cell:(r,s)=>`<td style="${s}">${esc(r.linea)}</td>`},
+  {k:'cont',         t:'s',l:'Contenedor',       cell:(r,s)=>`<td style="${s};font-family:monospace">${esc(r.cont)}</td>`},
+  {k:'man',          t:'s',l:'Manifiesto',       cell:(r,s)=>`<td style="${s};font-family:monospace">${esc(r.man)}</td>`},
+  {k:'cumpl',        t:'s',l:'Cumpl. vehículo',  cell:(r,s)=>`<td style="${s}">${_pillCumpl(r.cumpl)}</td>`},
+  {k:'cumpl_aten',   t:'s',l:'Cumpl. atención',  cell:(r,s)=>`<td style="${s}">${r.cumpl_aten?_pillCumpl(r.cumpl_aten):'—'}</td>`},
+  {k:'motivo_incumpl',t:'s',l:'Motivo incumpl.', cell:(r,s)=>`<td style="${s};font-size:10px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(r.motivo_incumpl)}">${esc(r.motivo_incumpl)||'—'}</td>`},
+  {k:'resp_incumpl', t:'s',l:'Resp. incumpl.',   cell:(r,s)=>`<td style="${s}">${esc(r.resp_incumpl)||'—'}</td>`},
+  {k:'dt1',          t:'n',l:'P→A',              cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt1)}</td>`},
+  {k:'dt2',          t:'n',l:'A→Patio',          cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt2)}</td>`},
+  {k:'dt3',          t:'n',l:'En patio',         cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt3)}</td>`},
+  {k:'dt4',          t:'n',l:'Patio→Planta',     cell:(r,s,m)=>`<td style="${s};color:var(--ink-2)">${m(r.dt4)}</td>`},
 ];
 const LL_COLS=[
   {k:'fecha',       t:'s',l:'Fecha aten.',     cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fecha)}</td>`},
@@ -1853,7 +1857,7 @@ function renderAjoverVacios(){
   // ── Tendencia mensual (usa TODAS las filas, sin filtro de mes) ───────────
   const allVacRows=va.rows||[];
   const _mesOrd=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
-  const mesesAll=[...new Set(allVacRows.map(r=>r.mes).filter(Boolean))].sort((a,b)=>(_mesOrd.indexOf(a.split(' ')[0])+12*(+(a.split(' ')[1]||0)))-(_mesOrd.indexOf(b.split(' ')[0])+12*(+(b.split(' ')[1]||0))));
+  const mesesAll=[...new Set(allVacRows.map(r=>r.mes).filter(Boolean))].sort();
   (function(){
     if(mesesAll.length<2){$('ajVacTrend').innerHTML='';return;}
     const byMes={};
