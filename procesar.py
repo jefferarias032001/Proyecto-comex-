@@ -618,7 +618,7 @@ def leer_ajover_webapp(stats):
             llp   = _ts_va(r.get("Fecha y hora de llegada de contenedor vacio a planta"))
             patio_cita = str(r.get("Patio con cita o sin cita") or "").strip().upper()
 
-            # Cumplimiento: fllpatio vs fcita_retiro (¿llegó el vehículo a la cita del patio?)
+            # Cumplimiento A: fllpatio vs fcita_retiro (¿llegó el vehículo a tiempo?)
             if pd.isna(cit_r):
                 cumpl = "Sin fecha"; sin_fecha += 1
             elif pd.isna(lpa):
@@ -629,14 +629,21 @@ def leer_ajover_webapp(stats):
                 mins_tard = round((lpa - cit_r).total_seconds() / 60)
                 cumpl = f"Tarde +{mins_tard}min"; tarde += 1
 
+            # Cumplimiento B: faten vs fcita_retiro (¿atendió Tractocar el pedido a tiempo?)
+            if pd.isna(cit_r) or pd.isna(at):
+                cumpl_aten = "Sin fecha"
+            elif at <= cit_r:
+                cumpl_aten = "A tiempo"
+            else:
+                mins_at = round((at - cit_r).total_seconds() / 60)
+                cumpl_aten = f"Tarde +{mins_at}min"
+
             # Tiempo total del ciclo fprog -> fplanta (informativo)
             if not pd.isna(pg) and not pd.isna(llp):
                 dt_total = round((llp - pg).total_seconds() / 3600, 1)
                 dt_totals.append(dt_total)
             else:
                 dt_total = None
-
-            cumpl_patio = ""  # campo reservado, cumpl ya refleja la cita del patio
 
             def _mins(a, b):
                 if pd.isna(a) or pd.isna(b): return None
@@ -672,7 +679,7 @@ def leer_ajover_webapp(stats):
                 "motivo_incumpl": str(r.get("Motivo incumplimiento de la hora de retiro") or "").strip(),
                 "resp_incumpl":   str(r.get("Responsable incumplimiento de la hora de retiro") or "").strip(),
                 "cumpl": cumpl,
-                "cumpl_patio": cumpl_patio,
+                "cumpl_aten": cumpl_aten,
                 "dt_total": dt_total,
                 "dt1": d1, "dt2": d2, "dt3": d3, "dt4": d4,
             })
