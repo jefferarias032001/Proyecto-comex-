@@ -490,15 +490,25 @@ def build_html(datos):
 
 def send_report():
     datos_path = BASE / "datos_bot.json"
+    log_path   = BASE / "sent_log.json"
     if not datos_path.exists():
         print("[ERROR] No existe datos_bot.json"); sys.exit(1)
 
-    # Validar que datos_bot.json fue actualizado hoy
     from datetime import date
-    mod_date = datetime.fromtimestamp(datos_path.stat().st_mtime).date()
-    if mod_date < date.today():
-        print(f"[ERROR] datos_bot.json fue actualizado el {mod_date}, no hoy ({date.today()}). Corre procesar.py primero.")
+    hoy      = date.today().isoformat()
+    mod_date = datetime.fromtimestamp(datos_path.stat().st_mtime).date().isoformat()
+    if mod_date < hoy:
+        print(f"[ERROR] datos_bot.json fue actualizado el {mod_date}, no hoy ({hoy}). Corre procesar.py primero.")
         sys.exit(1)
+
+    # Verificar si ya se envió hoy
+    log = {}
+    if log_path.exists():
+        try: log = json.loads(log_path.read_text(encoding="utf-8"))
+        except: pass
+    if log.get("vacios_interno") == hoy:
+        print(f"[SKIP] Correo interno vacíos ya enviado hoy ({hoy}).")
+        sys.exit(0)
 
     with open(datos_path, encoding="utf-8") as f:
         datos = json.load(f)
@@ -522,6 +532,8 @@ def send_report():
             smtp.login(EMAIL_FROM, EMAIL_PASSWORD)
             smtp.sendmail(EMAIL_FROM, dest_all, msg.as_string())
         print(f"[OK] Vacíos INTERNO — enviado a {', '.join(dest_all)}")
+        log["vacios_interno"] = hoy
+        log_path.write_text(json.dumps(log, indent=2), encoding="utf-8")
     except Exception as e:
         print(f"[ERROR] {e}"); sys.exit(1)
 

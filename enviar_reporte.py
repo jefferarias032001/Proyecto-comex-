@@ -475,6 +475,19 @@ def build_html(datos, interno=False):
 
     col_ef_mes = _col(pct_ef_mes)
 
+    # ── Cumplimiento Ajover (reprog Ajover cuenta como incumplimiento) ────────
+    def _cumple_aj(r):
+        cc = r.get("cumpl_cita","") or ""
+        return cc.startswith("A tiempo") or "externo" in cc
+        # "reprog Ajover" NO se perdona aquí
+
+    cumpl_aj_m   = sum(1 for r in mes_rows if _cumple_aj(r))
+    pct_aj_m     = _pct(cumpl_aj_m, base_m)
+    col_aj_m     = _col(pct_aj_m)
+    cumpl_aj_d   = sum(1 for r in dia_rows if _cumple_aj(r))
+    pct_aj_d     = _pct(cumpl_aj_d, dia_total - dia_sf)
+    col_aj_d     = _col(pct_aj_d)
+
     # ── Alertas mensuales (solo interno) ────────────────────────────────────
     def _fcita_repr_anterior(r):
         """True si fcita_repr < fcita (nueva cita antes que la original — posible error de digitación)."""
@@ -832,12 +845,12 @@ def build_html(datos, interno=False):
   <!-- ═══ ANÁLISIS IA ════════════════════════════════════════════════════ -->
   {_bloque_ia(analisis_ia)}
 
-  <!-- ═══ 5 KPI CARDS ═════════════════════════════════════════════════════ -->
+  <!-- ═══ 6 KPI CARDS ═════════════════════════════════════════════════════ -->
   <tr><td bgcolor="#0d2137" style="background:#0d2137;padding:0 32px 28px">
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <!-- Total -->
-        <td width="20%" style="padding-right:5px;vertical-align:top">
+        <td width="16%" style="padding-right:4px;vertical-align:top">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr><td height="3" bgcolor="#475569" style="background:#475569;border-radius:3px 3px 0 0;font-size:0"> </td></tr>
             <tr><td bgcolor="#0f1e2e" style="background:#0f1e2e;padding:14px 14px 16px;border:1px solid #1e2d3d;border-top:none;border-radius:0 0 10px 10px">
@@ -848,46 +861,57 @@ def build_html(datos, interno=False):
           </table>
         </td>
         <!-- Cumplen cita -->
-        <td width="20%" style="padding:0 3px;vertical-align:top">
+        <td width="17%" style="padding:0 2px;vertical-align:top">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr><td height="3" bgcolor="{col_m['bar']}" style="background:{col_m['bar']};border-radius:3px 3px 0 0;font-size:0"> </td></tr>
-            <tr><td bgcolor="#0a1f12" style="background:#0a1f12;padding:14px 14px 16px;border:1px solid #14532d;border-top:none;border-radius:0 0 10px 10px">
-              <p style="margin:0 0 10px;font-size:8px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:.12em">Cumplimiento</p>
-              <p style="margin:0;font-size:34px;font-weight:900;color:{col_m['bar']};line-height:1;letter-spacing:-.02em">{pct_m}%</p>
-              <p style="margin:10px 0 0;font-size:9px;color:#166534;border-top:1px solid #14532d;padding-top:8px">{cumpl_m} ok &nbsp;·&nbsp; {base_m - cumpl_m} no cumple</p>
+            <tr><td bgcolor="#0a1f12" style="background:#0a1f12;padding:12px 10px 14px;border:1px solid #14532d;border-top:none;border-radius:0 0 10px 10px">
+              <p style="margin:0 0 8px;font-size:8px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:.1em">Cumplimiento</p>
+              <p style="margin:0;font-size:30px;font-weight:900;color:{col_m['bar']};line-height:1;letter-spacing:-.02em">{pct_m}%</p>
+              <p style="margin:8px 0 0;font-size:9px;color:#166534;border-top:1px solid #14532d;padding-top:7px">{cumpl_m} ok &nbsp;·&nbsp; {base_m - cumpl_m} no</p>
+            </td></tr>
+          </table>
+        </td>
+        <!-- Cumplimiento Ajover -->
+        <td width="17%" style="padding:0 2px;vertical-align:top">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr><td height="3" bgcolor="{col_aj_m['bar']}" style="background:{col_aj_m['bar']};border-radius:3px 3px 0 0;font-size:0"> </td></tr>
+            <tr><td bgcolor="#1a0a0a" style="background:#1a0a0a;padding:12px 10px 14px;border:1px solid #7f1d1d;border-top:none;border-radius:0 0 10px 10px">
+              <p style="margin:0 0 8px;font-size:8px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:.1em">Cumpl. Ajover</p>
+              <p style="margin:0;font-size:30px;font-weight:900;color:{col_aj_m['bar']};line-height:1;letter-spacing:-.02em">{pct_aj_m}%</p>
+              <p style="margin:8px 0 0;font-size:9px;color:#991b1b;border-top:1px solid #7f1d1d;padding-top:7px">{cumpl_aj_m} ok &nbsp;·&nbsp; {base_m - cumpl_aj_m} no</p>
             </td></tr>
           </table>
         </td>
         <!-- Eficiencia ±30min -->
-        <td width="20%" style="padding:0 3px;vertical-align:top">
+        <td width="17%" style="padding:0 2px;vertical-align:top">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr><td height="3" bgcolor="{col_ef_mes['bar']}" style="background:{col_ef_mes['bar']};border-radius:3px 3px 0 0;font-size:0"> </td></tr>
-            <tr><td bgcolor="#0c1929" style="background:#0c1929;padding:14px 14px 16px;border:1px solid #1e3a5f;border-top:none;border-radius:0 0 10px 10px">
-              <p style="margin:0 0 10px;font-size:8px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:.12em">Eficiencia &#177;30min</p>
-              <p style="margin:0;font-size:34px;font-weight:900;color:{col_ef_mes['bar']};line-height:1;letter-spacing:-.02em">{pct_ef_mes}%</p>
-              <p style="margin:10px 0 0;font-size:9px;color:#3b82f6;border-top:1px solid #1e3a5f;padding-top:8px">{ef_mes_n} dentro &nbsp;·&nbsp; {len(ef_mes_rows)} con llegada</p>
+            <tr><td bgcolor="#0c1929" style="background:#0c1929;padding:12px 10px 14px;border:1px solid #1e3a5f;border-top:none;border-radius:0 0 10px 10px">
+              <p style="margin:0 0 8px;font-size:8px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:.1em">Efic. &#177;30min</p>
+              <p style="margin:0;font-size:30px;font-weight:900;color:{col_ef_mes['bar']};line-height:1;letter-spacing:-.02em">{pct_ef_mes}%</p>
+              <p style="margin:8px 0 0;font-size:9px;color:#3b82f6;border-top:1px solid #1e3a5f;padding-top:7px">{ef_mes_n}/{len(ef_mes_rows)}</p>
             </td></tr>
           </table>
         </td>
         <!-- Reprog -->
-        <td width="20%" style="padding:0 3px;vertical-align:top">
+        <td width="16%" style="padding:0 2px;vertical-align:top">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr><td height="3" bgcolor="#f59e0b" style="background:#f59e0b;border-radius:3px 3px 0 0;font-size:0"> </td></tr>
-            <tr><td bgcolor="#1a1000" style="background:#1a1000;padding:14px 14px 16px;border:1px solid #78350f;border-top:none;border-radius:0 0 10px 10px">
-              <p style="margin:0 0 10px;font-size:8px;font-weight:700;color:#d97706;text-transform:uppercase;letter-spacing:.12em">Reprogramaciones</p>
-              <p style="margin:0;font-size:34px;font-weight:900;color:#f59e0b;line-height:1;letter-spacing:-.02em">{len(repr_m)}</p>
-              <p style="margin:10px 0 0;font-size:9px;color:#92400e;border-top:1px solid #78350f;padding-top:8px">del mes actual</p>
+            <tr><td bgcolor="#1a1000" style="background:#1a1000;padding:12px 10px 14px;border:1px solid #78350f;border-top:none;border-radius:0 0 10px 10px">
+              <p style="margin:0 0 8px;font-size:8px;font-weight:700;color:#d97706;text-transform:uppercase;letter-spacing:.1em">Reprog.</p>
+              <p style="margin:0;font-size:30px;font-weight:900;color:#f59e0b;line-height:1;letter-spacing:-.02em">{len(repr_m)}</p>
+              <p style="margin:8px 0 0;font-size:9px;color:#92400e;border-top:1px solid #78350f;padding-top:7px">del mes</p>
             </td></tr>
           </table>
         </td>
         <!-- Sin fecha -->
-        <td width="20%" style="padding-left:5px;vertical-align:top">
+        <td width="17%" style="padding-left:4px;vertical-align:top">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr><td height="3" bgcolor="#818cf8" style="background:#818cf8;border-radius:3px 3px 0 0;font-size:0"> </td></tr>
-            <tr><td bgcolor="#0f0d1f" style="background:#0f0d1f;padding:14px 14px 16px;border:1px solid #312e6e;border-top:none;border-radius:0 0 10px 10px">
-              <p style="margin:0 0 10px;font-size:8px;font-weight:700;color:#818cf8;text-transform:uppercase;letter-spacing:.12em">Sin Fecha Cita</p>
-              <p style="margin:0;font-size:34px;font-weight:900;color:#a5b4fc;line-height:1;letter-spacing:-.02em">{sf_m}</p>
-              <p style="margin:10px 0 0;font-size:9px;color:#4c1d95;border-top:1px solid #312e6e;padding-top:8px">contenedores</p>
+            <tr><td bgcolor="#0f0d1f" style="background:#0f0d1f;padding:12px 10px 14px;border:1px solid #312e6e;border-top:none;border-radius:0 0 10px 10px">
+              <p style="margin:0 0 8px;font-size:8px;font-weight:700;color:#818cf8;text-transform:uppercase;letter-spacing:.1em">Sin Fecha</p>
+              <p style="margin:0;font-size:30px;font-weight:900;color:#a5b4fc;line-height:1;letter-spacing:-.02em">{sf_m}</p>
+              <p style="margin:8px 0 0;font-size:9px;color:#4c1d95;border-top:1px solid #312e6e;padding-top:7px">contenedores</p>
             </td></tr>
           </table>
         </td>
@@ -949,9 +973,13 @@ def build_html(datos, interno=False):
               <p style="margin:0;font-size:26px;font-weight:800;color:#dc2626;line-height:1">{len(dia_tarde)}</p>
               <p style="margin:3px 0 0;font-size:8px;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em">Tarde</p>
             </td>
-            <td style="padding:0 0 0 16px;text-align:center">
+            <td style="padding:0 16px;text-align:center;border-right:1px solid #e2e8f0">
               <p style="margin:0;font-size:26px;font-weight:800;color:#d97706;line-height:1">{len(dia_repr)}</p>
               <p style="margin:3px 0 0;font-size:8px;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em">C. perdidas</p>
+            </td>
+            <td style="padding:0 0 0 16px;text-align:center">
+              <p style="margin:0;font-size:26px;font-weight:800;color:{col_aj_d['text']};line-height:1">{pct_aj_d}%</p>
+              <p style="margin:3px 0 0;font-size:8px;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em">Cumpl. Ajover</p>
             </td>
           </tr></table>
         </td>
@@ -1005,8 +1033,23 @@ EMAIL_CC_INTERNO = [e.strip() for e in os.environ.get("EMAIL_CC_INTERNO","").spl
 
 def send_report(interno=False):
     datos_path = BASE / "datos_bot.json"
+    log_path   = BASE / "sent_log.json"
     if not datos_path.exists():
         print("[ERROR] No existe datos_bot.json"); sys.exit(1)
+
+    hoy = datetime.now().date().isoformat()
+    log_key = "llenos_interno" if interno else "llenos_cliente"
+
+    # Verificar si ya se envió hoy
+    log = {}
+    if log_path.exists():
+        try: log = json.loads(log_path.read_text(encoding="utf-8"))
+        except: pass
+    if log.get(log_key) == hoy:
+        modo = "interno" if interno else "cliente"
+        print(f"[SKIP] Correo llenos {modo} ya enviado hoy ({hoy}).")
+        return
+
     with open(datos_path, encoding="utf-8") as f:
         datos = json.load(f)
     if not EMAIL_PASSWORD:
@@ -1038,6 +1081,8 @@ def send_report(interno=False):
             smtp.sendmail(EMAIL_FROM, dest_all, msg.as_string())
         modo = "INTERNO (con alertas)" if interno else "CLIENTE (sin alertas)"
         print(f"[OK] {modo} — enviado a {', '.join(dest_all)}")
+        log[log_key] = hoy
+        log_path.write_text(json.dumps(log, indent=2), encoding="utf-8")
     except Exception as e:
         print(f"[ERROR] {e}"); sys.exit(1)
 
