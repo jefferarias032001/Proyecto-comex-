@@ -2415,14 +2415,37 @@ function renderAjoverLlenos(){
 
   // ── motivos de incumplimiento — todos los tarde (incluyendo externo y reprog) ──
   const ncRows=allTardeRows;
+  window._ncMotRows=ncRows;
+  window._ncMotRender=function(resp){
+    const rows=resp==='Todos'?window._ncMotRows:window._ncMotRows.filter(r=>{
+      if(resp==='Tractocar')return !_isExterno(r)&&!_isReprogAjover(r)&&_normResp(r.resp_repr)==='Tractocar';
+      if(resp==='Ajover')return _isReprogAjover(r);
+      if(resp==='Externo')return _isExterno(r);
+      return true;
+    });
+    const filt={};
+    rows.forEach(r=>{const m=_normMot(_pickMot(r));filt[m]=(filt[m]||0)+1;});
+    _ajBarras(filt,'ajLlNoCumplBars');
+    document.querySelectorAll('.ncm-btn').forEach(b=>{
+      const active=b.dataset.resp===resp;
+      b.style.background=active?'var(--marine)':'var(--surface)';
+      b.style.color=active?'white':'var(--ink-2)';
+      b.style.borderColor=active?'var(--marine)':'var(--line)';
+    });
+  };
   const ncmFilt={};
   ncRows.forEach(r=>{const m=_normMot(_pickMot(r));ncmFilt[m]=(ncmFilt[m]||0)+1;});
   if(ncRows.length){
+    const btnStyle='padding:3px 10px;border-radius:20px;border:1px solid var(--line);font-size:10px;font-weight:600;cursor:pointer;transition:all .15s;background:var(--surface);color:var(--ink-2)';
+    const btns=['Todos','Tractocar','Ajover','Externo'].map(r=>`<button class="ncm-btn" data-resp="${r}" onclick="window._ncMotRender('${r}')" style="${btnStyle}">${r}</button>`).join('');
     $('ajLlNoCumpl').innerHTML=`<div style="padding:12px;background:var(--surface-2);border-radius:8px;border-left:3px solid var(--neg)">
-      <div style="font-size:11px;font-weight:700;color:var(--neg);text-transform:uppercase;margin-bottom:4px">⚠ Motivos de incumplimiento — ${fN(ncRows.length)} citas no cumplidas</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+        <div style="font-size:11px;font-weight:700;color:var(--neg);text-transform:uppercase;flex:1">⚠ Motivos de incumplimiento — ${fN(ncRows.length)} citas no cumplidas</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap">${btns}</div>
+      </div>
       <div style="font-size:10px;color:var(--ink-3);margin-bottom:8px">${fN(noCumplRows.length)} imputable${noCumplRows.length!==1?'s':''} a Tractocar · ${fN(ncRows.length-noCumplRows.length)} no imputable${ncRows.length-noCumplRows.length!==1?'s':''} (Externo / Ajover)</div>
       <div id="ajLlNoCumplBars"></div></div>`;
-    _ajBarras(ncmFilt,'ajLlNoCumplBars');
+    window._ncMotRender('Todos');
   } else { $('ajLlNoCumpl').innerHTML=''; }
 
   // ── detalle de todos los que no cumplieron cita ──────────────────────────
