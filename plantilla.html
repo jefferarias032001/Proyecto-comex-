@@ -2143,13 +2143,18 @@ function renderAjoverLlenos(){
       Ajover:   ['#dc2626','#ef4444','#f87171','#fca5a5','#fecaca'],
       Externo:  ['#059669','#10b981','#34d399','#6ee7b7','#a7f3d0']
     };
-    // Build groups: {responsable: {motivo: count}}
+    // Build groups: {responsable: {motivo: count}} + raw texts for detail
     const grp={};
+    const grpRaw={};
     allTardeRows.forEach(r=>{
       const resp=_isExterno(r)?'Externo':_isReprogAjover(r)?'Ajover':_normResp(r.resp_repr);
       const mot=_normMot(_pickMot(r));
       if(!grp[resp])grp[resp]={};
       grp[resp][mot]=(grp[resp][mot]||0)+1;
+      if(!grpRaw[resp])grpRaw[resp]={};
+      if(!grpRaw[resp][mot])grpRaw[resp][mot]=new Set();
+      const raw=_pickMot(r);
+      if(raw)grpRaw[resp][mot].add(raw);
     });
     const respList=['Tractocar','Ajover','Externo'].filter(r=>grp[r]);
     // SVG config
@@ -2191,11 +2196,21 @@ function renderAjoverLlenos(){
           <span style="font-size:13px;font-weight:700;color:var(--ink)">${resp}</span>
           <span style="font-size:11px;color:var(--ink-3);margin-left:auto;white-space:nowrap">${rCnt} caso${rCnt!==1?'s':''} — ${pct}%</span>
         </div>
-        ${mots.map(([mot,cnt],mi)=>`<div style="display:flex;align-items:center;gap:5px;padding-left:21px;margin-bottom:3px">
-          <div style="width:9px;height:9px;border-radius:2px;background:${fam[Math.min(mi+1,fam.length-1)]};flex-shrink:0"></div>
-          <span style="font-size:11px;color:var(--ink-2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(mot)}">${esc(mot)}</span>
-          <span style="font-size:10px;color:var(--ink-3);white-space:nowrap;margin-left:8px">${cnt} · ${((cnt/nTotal)*100).toFixed(0)}%</span>
-        </div>`).join('')}
+        ${mots.map(([mot,cnt],mi)=>{
+          const rawArr=[...(grpRaw[resp]?.[mot]||new Set())];
+          const rawTxt=rawArr.join(' / ');
+          const showRaw=rawTxt&&rawTxt.toLowerCase()!==mot.toLowerCase();
+          return `<div style="display:flex;align-items:flex-start;gap:5px;padding-left:21px;margin-bottom:4px">
+            <div style="width:9px;height:9px;border-radius:2px;background:${fam[Math.min(mi+1,fam.length-1)]};flex-shrink:0;margin-top:2px"></div>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:0">
+                <span style="font-size:11px;color:var(--ink-2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(rawTxt||mot)}">${esc(mot)}</span>
+                <span style="font-size:10px;color:var(--ink-3);white-space:nowrap;margin-left:8px">${cnt} · ${((cnt/nTotal)*100).toFixed(0)}%</span>
+              </div>
+              ${showRaw?`<div style="font-size:9px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px" title="${esc(rawTxt)}">${esc(rawTxt.length>70?rawTxt.slice(0,70)+'…':rawTxt)}</div>`:''}
+            </div>
+          </div>`;
+        }).join('')}
       </div>`;
     }).join('');
     $('ajLlPies').innerHTML=`
