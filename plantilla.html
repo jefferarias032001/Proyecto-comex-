@@ -2134,19 +2134,20 @@ function renderAjoverLlenos(){
     if(mr&&ml!=='sin motivo'&&ml!=='otro')return mr;
     return r.motivo||mr;
   };
-  if(!nTotal){
-    $('ajLlPies').innerHTML='<div style="font-size:11px;color:var(--pos);padding:6px 0">✓ Sin citas no cumplidas en el período seleccionado</div>';
-  } else {
-    // Color families: Tractocar=blue, Ajover=red, Externo=green
-    const RFAM={
-      Tractocar:['#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe'],
-      Ajover:   ['#dc2626','#ef4444','#f87171','#fca5a5','#fecaca'],
-      Externo:  ['#059669','#10b981','#34d399','#6ee7b7','#a7f3d0']
-    };
-    // Build groups: {responsable: {motivo: count}} + raw texts for detail
-    const grp={};
-    const grpRaw={};
-    allTardeRows.forEach(r=>{
+  const _ncRFAM={
+    Tractocar:['#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe'],
+    Ajover:   ['#dc2626','#ef4444','#f87171','#fca5a5','#fecaca'],
+    Externo:  ['#059669','#10b981','#34d399','#6ee7b7','#a7f3d0']
+  };
+  window._ncPiesRender=function(rows){
+    const nT=rows.length;
+    const nImp=rows.filter(r=>!_isExterno(r)&&!_isReprogAjover(r)).length;
+    if(!nT){
+      $('ajLlPies').innerHTML='<div style="font-size:11px;color:var(--pos);padding:6px 0">✓ Sin citas no cumplidas en el período seleccionado</div>';
+      return;
+    }
+    const grp={},grpRaw={};
+    rows.forEach(r=>{
       const resp=_isExterno(r)?'Externo':_isReprogAjover(r)?'Ajover':_normResp(r.resp_repr);
       const mot=_normMot(_pickMot(r));
       if(!grp[resp])grp[resp]={};
@@ -2157,9 +2158,7 @@ function renderAjoverLlenos(){
       if(raw)grpRaw[resp][mot].add(raw);
     });
     const respList=['Tractocar','Ajover','Externo'].filter(r=>grp[r]);
-    // SVG config
     const W=300,H=300,cx=150,cy=150,R1i=52,R1o=86,R2i=92,R2o=136;
-    // Helper: donut arc path
     const _darc=(ri,ro,a0,a1,fill,sw=2)=>{
       const full=Math.abs(a1-a0)>=2*Math.PI*0.9999;
       if(full)return `<circle cx="${cx}" cy="${cy}" r="${ro}" fill="${fill}" stroke="var(--surface-2)" stroke-width="${sw}"/><circle cx="${cx}" cy="${cy}" r="${ri}" fill="var(--surface-2)"/>`;
@@ -2167,29 +2166,24 @@ function renderAjoverLlenos(){
       const p=(a,r)=>`${(cx+r*Math.cos(a)).toFixed(2)},${(cy+r*Math.sin(a)).toFixed(2)}`;
       return `<path d="M${p(a0,ro)} A${ro},${ro} 0 ${lf},1 ${p(a1,ro)} L${p(a1,ri)} A${ri},${ri} 0 ${lf},0 ${p(a0,ri)} Z" fill="${fill}" stroke="var(--surface-2)" stroke-width="${sw}"/>`;
     };
-    // Helper: text at midpoint of arc
     const _atxt=(a0,a1,r,txt,fs,fw)=>{const a=(a0+a1)/2,x=(cx+r*Math.cos(a)).toFixed(1),y=(cy+r*Math.sin(a)).toFixed(1);return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="${fs}" font-weight="${fw}" font-family="inherit">${txt}</text>`;};
-    let innerSvg='',outerSvg='',labelSvg='';
-    let ga=-Math.PI/2;
+    let innerSvg='',outerSvg='',labelSvg='',ga=-Math.PI/2;
     const legend=respList.map(resp=>{
       const mots=Object.entries(grp[resp]).sort((a,b)=>b[1]-a[1]);
       const rCnt=mots.reduce((s,[,v])=>s+v,0);
-      const rAngle=(rCnt/nTotal)*2*Math.PI;
-      const fam=RFAM[resp]||['#64748b'];
-      // Inner arc
+      const rAngle=(rCnt/nT)*2*Math.PI;
+      const fam=_ncRFAM[resp]||['#64748b'];
       innerSvg+=_darc(R1i,R1o,ga,ga+rAngle,fam[0]);
       if(rAngle>0.35)labelSvg+=_atxt(ga,ga+rAngle,(R1i+R1o)/2,rCnt,11,800);
-      // Outer arcs (motivos)
       let ma=ga;
       mots.forEach(([mot,cnt],mi)=>{
-        const sw=(cnt/nTotal)*2*Math.PI;
+        const sw=(cnt/nT)*2*Math.PI;
         outerSvg+=_darc(R2i,R2o,ma,ma+sw,fam[Math.min(mi+1,fam.length-1)]);
         if(sw>0.18)labelSvg+=_atxt(ma,ma+sw,(R2i+R2o)/2,cnt,9,700);
         ma+=sw;
       });
       ga+=rAngle;
-      // Legend block
-      const pct=((rCnt/nTotal)*100).toFixed(0);
+      const pct=((rCnt/nT)*100).toFixed(0);
       return `<div style="margin-bottom:12px">
         <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
           <div style="width:14px;height:14px;border-radius:50%;background:${fam[0]};flex-shrink:0"></div>
@@ -2205,7 +2199,7 @@ function renderAjoverLlenos(){
             <div style="flex:1;min-width:0">
               <div style="display:flex;align-items:center;gap:0">
                 <span style="font-size:11px;color:var(--ink-2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(rawTxt||mot)}">${esc(mot)}</span>
-                <span style="font-size:10px;color:var(--ink-3);white-space:nowrap;margin-left:8px">${cnt} · ${((cnt/nTotal)*100).toFixed(0)}%</span>
+                <span style="font-size:10px;color:var(--ink-3);white-space:nowrap;margin-left:8px">${cnt} · ${((cnt/nT)*100).toFixed(0)}%</span>
               </div>
               ${showRaw?`<div style="font-size:9px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px" title="${esc(rawTxt)}">${esc(rawTxt.length>70?rawTxt.slice(0,70)+'…':rawTxt)}</div>`:''}
             </div>
@@ -2215,8 +2209,8 @@ function renderAjoverLlenos(){
     }).join('');
     $('ajLlPies').innerHTML=`
       <div style="font-size:11px;font-weight:700;color:var(--neg);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px">
-        Análisis citas no cumplidas · ${fN(nTotal)} total
-        <span style="font-weight:400;font-size:10px"> — ${fN(nImputables)} imputable${nImputables!==1?'s':''} a Tractocar · ${fN(nTotal-nImputables)} no imputable${nTotal-nImputables!==1?'s':''}</span>
+        Análisis citas no cumplidas · ${fN(nT)} total
+        <span style="font-weight:400;font-size:10px"> — ${fN(nImp)} imputable${nImp!==1?'s':''} a Tractocar · ${fN(nT-nImp)} no imputable${nT-nImp!==1?'s':''}</span>
         <span style="font-size:10px;color:var(--ink-3);font-weight:400;margin-left:4px">· modo ${SAJ.ll.modo==='eficiente'?'Eficiente':'Real'}</span>
       </div>
       <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;max-width:680px;margin:0 auto">
@@ -2224,18 +2218,19 @@ function renderAjoverLlenos(){
           <svg viewBox="0 0 ${W} ${H}" style="width:${W}px;height:${H}px;display:block">
             ${innerSvg}${outerSvg}${labelSvg}
             <circle cx="${cx}" cy="${cy}" r="${R1i-3}" fill="var(--surface-2)"/>
-            <text x="${cx}" y="${cy-9}" text-anchor="middle" dominant-baseline="middle" fill="var(--ink)" font-size="26" font-weight="900" font-family="inherit">${nTotal}</text>
+            <text x="${cx}" y="${cy-9}" text-anchor="middle" dominant-baseline="middle" fill="var(--ink)" font-size="26" font-weight="900" font-family="inherit">${nT}</text>
             <text x="${cx}" y="${cy+12}" text-anchor="middle" dominant-baseline="middle" fill="var(--ink-3)" font-size="10" font-family="inherit">citas</text>
             <text x="${cx}" y="${cy+24}" text-anchor="middle" dominant-baseline="middle" fill="var(--ink-3)" font-size="10" font-family="inherit">no cumplidas</text>
           </svg>
           <div style="display:flex;justify-content:center;gap:10px;margin-top:8px;flex-wrap:wrap">
-            ${respList.map(r=>`<div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--ink-3)"><div style="width:10px;height:10px;border-radius:50%;background:${RFAM[r]?.[0]||'#64748b'}"></div>${r}</div>`).join('')}
+            ${respList.map(r=>`<div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--ink-3)"><div style="width:10px;height:10px;border-radius:50%;background:${_ncRFAM[r]?.[0]||'#64748b'}"></div>${r}</div>`).join('')}
             <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--ink-3);margin-left:4px">▪ anillo ext. = motivo</div>
           </div>
         </div>
         <div style="flex:1;min-width:200px;padding-top:6px">${legend}</div>
       </div>`;
-  }
+  };
+  window._ncPiesRender(allTardeRows);
   const fExitosos=filtRows.filter(r=>r.estado==='EXITOSO'||r.estado==='COMPLETADA').length;
   const fFallidos=filtRows.filter(r=>r.estado==='FALLIDO').length;
   const fEnProceso=filtRows.filter(r=>r.estado==='PROGRAMADO').length;
@@ -2423,9 +2418,19 @@ function renderAjoverLlenos(){
       if(resp==='Externo')return _isExterno(r);
       return true;
     });
+    // barras
     const filt={};
     rows.forEach(r=>{const m=_normMot(_pickMot(r));filt[m]=(filt[m]||0)+1;});
     _ajBarras(filt,'ajLlNoCumplBars');
+    // tabla detalle
+    window._ncRows=rows;
+    if(window._ncRender)window._ncRender();
+    // resumen detalle
+    const detSum=document.getElementById('_ncDetSum');
+    if(detSum){const imp=rows.filter(r=>!_isExterno(r)&&!_isReprogAjover(r)).length;detSum.textContent=`Detalle: ${fN(rows.length)} citas no cumplidas — ${fN(imp)} imputables a Tractocar · ${fN(rows.length-imp)} no imputables`;}
+    // sunburst
+    if(window._ncPiesRender)window._ncPiesRender(rows);
+    // botones activos
     document.querySelectorAll('.ncm-btn').forEach(b=>{
       const active=b.dataset.resp===resp;
       b.style.background=active?'var(--marine)':'var(--surface)';
@@ -2433,17 +2438,13 @@ function renderAjoverLlenos(){
       b.style.borderColor=active?'var(--marine)':'var(--line)';
     });
   };
-  const ncmFilt={};
-  ncRows.forEach(r=>{const m=_normMot(_pickMot(r));ncmFilt[m]=(ncmFilt[m]||0)+1;});
   if(ncRows.length){
     const btnStyle='padding:3px 10px;border-radius:20px;border:1px solid var(--line);font-size:10px;font-weight:600;cursor:pointer;transition:all .15s;background:var(--surface);color:var(--ink-2)';
     const btns=['Todos','Tractocar','Ajover','Externo'].map(r=>`<button class="ncm-btn" data-resp="${r}" onclick="window._ncMotRender('${r}')" style="${btnStyle}">${r}</button>`).join('');
     $('ajLlNoCumpl').innerHTML=`<div style="padding:12px;background:var(--surface-2);border-radius:8px;border-left:3px solid var(--neg)">
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
-        <div style="font-size:11px;font-weight:700;color:var(--neg);text-transform:uppercase;flex:1">⚠ Motivos de incumplimiento — ${fN(ncRows.length)} citas no cumplidas</div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap">${btns}</div>
-      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--neg);text-transform:uppercase;margin-bottom:4px">⚠ Motivos de incumplimiento — ${fN(ncRows.length)} citas no cumplidas</div>
       <div style="font-size:10px;color:var(--ink-3);margin-bottom:8px">${fN(noCumplRows.length)} imputable${noCumplRows.length!==1?'s':''} a Tractocar · ${fN(ncRows.length-noCumplRows.length)} no imputable${ncRows.length-noCumplRows.length!==1?'s':''} (Externo / Ajover)</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px">${btns}</div>
       <div id="ajLlNoCumplBars"></div></div>`;
     window._ncMotRender('Todos');
   } else { $('ajLlNoCumpl').innerHTML=''; }
@@ -2502,7 +2503,7 @@ function renderAjoverLlenos(){
     $('ajLlNoCumplDetalle').innerHTML=`
       <details open style="background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden">
         <summary style="padding:10px 16px;cursor:pointer;font-size:12px;font-weight:700;color:var(--neg);list-style:none;display:flex;align-items:center;gap:8px;background:var(--surface-2)">
-          <span>▾</span> Detalle: ${fN(ncRows.length)} citas no cumplidas — ${fN(noCumplRows.length)} imputables a Tractocar · ${fN(ncRows.length-noCumplRows.length)} no imputables
+          <span>▾</span> <span id="_ncDetSum">Detalle: ${fN(ncRows.length)} citas no cumplidas — ${fN(noCumplRows.length)} imputables a Tractocar · ${fN(ncRows.length-noCumplRows.length)} no imputables</span>
         </summary>
         <div style="overflow-x:auto;max-height:320px;overflow-y:auto">
           <table id="_ncTable" style="width:100%;border-collapse:collapse;font-size:11px">
