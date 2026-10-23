@@ -132,27 +132,79 @@ def renovar_cookie():
         raise RuntimeError('No se encontró CF_Authorization tras la autenticación.')
     return cf_cookie
 
+# ── Helpers para --full ───────────────────────────────────────────────────────
+def _hoy():
+    """Fecha de hoy en Colombia (UTC-5) como string YYYY-MM-DD."""
+    import datetime
+    return (datetime.datetime.utcnow() - datetime.timedelta(hours=5)).strftime('%Y-%m-%d')
+
+def _sent_log(base):
+    import json
+    p = base / 'sent_log.json'
+    try:
+        return json.loads(p.read_text(encoding='utf-8')) if p.exists() else {}
+    except Exception:
+        return {}
+
+def _datos_frescos(base):
+    """True si datos_bot.json fue guardado hoy (Colombia)."""
+    import datetime
+    p = base / 'datos_bot.json'
+    if not p.exists():
+        return False
+    mtime = datetime.datetime.utcfromtimestamp(p.stat().st_mtime) - datetime.timedelta(hours=5)
+    return mtime.strftime('%Y-%m-%d') == _hoy()
+
 # ─────────────────────────────────────────────────────────────────────────────
 def main():
     try:
         cookie = renovar_cookie()
         actualizar_env(cookie)
     except Exception as e:
-        print(f'[ERROR] {e}')
+        print(f'[ERROR renovar_cookie] {e}')
         sys.exit(1)
 
-    if '--full' in sys.argv:
-        base = Path(__file__).parent
-        py   = sys.executable
+    if '--full' not in sys.argv:
+        return
+
+    base = Path(__file__).parent
+    py   = sys.executable
+    hoy  = _hoy()
+    log  = _sent_log(base)
+
+    # ── ¿Ya enviamos todo hoy? ────────────────────────────────────────────────
+    pendientes = [k for k in ('llenos_interno', 'llenos_cliente', 'vacios_interno')
+                  if log.get(k) != hoy]
+    if not pendientes:
+        print(f'[OK] Todos los correos ya fueron enviados hoy ({hoy}). Nada que hacer.')
+        return
+
+    print(f'[INFO] Pendientes hoy: {", ".join(pendientes)}')
+
+    # ── Actualizar datos si no están frescos ─────────────────────────────────
+    if _datos_frescos(base):
+        print(f'[OK] datos_bot.json ya está actualizado hoy. Saltando procesar.py.')
+    else:
         print('\n[AUTO] Corriendo procesar.py...')
-        subprocess.run([py, str(base / 'procesar.py')], check=True, cwd=str(base))
-        for cmd in [
-            [py, str(base / 'enviar_reporte.py'), '--interno'],
-            [py, str(base / 'enviar_reporte.py'), '--cliente'],
-            [py, str(base / 'enviar_reporte_vacios.py')],
-        ]:
-            r = subprocess.run(cmd, capture_output=True, text=True, cwd=str(base))
-            print(' ', (r.stdout + r.stderr).strip())
+        r = subprocess.run([py, str(base / 'procesar.py')], cwd=str(base))
+        if r.returncode != 0:
+            print('[ERROR] procesar.py falló — abortando envío de correos.')
+            sys.exit(1)
+
+    # ── Enviar solo los correos pendientes ────────────────────────────────────
+    cmds = {
+        'llenos_interno':  [py, str(base / 'enviar_reporte.py'), '--interno'],
+        'llenos_cliente':  [py, str(base / 'enviar_reporte.py'), '--cliente'],
+        'vacios_interno':  [py, str(base / 'enviar_reporte_vacios.py')],
+    }
+    for key in ('llenos_interno', 'llenos_cliente', 'vacios_interno'):
+        if key not in pendientes:
+            print(f'[SKIP] {key} ya enviado hoy.')
+            continue
+        print(f'[SEND] {key}...')
+        r = subprocess.run(cmds[key], capture_output=True, text=True, cwd=str(base))
+        out = (r.stdout + r.stderr).strip()
+        print(f'       {out}')
 
 if __name__ == '__main__':
     main()
