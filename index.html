@@ -1680,6 +1680,9 @@ function _svgTend(data,cfg){
 }
 
 function _renderAlertas(rows,tipo,containerId){
+  if(AUTH_SESSION&&AUTH_SESSION.email==='consultaportalcomex@tractocar.com'){
+    const c=document.getElementById(containerId);if(c)c.innerHTML='';return;
+  }
   // Genera una mini-tabla HTML para una alerta con columnas configurables
   const _tblStyle='width:100%;border-collapse:collapse;font-size:11px;margin-top:7px';
   const _thStyle=(col)=>`padding:4px 8px;text-align:left;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:${col};border-bottom:1px solid rgba(255,255,255,.08);white-space:nowrap`;
