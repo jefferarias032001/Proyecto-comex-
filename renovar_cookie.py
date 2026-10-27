@@ -71,6 +71,7 @@ def actualizar_env(cookie):
     text = ENV_PATH.read_text(encoding='utf-8')
     text = re.sub(r'^WEBAPP_COOKIE=.*$', f'WEBAPP_COOKIE={cookie}', text, flags=re.MULTILINE)
     ENV_PATH.write_text(text, encoding='utf-8')
+    os.environ['WEBAPP_COOKIE'] = cookie  # propagar al proceso actual para que subprocesos hereden la nueva cookie
     print('[OK] WEBAPP_COOKIE actualizado en .env')
 
 # ── Flujo principal con Playwright ────────────────────────────────────────────
@@ -147,13 +148,28 @@ def _sent_log(base):
         return {}
 
 def _datos_frescos(base):
-    """True si datos_bot.json fue guardado hoy (Colombia)."""
-    import datetime
+    """True si datos_bot.json fue guardado hoy Y contiene datos recientes de la web app (no solo Excel)."""
+    import datetime, json
     p = base / 'datos_bot.json'
     if not p.exists():
         return False
     mtime = datetime.datetime.utcfromtimestamp(p.stat().st_mtime) - datetime.timedelta(hours=5)
-    return mtime.strftime('%Y-%m-%d') == _hoy()
+    if mtime.strftime('%Y-%m-%d') != _hoy():
+        return False
+    # Verificar que los datos contienen fechas recientes (últimos 60 días) — no solo Excel histórico
+    try:
+        data = json.loads(p.read_text(encoding='utf-8'))
+        hoy_dt = datetime.datetime.utcnow() - datetime.timedelta(hours=5)
+        limite = (hoy_dt - datetime.timedelta(days=60)).strftime('%Y-%m-%d')
+        llenos = data.get('ajover', {}).get('llenos', [])
+        for row in llenos:
+            fecha = str(row.get('fecha_atencion') or row.get('fecha') or '')[:10]
+            if fecha >= limite:
+                return True
+        print(f'[WARN] datos_bot.json no tiene datos de los últimos 60 días — se re-ejecutará procesar.py')
+        return False
+    except Exception:
+        return True  # si no se puede leer, asumir frescos para no bloquear
 
 # ─────────────────────────────────────────────────────────────────────────────
 def main():
