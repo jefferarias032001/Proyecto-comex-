@@ -3113,6 +3113,7 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   const isAjTab=['ajover','ajcomex'].includes(t.dataset.tab);
   $('filterbar').style.display=isAjTab?'none':'';
   $('kpis').style.display=isAjTab?'none':'';
+  $('btnCSV').style.display=isAjTab?'none':'';
   if(t.dataset.tab==='ditar')renderDitar();
   if(t.dataset.tab==='ajover')renderAjover();
   if(t.dataset.tab==='ajcomex')renderAjoverComex();
