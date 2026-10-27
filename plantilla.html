@@ -414,6 +414,14 @@
               <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Período</div>
               <button id="ajVacAyer" style="padding:5px 14px;border:none;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all .18s;background:rgba(255,255,255,.06);color:#94a3b8">Ayer</button>
             </div>
+            <div>
+              <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Desde</div>
+              <input type="date" id="ajVacDesde" style="padding:5px 10px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;background:rgba(255,255,255,.07);color:#e2e8f0;outline:none;color-scheme:dark"/>
+            </div>
+            <div>
+              <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Hasta</div>
+              <input type="date" id="ajVacHasta" style="padding:5px 10px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;background:rgba(255,255,255,.07);color:#e2e8f0;outline:none;color-scheme:dark"/>
+            </div>
             <div style="margin-left:auto;display:flex;gap:8px">
               <button class="btn btn-light" id="ajVacClear">Limpiar</button>
               <button class="btn btn-light" id="ajVacCSV">↓ CSV</button>
@@ -476,6 +484,14 @@
             <div>
               <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Período</div>
               <button id="ajLlAyer" style="padding:5px 14px;border:none;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all .18s;background:rgba(255,255,255,.06);color:#94a3b8">Ayer</button>
+            </div>
+            <div>
+              <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Desde</div>
+              <input type="date" id="ajLlDesde" style="padding:5px 10px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;background:rgba(255,255,255,.07);color:#e2e8f0;outline:none;color-scheme:dark"/>
+            </div>
+            <div>
+              <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Hasta</div>
+              <input type="date" id="ajLlHasta" style="padding:5px 10px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;background:rgba(255,255,255,.07);color:#e2e8f0;outline:none;color-scheme:dark"/>
             </div>
             <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
               <button class="btn btn-light" id="ajLlClear">Limpiar</button>
@@ -1452,7 +1468,7 @@ function init(){
 /* ============================================================
    AJOVER — vaciós y llenos
    ============================================================ */
-const SAJ={vac:{q:'',cumpl:'',mes:'',dia:'',pg:1,colOrder:null,sortCol:'',sortDir:1,colW:{}},ll:{q:'',est:'',mes:'',dia:'',pg:1,colOrder:null,sortCol:'',sortDir:1,colW:{},modo:'real'}};
+const SAJ={vac:{q:'',cumpl:'',mes:'',dia:'',desde:'',hasta:'',pg:1,colOrder:null,sortCol:'',sortDir:1,colW:{}},ll:{q:'',est:'',mes:'',dia:'',desde:'',hasta:'',pg:1,colOrder:null,sortCol:'',sortDir:1,colW:{},modo:'real'}};
 const VAC_COLS=[
   {k:'mes',          t:'s',l:'Mes',              cell:(r,s)=>`<td style="${s}">${esc(r.mes)}</td>`},
   {k:'fprog',        t:'s',l:'F. Programada',    cell:(r,s)=>`<td style="${s};white-space:nowrap">${esc(r.fprog)}</td>`},
@@ -1914,9 +1930,11 @@ function renderAjoverVacios(){
 
   // ── Filas filtradas por mes y/o día ──────────────────────────────────────
   const fm=SAJ.vac.mes, fd=SAJ.vac.dia==='ayer'?_ayerKey():null;
+  const fvd=SAJ.vac.desde, fvh=SAJ.vac.hasta;
   const filtVac=allVacRows.filter(r=>{
     if(fm&&r.mes!==fm)return false;
     if(fd&&_dayKey(r.fprog)!==fd)return false;
+    if(fvd||fvh){const dk=_dayKey(r.fprog);if(!dk)return false;if(fvd&&dk<fvd)return false;if(fvh&&dk>fvh)return false;}
     return true;
   });
   const fTotV=filtVac.length||1;
@@ -2037,9 +2055,11 @@ function renderAjoverLlenos(){
 
   // ── filas filtradas por mes y/o día ──────────────────────────────────────
   const _llFd=SAJ.ll.dia==='ayer'?_ayerKey():null;
+  const _lld=SAJ.ll.desde, _llh=SAJ.ll.hasta;
   const filtRows=allRows.filter(r=>{
     if(SAJ.ll.mes&&r.mes_iso!==SAJ.ll.mes)return false;
     if(_llFd&&_dayKey(r.fecha)!==_llFd)return false;
+    if(_lld||_llh){const dk=_dayKey(r.fecha);if(!dk)return false;if(_lld&&dk<_lld)return false;if(_llh&&dk>_llh)return false;}
     return true;
   });
   const fTot=filtRows.length;
@@ -3062,16 +3082,20 @@ function renderAjover(){
   renderAjoverLlenos();
   if(_ajovWired)return;
   _ajovWired=true;
-  $('ajVacMes').onchange=e=>{SAJ.vac.mes=e.target.value;SAJ.vac.pg=1;renderAjoverVacios()};
+  $('ajVacMes').onchange=e=>{SAJ.vac.mes=e.target.value;SAJ.vac.desde='';SAJ.vac.hasta='';SAJ.vac.pg=1;$('ajVacDesde').value='';$('ajVacHasta').value='';renderAjoverVacios()};
   $('ajVacQ').oninput=e=>{SAJ.vac.q=e.target.value.trim();SAJ.vac.pg=1;renderAjoverVacios()};
   $('ajVacFiltCumpl').onchange=e=>{SAJ.vac.cumpl=e.target.value;SAJ.vac.pg=1;renderAjoverVacios()};
-  $('ajVacAyer').onclick=()=>{SAJ.vac.dia=SAJ.vac.dia==='ayer'?'':'ayer';SAJ.vac.mes='';SAJ.vac.pg=1;$('ajVacMes').value='';renderAjoverVacios();};
-  $('ajVacClear').onclick=()=>{SAJ.vac.q='';SAJ.vac.cumpl='';SAJ.vac.mes='';SAJ.vac.dia='';SAJ.vac.pg=1;$('ajVacQ').value='';$('ajVacFiltCumpl').value='';$('ajVacMes').value='';renderAjoverVacios()};
-  $('ajLlMes').onchange=e=>{SAJ.ll.mes=e.target.value;SAJ.ll.pg=1;renderAjoverLlenos()};
+  $('ajVacAyer').onclick=()=>{SAJ.vac.dia=SAJ.vac.dia==='ayer'?'':'ayer';SAJ.vac.mes='';SAJ.vac.desde='';SAJ.vac.hasta='';SAJ.vac.pg=1;$('ajVacMes').value='';$('ajVacDesde').value='';$('ajVacHasta').value='';renderAjoverVacios();};
+  $('ajVacDesde').onchange=e=>{SAJ.vac.desde=e.target.value;SAJ.vac.mes='';SAJ.vac.dia='';SAJ.vac.pg=1;$('ajVacMes').value='';renderAjoverVacios()};
+  $('ajVacHasta').onchange=e=>{SAJ.vac.hasta=e.target.value;SAJ.vac.mes='';SAJ.vac.dia='';SAJ.vac.pg=1;$('ajVacMes').value='';renderAjoverVacios()};
+  $('ajVacClear').onclick=()=>{SAJ.vac.q='';SAJ.vac.cumpl='';SAJ.vac.mes='';SAJ.vac.dia='';SAJ.vac.desde='';SAJ.vac.hasta='';SAJ.vac.pg=1;$('ajVacQ').value='';$('ajVacFiltCumpl').value='';$('ajVacMes').value='';$('ajVacDesde').value='';$('ajVacHasta').value='';renderAjoverVacios()};
+  $('ajLlMes').onchange=e=>{SAJ.ll.mes=e.target.value;SAJ.ll.desde='';SAJ.ll.hasta='';SAJ.ll.pg=1;$('ajLlDesde').value='';$('ajLlHasta').value='';renderAjoverLlenos()};
   $('ajLlQ').oninput=e=>{SAJ.ll.q=e.target.value.trim();SAJ.ll.pg=1;renderAjoverLlenos()};
   $('ajLlFiltEst').onchange=e=>{SAJ.ll.est=e.target.value;SAJ.ll.pg=1;renderAjoverLlenos()};
-  $('ajLlAyer').onclick=()=>{SAJ.ll.dia=SAJ.ll.dia==='ayer'?'':'ayer';SAJ.ll.mes='';SAJ.ll.pg=1;$('ajLlMes').value='';renderAjoverLlenos();};
-  $('ajLlClear').onclick=()=>{SAJ.ll.q='';SAJ.ll.est='';SAJ.ll.mes='';SAJ.ll.dia='';SAJ.ll.pg=1;$('ajLlQ').value='';$('ajLlFiltEst').value='';$('ajLlMes').value='';renderAjoverLlenos()};
+  $('ajLlAyer').onclick=()=>{SAJ.ll.dia=SAJ.ll.dia==='ayer'?'':'ayer';SAJ.ll.mes='';SAJ.ll.desde='';SAJ.ll.hasta='';SAJ.ll.pg=1;$('ajLlMes').value='';$('ajLlDesde').value='';$('ajLlHasta').value='';renderAjoverLlenos();};
+  $('ajLlDesde').onchange=e=>{SAJ.ll.desde=e.target.value;SAJ.ll.mes='';SAJ.ll.dia='';SAJ.ll.pg=1;$('ajLlMes').value='';renderAjoverLlenos()};
+  $('ajLlHasta').onchange=e=>{SAJ.ll.hasta=e.target.value;SAJ.ll.mes='';SAJ.ll.dia='';SAJ.ll.pg=1;$('ajLlMes').value='';renderAjoverLlenos()};
+  $('ajLlClear').onclick=()=>{SAJ.ll.q='';SAJ.ll.est='';SAJ.ll.mes='';SAJ.ll.dia='';SAJ.ll.desde='';SAJ.ll.hasta='';SAJ.ll.pg=1;$('ajLlQ').value='';$('ajLlFiltEst').value='';$('ajLlMes').value='';$('ajLlDesde').value='';$('ajLlHasta').value='';renderAjoverLlenos()};
   const csvDl=(rows,cols,fname)=>{const q=v=>{v=v==null?'':String(v);return /[;\n"]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};const out=[cols.map(c=>c[1]).join(';')].concat(rows.map(r=>cols.map(c=>q(r[c[0]])).join(';'))).join('\r\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(out);a.download=fname;a.click();};
   $('ajVacCSV').onclick=()=>{
     const va=(window.AJOVER||{}).vacios;if(!va)return;
