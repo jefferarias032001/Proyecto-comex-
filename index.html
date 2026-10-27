@@ -1988,32 +1988,7 @@ function renderAjoverVacios(){
     en_patio:     _avg(filtVac.map(r=>r.dt3).filter(v=>v!=null)),
     patio_planta: _avg(filtVac.map(r=>r.dt4).filter(v=>v!=null)),
   };
-  $('ajVacPromedios').innerHTML=`
-    <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;margin:10px 0 4px">
-      <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:130px">
-        <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Cita → Llegada prom.</div>
-        <div style="font-size:16px">${_fminSgn(prF.cita_llegada)}</div>
-        <div style="font-size:10px;color:var(--ink-3)">antes(-) / después(+) cita</div>
-      </div>
-      <div style="font-size:18px;color:var(--ink-3);padding:0 6px">›</div>
-      <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:130px">
-        <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Cita → Atención prom.</div>
-        <div style="font-size:16px">${_fminSgn(prF.cita_aten)}</div>
-        <div style="font-size:10px;color:var(--ink-3)">antes(-) / después(+) cita</div>
-      </div>
-      <div style="font-size:18px;color:var(--ink-3);padding:0 6px">›</div>
-      <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:130px">
-        <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Tiempo en patio</div>
-        <div style="font-size:16px">${_fmin(prF.en_patio)}</div>
-        <div style="font-size:10px;color:var(--ink-3)">llegada → salida patio</div>
-      </div>
-      <div style="font-size:18px;color:var(--ink-3);padding:0 6px">›</div>
-      <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:130px">
-        <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Salida patio → Planta</div>
-        <div style="font-size:16px">${_fmin(prF.patio_planta)}</div>
-        <div style="font-size:10px;color:var(--ink-3)">transporte a planta</div>
-      </div>
-    </div>`;
+  $('ajVacPromedios').innerHTML='';
 
   // tabla con columnas ordenables + redimensionables + reordenables
   if(!SAJ.vac.colOrder)SAJ.vac.colOrder=VAC_COLS.map((_,i)=>i);
@@ -2325,32 +2300,7 @@ function renderAjoverLlenos(){
   };
   const pr2=fPr;
   const deltaColor=pr2.delta_cita==null?'var(--ink-3)':pr2.delta_cita<=_win?'var(--pos)':'var(--neg)';
-  $('ajLlPromedios').innerHTML=`
-    <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;margin:10px 0 4px">
-      <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:140px">
-        <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Planeada → Llegada a planta</div>
-        <div style="font-size:16px">${_fmin2(pr2.retraso_planta)}</div>
-        <div style="font-size:10px;color:var(--ink-3)">retraso llegada vehículo</div>
-      </div>
-      <div style="font-size:18px;color:var(--ink-3);padding:0 6px">›</div>
-      <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:140px">
-        <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Tiempo de cargue en planta</div>
-        <div style="font-size:16px">${_fmin2(pr2.cargue_planta)}</div>
-        <div style="font-size:10px;color:var(--ink-3)">llegada planta → salida</div>
-      </div>
-      <div style="font-size:18px;color:var(--ink-3);padding:0 6px">›</div>
-      <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:140px">
-        <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Tránsito a puerto</div>
-        <div style="font-size:16px">${_fmin2(pr2.transito_puerto)}</div>
-        <div style="font-size:10px;color:var(--ink-3)">salida planta → llegada puerto</div>
-      </div>
-      <div style="font-size:18px;color:var(--ink-3);padding:0 6px">→</div>
-      <div style="text-align:center;padding:10px 16px;background:var(--surface-2);border-radius:8px;min-width:140px;border:2px solid ${deltaColor}">
-        <div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">Delta promedio vs cita</div>
-        <div style="font-size:16px;color:${deltaColor}">${_fmin2(pr2.delta_cita)}</div>
-        <div style="font-size:10px;color:var(--ink-3)">${pr2.delta_cita==null?'sin datos':(pr2.delta_cita||0)<=60?'dentro del rango':'tarde en promedio'}</div>
-      </div>
-    </div>`;
+  $('ajLlPromedios').innerHTML='';
 
   // ── gráfico 1: % cumplimiento, subtítulo = OBs distintos ─────────────────
   const tend=(ll.tendencia||[]).filter(t=>!S.f.meses.size||S.f.meses.has(t.mes));
@@ -3125,8 +3075,35 @@ function renderAjover(){
   $('ajLlAyer').onclick=()=>{SAJ.ll.dia=SAJ.ll.dia==='ayer'?'':'ayer';SAJ.ll.mes='';SAJ.ll.pg=1;$('ajLlMes').value='';renderAjoverLlenos();};
   $('ajLlClear').onclick=()=>{SAJ.ll.q='';SAJ.ll.est='';SAJ.ll.mes='';SAJ.ll.dia='';SAJ.ll.pg=1;$('ajLlQ').value='';$('ajLlFiltEst').value='';$('ajLlMes').value='';renderAjoverLlenos()};
   const csvDl=(rows,cols,fname)=>{const q=v=>{v=v==null?'':String(v);return /[;\n"]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};const out=[cols.map(c=>c[1]).join(';')].concat(rows.map(r=>cols.map(c=>q(r[c[0]])).join(';'))).join('\r\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(out);a.download=fname;a.click();};
-  $('ajVacCSV').onclick=()=>{const va=(window.AJOVER||{}).vacios;if(!va)return;csvDl(va.rows,[['mes','Mes'],['fprog','Fecha programada'],['faten','Fecha atención'],['fplanta','Llegada planta'],['patio','Patio'],['linea','Línea'],['cont','Contenedor'],['man','Manifiesto'],['cumpl','Cumplimiento']],'ajover_vacios.csv');};
-  $('ajLlCSV').onclick=()=>{const ll=(window.AJOVER||{}).llenos;if(!ll)return;csvDl(ll.rows,[['fecha','Fecha'],['cont','Contenedor'],['terminal','Terminal'],['placa','Placa'],['estado','Estado'],['cumpl_planta','Cumpl.planta'],['cumpl_puerto','Cumpl.puerto'],['motivo','Motivo fallo'],['obs','Observaciones']],'ajover_llenos.csv');};
+  $('ajVacCSV').onclick=()=>{
+    const va=(window.AJOVER||{}).vacios;if(!va)return;
+    const rows=SAJ.vac._filtRows||va.rows;
+    csvDl(rows,[
+      ['mes','Mes'],['fprog','Fecha programada'],['faten','Fecha atención'],
+      ['fcita_retiro','Fecha cita retiro'],['patio_con_cita','Patio con cita'],
+      ['fllpatio','Llegada patio'],['fslpatio','Salida patio'],['fplanta','Llegada planta'],
+      ['patio','Patio'],['linea','Línea'],['cont','Contenedor'],['man','Manifiesto'],
+      ['ob','Orden base'],['do','DO'],['placa','Placa'],['conductor','Conductor'],
+      ['cumpl','Cumplimiento cita'],['cumpl_aten','Cumplimiento atención'],
+      ['motivo_incumpl','Motivo incumplimiento'],['resp_incumpl','Responsable']
+    ],'ajover_vacios.csv');
+  };
+  $('ajLlCSV').onclick=()=>{
+    const ll=(window.AJOVER||{}).llenos;if(!ll)return;
+    const rows=SAJ.ll._filtRows||ll.rows;
+    csvDl(rows,[
+      ['fecha','Fecha'],['mes_iso','Mes'],['ob','Orden base'],['man','Manifiesto'],
+      ['cont','Contenedor'],['tamano','Tamaño'],['terminal','Terminal'],['placa','Placa'],
+      ['trailer','Trailer'],['conductor','Conductor'],['estado','Estado'],
+      ['fcita','Fecha cita'],['fcita_repr','Cita reprogramada'],['motivo_repr','Motivo repr.'],
+      ['resp_repr','Resp. repr.'],['fplanta_plan','Llegada planta planeada'],
+      ['fplanta_real','Llegada planta real'],['fpesaje','Fecha pesaje'],
+      ['fsalida','Salida planta'],['fllpuerto','Llegada puerto'],
+      ['cumpl_cita','Cumplimiento cita'],['delta_min','Delta vs cita (min)'],
+      ['do','DO'],['radicado_lleno','Radicado'],['motivo','Motivo fallo'],
+      ['resp_opt','Resp. optimización'],['motivo_opt','Motivo opt.'],['obs','Observaciones']
+    ],'ajover_llenos.csv');
+  };
 }
 
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{

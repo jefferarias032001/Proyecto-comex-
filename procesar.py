@@ -606,16 +606,23 @@ def leer_ajover_webapp(stats):
             try: return pd.Timestamp(str(v).strip()) if v and str(v).strip() not in ("", "nan", "None") else pd.NaT
             except: return pd.NaT
 
+        import datetime as _dt
+        _cur_year = _dt.datetime.now().year
+        def _cap_year(ts):
+            if pd.isna(ts) or ts.year <= _cur_year: return ts
+            try: return ts.replace(year=_cur_year)
+            except: return ts
+
         dt_totals = []
 
         for r in vacios_rows:
-            pg    = _ts_va(r.get("Fecha y hora recibido de programacion"))
-            at    = _ts_va(r.get("Fecha y hora de atención de pedido del retiro de vacíos")
-                           or r.get("Fecha y Hora de atención de pedido del retiro de vacíos"))
-            cit_r = _ts_va(r.get("Fecha y hora de cita de retiro en patio"))
-            lpa   = _ts_va(r.get("Fecha y hora de llegada de vehículo a patio"))
-            slpa  = _ts_va(r.get("Fecha y hora de salida de vehículo de patio"))
-            llp   = _ts_va(r.get("Fecha y hora de llegada de contenedor vacio a planta"))
+            pg    = _cap_year(_ts_va(r.get("Fecha y hora recibido de programacion")))
+            at    = _cap_year(_ts_va(r.get("Fecha y hora de atención de pedido del retiro de vacíos")
+                           or r.get("Fecha y Hora de atención de pedido del retiro de vacíos")))
+            cit_r = _cap_year(_ts_va(r.get("Fecha y hora de cita de retiro en patio")))
+            lpa   = _cap_year(_ts_va(r.get("Fecha y hora de llegada de vehículo a patio")))
+            slpa  = _cap_year(_ts_va(r.get("Fecha y hora de salida de vehículo de patio")))
+            llp   = _cap_year(_ts_va(r.get("Fecha y hora de llegada de contenedor vacio a planta")))
             patio_cita = str(r.get("Patio con cita o sin cita") or "").strip().upper()
 
             # Cumplimiento A: fllpatio vs fcita_retiro (tolerancia 30 min)
